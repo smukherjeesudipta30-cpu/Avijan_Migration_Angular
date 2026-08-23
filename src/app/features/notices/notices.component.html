@@ -1,0 +1,155 @@
+<p-confirmDialog />
+
+<header class="ntc__header">
+  <div>
+    <p class="app-section-title">Academics</p>
+    <h1>Notice board</h1>
+  </div>
+</header>
+
+<!-- ------------------------------------------------------------- entry form -->
+<section class="app-card ntc__form" id="notice-form">
+  <header class="ntc__form-head">
+    <div>
+      <h2>{{ isEditing() ? 'Edit notice' : 'Publish a notice' }}</h2>
+      <p class="app-muted">
+        The five most recent notices appear on the dashboard board.
+      </p>
+    </div>
+  </header>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="ntc__field">
+      <label for="text">Notice <span class="ntc__req">*</span></label>
+      <textarea
+        pTextarea
+        id="text"
+        rows="4"
+        formControlName="text"
+        placeholder="e.g. Classes will remain closed on 15 August."></textarea>
+
+      <div class="ntc__field-foot">
+        @if (form.controls.text.touched && form.controls.text.invalid) {
+          <small class="ntc__error">Notice text is required (4000 characters maximum).</small>
+        } @else {
+          <small class="app-muted">{{ remaining() }} characters left</small>
+        }
+      </div>
+    </div>
+
+    <div class="ntc__field ntc__field--date">
+      <label for="noticeDate">Notice date</label>
+      <p-datePicker
+        inputId="noticeDate"
+        formControlName="noticeDate"
+        dateFormat="dd/mm/yy"
+        [showIcon]="true"
+        [showTime]="true"
+        hourFormat="12"
+        appendTo="body"
+        styleClass="ntc__datepicker" />
+      <small class="app-muted ntc__hint">
+        {{ isEditing()
+            ? 'Leave blank to keep the original date — editing does not move a notice to the top.'
+            : 'Leave blank to stamp the current date and time.' }}
+      </small>
+    </div>
+
+    <footer class="ntc__form-actions">
+      <p-button
+        type="submit"
+        [label]="isEditing() ? 'Update notice' : 'Publish'"
+        [icon]="isEditing() ? 'pi pi-save' : 'pi pi-send'"
+        [loading]="saving()"
+        [disabled]="saving()" />
+
+      <p-button
+        type="button"
+        label="Reset"
+        icon="pi pi-refresh"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="resetForm()" />
+    </footer>
+  </form>
+</section>
+
+<!-- ------------------------------------------------------------------ list -->
+<section class="app-card ntc__list">
+  <header class="ntc__list-head">
+    <h2>Published notices</h2>
+
+    <div class="ntc__list-head-right">
+      <input
+        pInputText
+        class="ntc__search"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        (keyup.enter)="runSearch()"
+        [ngModelOptions]="{ standalone: true }"
+        placeholder="Search notice text" />
+      <p-button label="Search" icon="pi pi-search" size="small" (onClick)="runSearch()" />
+      <span class="app-muted">{{ totalCount() }} notice(s)</span>
+    </div>
+  </header>
+
+  <p-table
+    [value]="rows()"
+    [lazy]="true"
+    [paginator]="true"
+    [rows]="pageSize()"
+    [totalRecords]="totalCount()"
+    [loading]="loading()"
+    [rowsPerPageOptions]="[25, 50, 100]"
+    (onLazyLoad)="onLazyLoad($event)"
+    styleClass="p-datatable-sm"
+    [tableStyle]="{ 'min-width': '48rem' }"
+    currentPageReportTemplate="{first}&ndash;{last} of {totalRecords}"
+    [showCurrentPageReport]="true">
+
+    <ng-template pTemplate="header">
+      <tr>
+        <th style="width: 12rem">Date</th>
+        <th>Notice</th>
+        <th style="width: 7rem">Actions</th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-notice let-rowIndex="rowIndex">
+      <tr>
+        <td>
+          {{ notice.noticeDate ? (notice.noticeDate | date: 'd MMM y, h:mm a') : '—' }}
+          @if (isOnBoard(rowIndex)) {
+            <span class="ntc__cell-sub">
+              <p-tag severity="info" value="On dashboard" />
+            </span>
+          }
+        </td>
+        <td class="ntc__text">{{ notice.text || '—' }}</td>
+        <td>
+          <div class="ntc__actions">
+            <p-button
+              icon="pi pi-pencil"
+              severity="secondary"
+              [text]="true"
+              pTooltip="Edit"
+              tooltipPosition="top"
+              (onClick)="edit(notice)" />
+
+            <p-button
+              icon="pi pi-trash"
+              severity="danger"
+              [text]="true"
+              pTooltip="Delete"
+              tooltipPosition="top"
+              (onClick)="remove(notice)" />
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr><td colspan="3" class="app-muted ntc__empty">No notices published yet.</td></tr>
+    </ng-template>
+  </p-table>
+</section>

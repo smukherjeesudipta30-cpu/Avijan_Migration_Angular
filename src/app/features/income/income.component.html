@@ -1,0 +1,287 @@
+<header class="inc__header">
+  <div>
+    <p class="app-section-title">Reports</p>
+    <h1>Income report</h1>
+  </div>
+
+  @if (report(); as data) {
+    <span class="app-muted inc__generated">
+      Generated {{ data.generatedOn | date: 'd MMM y, h:mm a' }}
+    </span>
+  }
+</header>
+
+<!-- --------------------------------------------------------------- range -->
+<section class="app-card inc__range">
+  <div class="inc__range-field">
+    <label for="from">From</label>
+    <p-datePicker
+      inputId="from"
+      [ngModel]="from()"
+      (ngModelChange)="from.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      dateFormat="dd/mm/yy"
+      [showIcon]="true"
+      [maxDate]="today"
+      appendTo="body"
+      styleClass="inc__datepicker" />
+  </div>
+
+  <div class="inc__range-field">
+    <label for="to">To</label>
+    <p-datePicker
+      inputId="to"
+      [ngModel]="to()"
+      (ngModelChange)="to.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      dateFormat="dd/mm/yy"
+      [showIcon]="true"
+      [maxDate]="today"
+      appendTo="body"
+      styleClass="inc__datepicker" />
+  </div>
+
+  <p-button label="Run report" icon="pi pi-chart-bar" [loading]="loading()" (onClick)="run()" />
+
+  <div class="inc__presets">
+    @for (preset of presets; track preset.value) {
+      <p-button
+        [label]="preset.label"
+        severity="secondary"
+        [text]="true"
+        size="small"
+        (onClick)="applyPreset(preset.value)" />
+    }
+  </div>
+</section>
+
+@if (report(); as data) {
+
+  <!-- ------------------------------------------------- profit and loss -->
+  <section class="inc__pnl">
+    <article class="app-card inc__pnl-card inc__pnl-card--income">
+      <p class="inc__pnl-label">Total income</p>
+      <strong class="inc__pnl-value">{{ money(data.totalIncome) }}</strong>
+      <ul class="inc__pnl-breakdown">
+        @for (section of incomeSections(); track section.section) {
+          <li>
+            <span>{{ section.label }}</span>
+            <span>{{ money(section.amount) }}</span>
+          </li>
+        }
+        @for (section of breakdownSections(); track section.section) {
+          @if (section.section === 'LateFines') {
+            <li class="inc__pnl-of-which">
+              <span>
+                {{ section.label }}
+                <i class="pi pi-info-circle"
+                   pTooltip="Already included in fee collections — the fee ledger stores installment + fine"
+                   tooltipPosition="top"></i>
+              </span>
+              <span>{{ money(section.amount) }}</span>
+            </li>
+          }
+        }
+      </ul>
+    </article>
+
+    <article class="app-card inc__pnl-card inc__pnl-card--cost">
+      <p class="inc__pnl-label">Total cost</p>
+      <strong class="inc__pnl-value">{{ money(data.totalCost) }}</strong>
+      <ul class="inc__pnl-breakdown">
+        @for (section of costSections(); track section.section) {
+          <li>
+            <span>{{ section.label }}</span>
+            <span>{{ money(section.amount) }}</span>
+          </li>
+        }
+      </ul>
+    </article>
+
+    <article class="app-card inc__pnl-card" [attr.data-tone]="isProfit() ? 'positive' : 'negative'">
+      <p class="inc__pnl-label">{{ isProfit() ? 'Net profit' : 'Net loss' }}</p>
+      <strong class="inc__pnl-value" [class.app-positive]="isProfit()" [class.app-negative]="!isProfit()">
+        {{ money(data.netProfit) }}
+      </strong>
+      <ul class="inc__pnl-breakdown">
+        <li>
+          <span>Margin</span>
+          <span [class.app-positive]="isProfit()" [class.app-negative]="!isProfit()">
+            {{ data.marginPercent }}%
+          </span>
+        </li>
+        <li>
+          <span>
+            Dues movement
+            <i class="pi pi-info-circle"
+               pTooltip="How much students' outstanding balance grew or shrank. Not part of income."
+               tooltipPosition="top"></i>
+          </span>
+          <span [class.app-negative]="data.duesMovement > 0">{{ money(data.duesMovement) }}</span>
+        </li>
+      </ul>
+    </article>
+  </section>
+
+  <!-- ---------------------------------------------------- monthly chart -->
+  @if (trendChart(); as chart) {
+    <section class="app-card inc__panel">
+      <header class="inc__panel-head">
+        <h2>Month by month</h2>
+        <span class="app-muted">{{ data.monthly.length }} month(s)</span>
+      </header>
+      <div class="inc__chart">
+        <p-chart type="bar" [data]="chart" [options]="trendOptions" height="320px" />
+      </div>
+    </section>
+  } @else {
+    <p-message
+      severity="info"
+      text="The monthly chart is shown for ranges up to 36 months. Narrow the range to see it."
+      styleClass="inc__notice" />
+  }
+
+  <!-- --------------------------------------------------------- detail -->
+  <section class="app-card inc__panel">
+    <header class="inc__panel-head">
+      <h2>Detail</h2>
+      <p-button
+        label="Export CSV"
+        icon="pi pi-download"
+        severity="secondary"
+        [outlined]="true"
+        size="small"
+        [disabled]="detail().length === 0"
+        (onClick)="exportCsv()" />
+    </header>
+
+    <div class="inc__tabs">
+      @for (tab of sectionTabs(); track tab.value) {
+        <button
+          type="button"
+          class="inc__tab"
+          [class.inc__tab--active]="activeSection() === tab.value"
+          [class.inc__tab--cost]="tab.isCost"
+          (click)="selectSection(tab.value)">
+          <span class="inc__tab-label">{{ tab.label }}</span>
+          <span class="inc__tab-amount">{{ money(tab.amount) }}</span>
+          <span class="inc__tab-count">{{ tab.rowCount }}</span>
+        </button>
+      }
+    </div>
+
+    <!-- Total for whichever tab is open. Shown here as well as on the tab
+         itself, because when the list is paged the visible rows add up to less
+         than the section, and that difference has to be explicit. -->
+    @if (activeSectionTotal(); as active) {
+      <div class="inc__section-total" [class.inc__section-total--cost]="active.isCost">
+        <div class="inc__section-total-main">
+          <span class="inc__section-total-label">
+            {{ active.label }} — total for {{ report()?.from | date: 'd MMM y' }}
+            to {{ report()?.to | date: 'd MMM y' }}
+          </span>
+          <strong class="inc__section-total-value">{{ money(active.amount) }}</strong>
+        </div>
+
+        <div class="inc__section-total-meta app-muted">
+          <span>{{ active.rowCount }} row(s)</span>
+
+          @if (isPartialPage()) {
+            <span>·</span>
+            <span>this page: <strong>{{ money(visiblePageTotal()) }}</strong> over {{ detail().length }} row(s)</span>
+          }
+
+          @if (active.isBreakdown) {
+            <span>·</span>
+            <span class="inc__section-total-note">
+              <i class="pi pi-info-circle" aria-hidden="true"></i>
+              @if (active.section === 'LateFines') {
+                Already counted inside fee collections — not added to total income.
+              } @else {
+                Informational — not part of the income or cost totals.
+              }
+            </span>
+          } @else if (active.isCost) {
+            <span>·</span>
+            <span>counts against profit</span>
+          }
+        </div>
+      </div>
+    }
+
+    <p-table
+      [value]="detail()"
+      [lazy]="true"
+      [paginator]="true"
+      [rows]="detailPageSize()"
+      [totalRecords]="detailTotal()"
+      [loading]="detailLoading()"
+      [rowsPerPageOptions]="[25, 50, 100]"
+      (onLazyLoad)="onDetailLazyLoad($event)"
+      styleClass="p-datatable-sm"
+      [tableStyle]="{ 'min-width': '54rem' }"
+      currentPageReportTemplate="{first}–{last} of {totalRecords}"
+      [showCurrentPageReport]="true">
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 8rem">Date</th>
+          <th>Reference</th>
+          <th>Student / Teacher</th>
+          <th>Course</th>
+          <th>Description</th>
+          <th class="inc__num" style="width: 10rem">Amount</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td>{{ row.date ? (row.date | date: 'd MMM y') : '—' }}</td>
+          <td>
+            @if (row.reference) {
+              <code class="inc__code">{{ row.reference }}</code>
+            } @else {
+              <span class="app-muted">—</span>
+            }
+          </td>
+          <td>
+            @if (row.studentName || row.teacherName) {
+              <strong>{{ row.studentName || row.teacherName }}</strong>
+              @if (row.registrationId) {
+                <small class="app-muted inc__cell-sub">{{ row.registrationId }}</small>
+              }
+            } @else {
+              <span class="app-muted">—</span>
+            }
+          </td>
+          <td>{{ row.courseName || '—' }}</td>
+          <td class="inc__desc">{{ row.description || '—' }}</td>
+          <td class="inc__num">{{ money(row.amount) }}</td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="footer">
+        @if (detail().length > 0) {
+          <tr class="inc__foot">
+            <td colspan="5">
+              {{ isPartialPage() ? 'Total on this page' : 'Total' }}
+              @if (isPartialPage()) {
+                <span class="app-muted inc__foot-note">
+                  ({{ detail().length }} of {{ detailTotal() }} rows —
+                  whole range {{ money(activeSectionTotal()?.amount) }})
+                </span>
+              }
+            </td>
+            <td class="inc__num"><strong>{{ money(visiblePageTotal()) }}</strong></td>
+          </tr>
+        }
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="6" class="app-muted inc__empty">Nothing recorded in this section for the selected range.</td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </section>
+}

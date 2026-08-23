@@ -1,0 +1,205 @@
+/**
+ * Layout shared by the six report pages: a header, a filter bar, a row of
+ * summary tiles and a results card. Each page's own stylesheet pulls this in
+ * with `@use '../report.shared.scss';`.
+ */
+
+:host {
+  display: block;
+}
+
+.rpt__header {
+  margin-bottom: 1.25rem;
+
+  h1 {
+    margin-top: 0.25rem;
+    font-size: 1.5rem;
+  }
+
+  p.app-muted {
+    margin: 0.3rem 0 0;
+    font-size: 0.83rem;
+    max-width: 62ch;
+  }
+}
+
+/* ------------------------------------------------------------------ filter */
+.rpt__filter {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.rpt__field {
+  flex: 1 1 190px;
+  min-width: 0;
+
+  label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--app-text-muted);
+  }
+
+  input {
+    width: 100%;
+  }
+}
+
+.rpt__field--check {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding-bottom: 0.5rem;
+
+  label {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--app-text);
+    cursor: pointer;
+  }
+}
+
+.rpt__filter-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
+:host ::ng-deep .rpt__picker,
+:host ::ng-deep .rpt__picker input,
+:host ::ng-deep .rpt__select {
+  width: 100%;
+}
+
+/* ------------------------------------------------------------------- tiles */
+.rpt__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.rpt__tile {
+  padding: 0.95rem 1.1rem;
+
+  span {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--app-text-muted);
+  }
+
+  strong {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 1.45rem;
+    letter-spacing: -0.02em;
+  }
+
+  small {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 0.73rem;
+  }
+}
+
+.rpt__tile--positive strong { color: var(--app-positive); }
+.rpt__tile--negative strong { color: var(--app-negative); }
+
+/* ------------------------------------------------------------------ result */
+.rpt__result {
+  padding: 1.15rem 1.25rem 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+.rpt__result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+
+  h2 {
+    font-size: 1.05rem;
+  }
+}
+
+.rpt__result-head-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+
+  span {
+    font-size: 0.8rem;
+  }
+}
+
+.rpt__num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.rpt__code {
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  background: var(--app-page-bg);
+  font-size: 0.73rem;
+  white-space: nowrap;
+}
+
+.rpt__cell-sub {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.73rem;
+  line-height: 1.35;
+}
+
+.rpt__total-row {
+  font-weight: 700;
+
+  td {
+    border-top: 2px solid var(--app-border);
+  }
+}
+
+.rpt__empty {
+  padding: 1.75rem 0.5rem;
+  text-align: center;
+}
+
+/* The line explaining a deliberate difference from the legacy report. */
+.rpt__note {
+  margin: 0.75rem 0 0;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--app-radius);
+  background: var(--app-page-bg);
+  border-left: 3px solid var(--app-accent);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.rpt__generated {
+  margin: 0.35rem 0 0;
+  font-size: 0.73rem;
+}
+
+@media (max-width: 760px) {
+  .rpt__filter {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .rpt__filter-actions {
+    justify-content: flex-start;
+  }
+}

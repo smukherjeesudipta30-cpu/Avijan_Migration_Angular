@@ -1,0 +1,212 @@
+<p-confirmDialog />
+
+<header class="mrk__header">
+  <div>
+    <p class="app-section-title">Academics</p>
+    <h1>Marks</h1>
+  </div>
+</header>
+
+<!-- ------------------------------------------------------------- entry form -->
+<section class="app-card mrk__form" id="marks-form">
+  <header class="mrk__form-head">
+    <div>
+      <h2>{{ isEditing() ? 'Edit marks' : 'Enter marks' }}</h2>
+      <p class="app-muted">
+        Up to four subjects. Leave a subject blank to skip it — its marks are cleared with it.
+      </p>
+    </div>
+  </header>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="mrk__top">
+      <div class="mrk__field">
+        <label for="registrationId">Registration id <span class="mrk__req">*</span></label>
+        <input
+          pInputText
+          id="registrationId"
+          formControlName="registrationId"
+          class="mrk__upper"
+          placeholder="e.g. AVI/2440/25" />
+        @if (form.controls.registrationId.touched && form.controls.registrationId.invalid) {
+          <small class="mrk__error">Registration id is required.</small>
+        }
+      </div>
+
+      <div class="mrk__field">
+        <label for="examDate">Date of examination <span class="mrk__req">*</span></label>
+        <p-datePicker
+          inputId="examDate"
+          formControlName="examDate"
+          dateFormat="dd/mm/yy"
+          [showIcon]="true"
+          [maxDate]="today"
+          appendTo="body"
+          styleClass="mrk__datepicker" />
+        @if (form.controls.examDate.touched && form.controls.examDate.invalid) {
+          <small class="mrk__error">Date of examination is required.</small>
+        }
+      </div>
+    </div>
+
+    <!-- --------------------------------------------------- subject slots -->
+    <div class="mrk__subjects">
+      @for (slot of slots; track slot) {
+        <fieldset class="mrk__slot">
+          <legend>Subject {{ slot }}</legend>
+
+          <div class="mrk__field">
+            <label [attr.for]="'subject' + slot">Subject</label>
+            <input pInputText [id]="'subject' + slot" [formControlName]="'subject' + slot" />
+          </div>
+
+          <div class="mrk__slot-marks">
+            <div class="mrk__field">
+              <label [attr.for]="'fullMarks' + slot">Full marks</label>
+              <p-inputNumber
+                [inputId]="'fullMarks' + slot"
+                [formControlName]="'fullMarks' + slot"
+                [min]="0"
+                [useGrouping]="false" />
+            </div>
+
+            <div class="mrk__field">
+              <label [attr.for]="'obtainedMarks' + slot">Obtained</label>
+              <p-inputNumber
+                [inputId]="'obtainedMarks' + slot"
+                [formControlName]="'obtainedMarks' + slot"
+                [min]="0"
+                [useGrouping]="false" />
+            </div>
+          </div>
+        </fieldset>
+      }
+    </div>
+
+    <!-- Live totals, so the result is visible before saving. -->
+    @if (liveTotals().full > 0) {
+      <div class="mrk__totals">
+        <span>Total</span>
+        <strong>{{ liveTotals().obtained }} / {{ liveTotals().full }}</strong>
+        <p-tag [severity]="scoreSeverity(liveTotals().percent)" [value]="liveTotals().percent + '%'" />
+      </div>
+    }
+
+    <footer class="mrk__form-actions">
+      <p-button
+        type="submit"
+        [label]="isEditing() ? 'Update marks' : 'Submit'"
+        [icon]="isEditing() ? 'pi pi-save' : 'pi pi-plus'"
+        [loading]="saving()"
+        [disabled]="saving()" />
+
+      <p-button
+        type="button"
+        label="Reset"
+        icon="pi pi-refresh"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="resetForm()" />
+    </footer>
+  </form>
+</section>
+
+<!-- ------------------------------------------------------------------ list -->
+<section class="app-card mrk__list">
+  <header class="mrk__list-head">
+    <h2>Recorded marks</h2>
+
+    <div class="mrk__list-head-right">
+      <input
+        pInputText
+        class="mrk__search"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        (keyup.enter)="runSearch()"
+        [ngModelOptions]="{ standalone: true }"
+        placeholder="Search registration id or subject" />
+      <p-button label="Search" icon="pi pi-search" size="small" (onClick)="runSearch()" />
+      <span class="app-muted">{{ totalCount() }} record(s)</span>
+    </div>
+  </header>
+
+  <p-table
+    [value]="rows()"
+    [lazy]="true"
+    [paginator]="true"
+    [rows]="pageSize()"
+    [totalRecords]="totalCount()"
+    [loading]="loading()"
+    [rowsPerPageOptions]="[25, 50, 100]"
+    (onLazyLoad)="onLazyLoad($event)"
+    styleClass="p-datatable-sm"
+    [tableStyle]="{ 'min-width': '60rem' }"
+    currentPageReportTemplate="{first}–{last} of {totalRecords}"
+    [showCurrentPageReport]="true">
+
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Student</th>
+        <th>Exam date</th>
+        <th>Subjects</th>
+        <th class="mrk__num">Total</th>
+        <th style="width: 6rem">Score</th>
+        <th style="width: 7rem">Actions</th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-mark>
+      <tr>
+        <td>
+          <strong>{{ mark.studentName || '—' }}</strong>
+          <small class="app-muted mrk__cell-sub">
+            <code class="mrk__code">{{ mark.registrationId }}</code>
+          </small>
+          @if (mark.courseName) {
+            <small class="app-muted mrk__cell-sub">{{ mark.courseName }}</small>
+          }
+        </td>
+        <td>{{ mark.examDate ? (mark.examDate | date: 'd MMM y') : '—' }}</td>
+        <td>
+          <div class="mrk__subject-list">
+            @for (subject of mark.subjects; track $index) {
+              <span class="mrk__subject-chip">
+                {{ subject.subject }}
+                <strong>{{ subject.obtainedMarks }}/{{ subject.fullMarks }}</strong>
+              </span>
+            } @empty {
+              <span class="app-muted">—</span>
+            }
+          </div>
+        </td>
+        <td class="mrk__num">{{ mark.totalObtainedMarks }} / {{ mark.totalFullMarks }}</td>
+        <td>
+          <p-tag [severity]="scoreSeverity(mark.percentScored)" [value]="mark.percentScored + '%'" />
+        </td>
+        <td>
+          <div class="mrk__actions">
+            <p-button
+              icon="pi pi-pencil"
+              severity="secondary"
+              [text]="true"
+              pTooltip="Edit"
+              tooltipPosition="top"
+              (onClick)="edit(mark)" />
+
+            <p-button
+              icon="pi pi-trash"
+              severity="danger"
+              [text]="true"
+              pTooltip="Delete"
+              tooltipPosition="top"
+              (onClick)="remove(mark)" />
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr><td colspan="6" class="app-muted mrk__empty">No marks recorded yet.</td></tr>
+    </ng-template>
+  </p-table>
+</section>

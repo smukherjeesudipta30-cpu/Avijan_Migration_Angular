@@ -1,0 +1,189 @@
+<header class="dash__header">
+  <div>
+    <p class="app-section-title">Home</p>
+    <h1>Welcome back, {{ userName() }}</h1>
+    @if (summary(); as data) {
+      <p class="app-muted dash__generated">
+        Updated {{ data.generatedOn | date: 'd MMM y, h:mm a' }}
+      </p>
+    }
+  </div>
+
+  <p-button
+    label="Refresh"
+    icon="pi pi-refresh"
+    severity="secondary"
+    [outlined]="true"
+    [disabled]="loading()"
+    (onClick)="load()" />
+</header>
+
+@if (loading()) {
+  <div class="dash__stats">
+    @for (placeholder of [1, 2, 3, 4]; track placeholder) {
+      <div class="app-card dash__stat">
+        <p-skeleton width="60%" height="0.8rem" styleClass="mb-2" />
+        <p-skeleton width="45%" height="1.8rem" />
+      </div>
+    }
+  </div>
+  <div class="app-card dash__chart-skeleton">
+    <p-skeleton width="100%" height="280px" />
+  </div>
+} @else if (failed()) {
+  <div class="app-card dash__error">
+    <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+    <div>
+      <h3>Could not load the dashboard</h3>
+      <p class="app-muted">The API did not respond. Check that InstituteMS.Api is running, then retry.</p>
+    </div>
+    <p-button label="Retry" icon="pi pi-refresh" (onClick)="load()" />
+  </div>
+} @else {
+  <!-- Plain @if, not @else if: an alias declared on @else if is not visible
+       inside nested blocks, and the notice board below needs it. -->
+  @if (summary(); as data) {
+
+  @if (noActivityThisMonth() && data.finance.lastPaymentOn) {
+    <div class="app-card dash__notice">
+      <i class="pi pi-info-circle" aria-hidden="true"></i>
+      <span>
+        No income or cost recorded for the current month. The most recent payment on
+        record is <strong>{{ data.finance.lastPaymentOn | date: 'd MMM y' }}</strong> —
+        the figures below reflect the migrated ledger as it stands.
+      </span>
+    </div>
+  }
+
+  <!-- ------------------------------------------------------------ stat row -->
+  <section class="dash__stats">
+    @for (stat of stats(); track stat.label) {
+      <article class="app-card dash__stat" [attr.data-tone]="stat.tone">
+        <div class="dash__stat-top">
+          <span class="dash__stat-label">{{ stat.label }}</span>
+          <span class="dash__stat-icon"><i [class]="stat.icon" aria-hidden="true"></i></span>
+        </div>
+        <strong class="dash__stat-value">{{ stat.value }}</strong>
+        @if (stat.caption) {
+          <span class="dash__stat-caption app-muted">{{ stat.caption }}</span>
+        }
+      </article>
+    }
+  </section>
+
+  <!-- --------------------------------------------------------------- charts -->
+  <section class="dash__grid">
+    <article class="app-card dash__panel dash__panel--wide">
+      <header class="dash__panel-head">
+        <h2>Income vs cost</h2>
+        <span class="app-muted">Last 12 months</span>
+      </header>
+      <div class="dash__chart">
+        <p-chart type="line" [data]="trendChart()" [options]="trendOptions" height="300px" />
+      </div>
+    </article>
+
+    <article class="app-card dash__panel">
+      <header class="dash__panel-head">
+        <h2>Enrolment by course</h2>
+        <span class="app-muted">{{ data.counts.courses }} courses · {{ data.counts.teachers }} teachers</span>
+      </header>
+      <div class="dash__chart">
+        <p-chart type="doughnut" [data]="enrolmentChart()" [options]="enrolmentOptions" height="300px" />
+      </div>
+    </article>
+  </section>
+
+  <!-- --------------------------------------------------------------- tables -->
+  <section class="dash__grid">
+    <article class="app-card dash__panel dash__panel--wide">
+      <header class="dash__panel-head">
+        <h2>Recent admissions</h2>
+        <span class="app-muted">Latest {{ data.recentAdmissions.length }}</span>
+      </header>
+
+      <p-table [value]="data.recentAdmissions" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '30rem' }">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Student</th>
+            <th>Registration</th>
+            <th>Course</th>
+            <th>Joined</th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-student>
+          <tr>
+            <td>{{ student.name }}</td>
+            <td><code class="dash__code">{{ student.registrationId }}</code></td>
+            <td>{{ student.courseName ?? '—' }}</td>
+            <td>{{ student.dateOfJoining ? (student.dateOfJoining | date: 'd MMM y') : '—' }}</td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr><td colspan="4" class="app-muted">No admissions recorded yet.</td></tr>
+        </ng-template>
+      </p-table>
+    </article>
+
+    <article class="app-card dash__panel dash__panel--wide">
+      <header class="dash__panel-head">
+        <h2>Recent collections</h2>
+        <span class="app-muted">{{ data.counts.studentAccounts }} student logins · {{ data.counts.staffAccounts }} staff</span>
+      </header>
+
+      <p-table [value]="data.recentPayments" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '30rem' }">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Student</th>
+            <th>Registration</th>
+            <th>Bill</th>
+            <th class="dash__num">Amount</th>
+            <th>Paid</th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-payment>
+          <tr>
+            <td>{{ payment.studentName ?? '—' }}</td>
+            <td><code class="dash__code">{{ payment.registrationId }}</code></td>
+            <td>{{ payment.billNo ?? '—' }}</td>
+            <td class="dash__num">{{ payment.amount | currency: 'INR':'symbol-narrow':'1.0-0' }}</td>
+            <td>{{ payment.paidOn ? (payment.paidOn | date: 'd MMM y') : '—' }}</td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr><td colspan="5" class="app-muted">No payments recorded yet.</td></tr>
+        </ng-template>
+      </p-table>
+    </article>
+
+    <article class="app-card dash__panel">
+      <header class="dash__panel-head">
+        <h2>Notice board</h2>
+        @if (data.counts.pendingEnquiries > 0) {
+          <p-tag
+            severity="warn"
+            [value]="data.counts.pendingEnquiries + ' new enquiry'"
+            icon="pi pi-envelope" />
+        }
+      </header>
+
+      @if (data.recentNotices.length) {
+        <ul class="dash__notices">
+          @for (notice of data.recentNotices; track notice.id) {
+            <li>
+              <p>{{ notice.text }}</p>
+              <small class="app-muted">{{ notice.noticeDate | date: 'd MMM y' }}</small>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="app-muted">No notices published.</p>
+      }
+    </article>
+  </section>
+  }
+}

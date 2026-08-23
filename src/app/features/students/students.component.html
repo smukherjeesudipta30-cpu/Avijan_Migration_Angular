@@ -1,0 +1,610 @@
+<p-confirmDialog />
+
+<header class="stu__header">
+  <div>
+    <p class="app-section-title">Master</p>
+    <h1>Student registration</h1>
+  </div>
+
+  <div class="stu__next app-card">
+    <span class="app-muted">Next registration id</span>
+    <strong>{{ nextRegistrationId() }}</strong>
+    <span class="app-muted">Bill {{ nextBillNo() }}</span>
+  </div>
+</header>
+
+<!-- ------------------------------------------------------------- search -->
+<section class="app-card stu__search">
+  <div class="stu__search-field">
+    <label for="searchReg">Registration id</label>
+    <input
+      pInputText
+      id="searchReg"
+      [ngModel]="searchRegistrationId()"
+      (ngModelChange)="searchRegistrationId.set($event)"
+      (keyup.enter)="search()"
+      [ngModelOptions]="{ standalone: true }"
+      placeholder="e.g. AVI/3451/26" />
+  </div>
+
+  <span class="stu__or app-muted">or</span>
+
+  <div class="stu__search-field">
+    <label for="searchName">Student name</label>
+    <input
+      pInputText
+      id="searchName"
+      [ngModel]="searchName()"
+      (ngModelChange)="searchName.set($event)"
+      (keyup.enter)="search()"
+      [ngModelOptions]="{ standalone: true }"
+      placeholder="Enter name to search" />
+  </div>
+
+  <div class="stu__search-actions">
+    <p-button label="Search" icon="pi pi-search" (onClick)="search()" />
+    <p-button label="Clear" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="clearSearch()" />
+  </div>
+</section>
+
+<!-- --------------------------------------------------------- entry form -->
+<section class="app-card stu__form" id="student-form">
+  <header class="stu__form-head">
+    <div>
+      <h2>{{ isEditing() ? 'Edit student' : 'Student entry form' }}</h2>
+      @if (isEditing()) {
+        <p class="app-muted">
+          {{ editingRegistrationId() }} · Bill {{ editingBillNo() }}
+          <span class="stu__locked">(registration id and bill number cannot be changed)</span>
+        </p>
+      } @else {
+        <p class="app-muted">A registration id and bill number are issued automatically on save.</p>
+      }
+    </div>
+
+    <div class="stu__form-head-actions">
+      <p-button
+        label="Re-registration"
+        icon="pi pi-history"
+        severity="success"
+        pTooltip="Copy a past student's details into a new registration"
+        tooltipPosition="left"
+        (onClick)="openPicker()" />
+    </div>
+  </header>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="stu__grid">
+
+      <!-- ---------------------------------------------- student details -->
+      <fieldset class="stu__fieldset">
+        <legend>Student details</legend>
+
+        <div class="stu__field">
+          <label for="name">Student name <span class="stu__req">*</span></label>
+          <input pInputText id="name" formControlName="name" placeholder="Full name" />
+          @if (form.controls.name.touched && form.controls.name.invalid) {
+            <small class="stu__error">Student name is required.</small>
+          }
+        </div>
+
+        <div class="stu__field">
+          <label for="guardianName">Guardian name <span class="stu__req">*</span></label>
+          <input pInputText id="guardianName" formControlName="guardianName" />
+          @if (form.controls.guardianName.touched && form.controls.guardianName.invalid) {
+            <small class="stu__error">Guardian name is required.</small>
+          }
+        </div>
+
+        <div class="stu__field">
+          <label for="phone">Phone number <span class="stu__req">*</span></label>
+          <input pInputText id="phone" formControlName="phone" maxlength="10" inputmode="numeric" placeholder="10 digits" />
+          @if (form.controls.phone.touched && form.controls.phone.invalid) {
+            <small class="stu__error">Enter a valid 10-digit phone number.</small>
+          }
+        </div>
+
+        <div class="stu__field">
+          <label for="address">Address <span class="stu__req">*</span></label>
+          <textarea pTextarea id="address" rows="2" formControlName="address"></textarea>
+          @if (form.controls.address.touched && form.controls.address.invalid) {
+            <small class="stu__error">Address is required.</small>
+          }
+        </div>
+
+        <div class="stu__field">
+          <label for="email">Email <span class="stu__req">*</span></label>
+          <input pInputText id="email" type="email" formControlName="email" />
+          @if (form.controls.email.touched && form.controls.email.invalid) {
+            <small class="stu__error">Enter a valid email address.</small>
+          }
+        </div>
+
+        <div class="stu__field">
+          <label for="dateOfBirth">Date of birth <span class="stu__req">*</span></label>
+          <p-datePicker
+            inputId="dateOfBirth"
+            formControlName="dateOfBirth"
+            dateFormat="dd/mm/yy"
+            [showIcon]="true"
+            [maxDate]="today"
+            appendTo="body"
+            styleClass="stu__datepicker" />
+          @if (form.controls.dateOfBirth.touched && form.controls.dateOfBirth.invalid) {
+            <small class="stu__error">Date of birth is required.</small>
+          }
+        </div>
+      </fieldset>
+
+      <!-- ------------------------------------------------------ teachers -->
+      <fieldset class="stu__fieldset">
+        <legend>Teachers</legend>
+
+        <div class="stu__field">
+          <label for="teacherCount">Number of teachers <span class="stu__req">*</span></label>
+          <p-selectButton
+            inputId="teacherCount"
+            formControlName="teacherCount"
+            [options]="teacherCountOptions"
+            optionLabel="label"
+            optionValue="value"
+            [allowEmpty]="false" />
+        </div>
+
+        <div class="stu__field">
+          <label for="primaryTeacherId">Teacher <span class="stu__req">*</span></label>
+          <p-select
+            inputId="primaryTeacherId"
+            formControlName="primaryTeacherId"
+            [options]="teachers()"
+            optionLabel="name"
+            optionValue="teacherId"
+            placeholder="Select teacher"
+            [filter]="true"
+            filterBy="name"
+            appendTo="body"
+            styleClass="stu__select" />
+          @if (form.controls.primaryTeacherId.touched && form.controls.primaryTeacherId.invalid) {
+            <small class="stu__error">Please select the first teacher.</small>
+          }
+        </div>
+
+        @if (teacherCount() >= 2) {
+          <div class="stu__field">
+            <label for="secondTeacherId">2nd teacher <span class="stu__req">*</span></label>
+            <p-select
+              inputId="secondTeacherId"
+              formControlName="secondTeacherId"
+              [options]="teachers()"
+              optionLabel="name"
+              optionValue="teacherId"
+              placeholder="Select teacher"
+              [filter]="true"
+              filterBy="name"
+              appendTo="body"
+              styleClass="stu__select" />
+            @if (form.controls.secondTeacherId.touched && form.controls.secondTeacherId.invalid) {
+              <small class="stu__error">Please select the second teacher.</small>
+            }
+          </div>
+        }
+
+        @if (teacherCount() >= 3) {
+          <div class="stu__field">
+            <label for="thirdTeacherId">3rd teacher <span class="stu__req">*</span></label>
+            <p-select
+              inputId="thirdTeacherId"
+              formControlName="thirdTeacherId"
+              [options]="teachers()"
+              optionLabel="name"
+              optionValue="teacherId"
+              placeholder="Select teacher"
+              [filter]="true"
+              filterBy="name"
+              appendTo="body"
+              styleClass="stu__select" />
+            @if (form.controls.thirdTeacherId.touched && form.controls.thirdTeacherId.invalid) {
+              <small class="stu__error">Please select the third teacher.</small>
+            }
+          </div>
+        }
+      </fieldset>
+
+      <!-- ------------------------------------------------ course & fees -->
+      <fieldset class="stu__fieldset">
+        <legend>Course &amp; fees</legend>
+
+        <div class="stu__field">
+          <label for="courseId">Course <span class="stu__req">*</span></label>
+          <p-select
+            inputId="courseId"
+            formControlName="courseId"
+            [options]="courses()"
+            optionLabel="name"
+            optionValue="courseId"
+            placeholder="--Select Course--"
+            [filter]="true"
+            filterBy="name"
+            appendTo="body"
+            styleClass="stu__select" />
+          @if (form.controls.courseId.touched && form.controls.courseId.invalid) {
+            <small class="stu__error">Please select a course.</small>
+          }
+        </div>
+
+        <div class="stu__field">
+          <label for="duration">Duration (months)</label>
+          <input pInputText id="duration" formControlName="duration" readonly placeholder="Set by the course" />
+        </div>
+
+        <div class="stu__field">
+          <label for="admissionFees">Admission fees <span class="stu__req">*</span></label>
+          <p-inputNumber
+            inputId="admissionFees"
+            formControlName="admissionFees"
+            mode="currency"
+            currency="INR"
+            locale="en-IN"
+            [min]="0"
+            [maxFractionDigits]="2" />
+          @if (form.controls.admissionFees.touched && form.controls.admissionFees.invalid) {
+            <small class="stu__error">Admission fees must be a valid number.</small>
+          }
+        </div>
+
+        <div class="stu__field">
+          <label for="monthlyFees">Monthly fees <span class="stu__req">*</span></label>
+          <p-inputNumber
+            inputId="monthlyFees"
+            formControlName="monthlyFees"
+            mode="currency"
+            currency="INR"
+            locale="en-IN"
+            [min]="0"
+            [maxFractionDigits]="2" />
+          @if (form.controls.monthlyFees.touched && form.controls.monthlyFees.invalid) {
+            <small class="stu__error">Monthly fees must be a valid number.</small>
+          }
+        </div>
+
+        <div class="stu__field">
+          <label for="dateOfJoining">Date of joining <span class="stu__req">*</span></label>
+          <p-datePicker
+            inputId="dateOfJoining"
+            formControlName="dateOfJoining"
+            dateFormat="dd/mm/yy"
+            [showIcon]="true"
+            appendTo="body"
+            styleClass="stu__datepicker" />
+          @if (form.controls.dateOfJoining.touched && form.controls.dateOfJoining.invalid) {
+            <small class="stu__error">Date of joining is required.</small>
+          }
+        </div>
+
+        <div class="stu__field">
+          <label for="branchId">Branch</label>
+          <p-select
+            inputId="branchId"
+            formControlName="branchId"
+            [options]="branches()"
+            optionLabel="name"
+            optionValue="branchId"
+            placeholder="--Select Branch--"
+            [showClear]="true"
+            appendTo="body"
+            styleClass="stu__select" />
+          <small class="stu__help">
+            The branch code becomes part of the registration id — Rajpur gives
+            <code>AVI/Raj/…</code>. Leave blank for the older <code>AVI/…</code> format.
+          </small>
+        </div>
+
+        <div class="stu__checks">
+          <label class="stu__check">
+            <p-checkbox formControlName="isActive" [binary]="true" inputId="isActive" />
+            <span>Is Active</span>
+          </label>
+
+          <label class="stu__check">
+            <p-checkbox formControlName="isComplete" [binary]="true" inputId="isComplete" />
+            <span>Is Complete</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <!-- --------------------------------------------------------- photo -->
+      <fieldset class="stu__fieldset">
+        <legend>Photo</legend>
+
+        @if (isEditing()) {
+          <div class="stu__photo">
+            @if (editingPhotoUrl(); as url) {
+              <img class="stu__photo-preview" [src]="url" alt="Student photo" />
+            } @else {
+              <div class="stu__photo-preview stu__photo-preview--empty">
+                <i class="pi pi-user" aria-hidden="true"></i>
+                <span>No photo</span>
+              </div>
+            }
+
+            <div class="stu__photo-actions">
+              <label class="stu__photo-pick" [class.stu__photo-pick--busy]="photoUploading()">
+                <i class="pi" [class.pi-upload]="!photoUploading()" [class.pi-spinner]="photoUploading()"></i>
+                <span>{{ photoUploading() ? 'Uploading…' : 'Choose image' }}</span>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/gif"
+                  [disabled]="photoUploading()"
+                  (change)="onPhotoSelected($event)" />
+              </label>
+
+              @if (editingPhotoUrl()) {
+                <p-button
+                  type="button"
+                  label="Remove"
+                  icon="pi pi-trash"
+                  severity="danger"
+                  [text]="true"
+                  size="small"
+                  (onClick)="removePhoto()" />
+              }
+            </div>
+
+            <small class="stu__help">PNG, JPEG or GIF · 512 KB maximum.</small>
+
+            @if (photoError(); as error) {
+              <small class="stu__error">{{ error }}</small>
+            }
+          </div>
+        } @else {
+          <p class="stu__photo-hint app-muted">
+            <i class="pi pi-info-circle" aria-hidden="true"></i>
+            The photo is filed against the registration id, so save the student first —
+            then reopen the record to attach one.
+          </p>
+        }
+      </fieldset>
+    </div>
+
+    <footer class="stu__form-actions">
+      <p-button
+        type="submit"
+        [label]="isEditing() ? 'Update student' : 'Submit'"
+        [icon]="isEditing() ? 'pi pi-save' : 'pi pi-plus'"
+        [loading]="saving()"
+        [disabled]="saving()" />
+
+      <p-button
+        type="button"
+        label="Reset"
+        icon="pi pi-refresh"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="resetForm()" />
+    </footer>
+  </form>
+</section>
+
+<!-- --------------------------------------------------------------- list -->
+<section class="app-card stu__list">
+  <header class="stu__list-head">
+    <h2>Students</h2>
+
+    <div class="stu__list-head-right">
+      <p-selectButton
+        [options]="statusOptions"
+        optionLabel="label"
+        optionValue="value"
+        [allowEmpty]="false"
+        [ngModel]="statusFilter()"
+        (ngModelChange)="page.set(1); statusFilter.set($event)"
+        [ngModelOptions]="{ standalone: true }" />
+      <span class="app-muted">{{ totalCount() }} record(s)</span>
+    </div>
+  </header>
+
+  <p-table
+    [value]="rows()"
+    [lazy]="true"
+    [paginator]="true"
+    [rows]="pageSize()"
+    [totalRecords]="totalCount()"
+    [loading]="loading()"
+    [rowsPerPageOptions]="[10, 25, 50]"
+    (onLazyLoad)="onLazyLoad($event)"
+    styleClass="p-datatable-sm"
+    [tableStyle]="{ 'min-width': '68rem' }"
+    currentPageReportTemplate="{first}–{last} of {totalRecords}"
+    [showCurrentPageReport]="true">
+
+    <ng-template pTemplate="header">
+      <tr>
+        <th style="width: 3.5rem"></th>
+        <th>Student</th>
+        <th>Registration</th>
+        <th>Course</th>
+        <th>Teachers</th>
+        <th class="stu__num">Adm. fees</th>
+        <th class="stu__num">Monthly</th>
+        <th>Joined</th>
+        <th>Status</th>
+        <th style="width: 11rem">Actions</th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-student>
+      <tr>
+        <td>
+          @if (photoUrl(student); as url) {
+            <img class="stu__avatar" [src]="url" [alt]="student.name" loading="lazy" />
+          } @else {
+            <span class="stu__avatar stu__avatar--empty"><i class="pi pi-user"></i></span>
+          }
+        </td>
+
+        <td>
+          <strong>{{ student.name }}</strong>
+          @if (student.guardianName) {
+            <small class="app-muted stu__cell-sub">C/O {{ student.guardianName }}</small>
+          }
+          @if (student.phone) {
+            <small class="app-muted stu__cell-sub">{{ student.phone }}</small>
+          }
+        </td>
+
+        <td>
+          <code class="stu__code">{{ student.registrationId }}</code>
+          @if (student.billNo) {
+            <small class="app-muted stu__cell-sub">{{ student.billNo }}</small>
+          }
+        </td>
+
+        <td>
+          {{ student.courseName ?? '—' }}
+          @if (student.courseDuration) {
+            <small class="app-muted stu__cell-sub">{{ student.courseDuration }} months</small>
+          }
+        </td>
+
+        <td>
+          <span>{{ student.primaryTeacherName ?? '—' }}</span>
+          @if (student.secondTeacherName) {
+            <small class="app-muted stu__cell-sub">{{ student.secondTeacherName }}</small>
+          }
+          @if (student.thirdTeacherName) {
+            <small class="app-muted stu__cell-sub">{{ student.thirdTeacherName }}</small>
+          }
+        </td>
+
+        <td class="stu__num">{{ student.admissionFees | currency: 'INR':'symbol-narrow':'1.0-0' }}</td>
+        <td class="stu__num">{{ student.monthlyFees | currency: 'INR':'symbol-narrow':'1.0-0' }}</td>
+        <td>{{ student.dateOfJoining ? (student.dateOfJoining | date: 'd MMM y') : '—' }}</td>
+
+        <td>
+          @if (student.isActive) {
+            <p-tag severity="success" value="Active" />
+          } @else {
+            <p-tag severity="secondary" value="Inactive" />
+          }
+          @if (student.isComplete) {
+            <p-tag severity="info" value="Complete" styleClass="stu__tag-second" />
+          }
+        </td>
+
+        <td>
+          <div class="stu__actions">
+            <p-button
+              icon="pi pi-pencil"
+              severity="secondary"
+              [text]="true"
+              pTooltip="Edit"
+              tooltipPosition="top"
+              (onClick)="edit(student)" />
+
+            <p-button
+              icon="pi pi-print"
+              severity="secondary"
+              [text]="true"
+              pTooltip="Print admission receipt"
+              tooltipPosition="top"
+              (onClick)="printReceipt(student)" />
+
+            @if (student.isActive) {
+              <p-button
+                icon="pi pi-ban"
+                severity="danger"
+                [text]="true"
+                pTooltip="Deactivate"
+                tooltipPosition="top"
+                (onClick)="deactivate(student)" />
+            } @else {
+              <p-button
+                icon="pi pi-check-circle"
+                severity="success"
+                [text]="true"
+                pTooltip="Reactivate"
+                tooltipPosition="top"
+                (onClick)="activate(student)" />
+            }
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td colspan="10" class="app-muted stu__empty">No students match the current filters.</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</section>
+
+<!-- -------------------------------------------- re-registration picker -->
+<p-dialog
+  header="Re-registration — find a past student"
+  [visible]="pickerVisible()"
+  (visibleChange)="pickerVisible.set($event)"
+  [modal]="true"
+  [style]="{ width: '52rem' }"
+  [draggable]="false">
+
+  <p class="app-muted stu__picker-lead">
+    Search across active and inactive students. Selecting one copies their details
+    into a blank form — the original record is left untouched and a new registration
+    id is issued when you save.
+  </p>
+
+  <div class="stu__picker-search">
+    <input
+      pInputText
+      [ngModel]="pickerTerm()"
+      (ngModelChange)="pickerTerm.set($event)"
+      (keyup.enter)="searchPicker()"
+      [ngModelOptions]="{ standalone: true }"
+      placeholder="Student name" />
+    <p-button label="Search" icon="pi pi-search" [loading]="pickerLoading()" (onClick)="searchPicker()" />
+  </div>
+
+  <p-table [value]="pickerRows()" styleClass="p-datatable-sm" [scrollable]="true" scrollHeight="320px">
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Student</th>
+        <th>Registration</th>
+        <th>Course</th>
+        <th>Status</th>
+        <th style="width: 7rem"></th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-student>
+      <tr>
+        <td>
+          <strong>{{ student.name }}</strong>
+          @if (student.phone) {
+            <small class="app-muted stu__cell-sub">{{ student.phone }}</small>
+          }
+        </td>
+        <td><code class="stu__code">{{ student.registrationId }}</code></td>
+        <td>{{ student.courseName ?? '—' }}</td>
+        <td>
+          @if (student.isActive) {
+            <p-tag severity="success" value="Active" />
+          } @else {
+            <p-tag severity="secondary" value="Inactive" />
+          }
+        </td>
+        <td>
+          <p-button label="Use" icon="pi pi-copy" size="small" (onClick)="pickForReRegistration(student)" />
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td colspan="5" class="app-muted stu__empty">
+          {{ pickerTerm() ? 'No student matches that name.' : 'Type a name and press Search.' }}
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</p-dialog>

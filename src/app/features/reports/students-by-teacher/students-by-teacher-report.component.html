@@ -1,0 +1,180 @@
+<header class="rpt__header">
+  <p class="app-section-title">Reports</p>
+  <h1>Students by teacher</h1>
+  <p class="app-muted">
+    Every student assigned to a teacher, in any of the three teacher slots on
+    their registration.
+  </p>
+</header>
+
+<section class="app-card rpt__filter">
+  <div class="rpt__field">
+    <label for="teacher">Teacher</label>
+    <p-select
+      inputId="teacher"
+      [options]="teachers()"
+      optionLabel="name"
+      optionValue="teacherId"
+      [ngModel]="teacherId()"
+      (ngModelChange)="teacherId.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      [filter]="true"
+      filterBy="name"
+      placeholder="Select a teacher"
+      appendTo="body"
+      styleClass="rpt__select" />
+  </div>
+
+  <div class="rpt__field">
+    <label for="search">Search</label>
+    <input
+      pInputText
+      id="search"
+      [ngModel]="search()"
+      (ngModelChange)="search.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      (keyup.enter)="run()"
+      placeholder="Name, registration id or phone" />
+  </div>
+
+  <div class="rpt__field--check">
+    <p-toggleswitch
+      inputId="activeOnly"
+      [ngModel]="activeOnly()"
+      (ngModelChange)="activeOnly.set($event)"
+      [ngModelOptions]="{ standalone: true }" />
+    <label for="activeOnly">Active students only</label>
+  </div>
+
+  <div class="rpt__filter-actions">
+    <p-button label="Run" icon="pi pi-search" [loading]="loading()" (onClick)="run()" />
+    <p-button
+      label="CSV"
+      icon="pi pi-download"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="!report() || report()!.studentCount === 0"
+      (onClick)="exportCsv()" />
+  </div>
+</section>
+
+@if (report(); as r) {
+  <div class="rpt__tiles">
+    <div class="app-card rpt__tile">
+      <span>Students</span>
+      <strong>{{ r.studentCount }}</strong>
+      <small class="app-muted">{{ r.teacherName }}</small>
+    </div>
+  </div>
+
+  <section class="app-card rpt__result">
+    <header class="rpt__result-head">
+      <h2>Assigned students</h2>
+      <div class="rpt__result-head-right">
+        <span class="app-muted">{{ activeOnly() ? 'Active only' : 'Active and past students' }}</span>
+      </div>
+    </header>
+
+    <p-table
+      [value]="r.rows.items"
+      [lazy]="true"
+      [paginator]="true"
+      [rows]="pageSize()"
+      [totalRecords]="r.rows.totalCount"
+      [loading]="loading()"
+      [rowsPerPageOptions]="[25, 50, 100]"
+      (onLazyLoad)="onLazyLoad($event)"
+      styleClass="p-datatable-sm"
+      [tableStyle]="{ 'min-width': '68rem' }"
+      currentPageReportTemplate="{first}–{last} of {totalRecords}"
+      [showCurrentPageReport]="true">
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Student</th>
+          <th style="width: 9rem">Phone</th>
+          <th>Course</th>
+          <th style="width: 9rem">Joined</th>
+          <th class="rpt__num" style="width: 8rem">Monthly fee</th>
+          <th>Teaching team</th>
+          <th style="width: 7rem">Status</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td>
+            <strong>{{ row.studentName || '—' }}</strong>
+            <small class="app-muted rpt__cell-sub">
+              <code class="rpt__code">{{ row.registrationId }}</code>
+            </small>
+            @if (row.guardianName) {
+              <small class="app-muted rpt__cell-sub">G/o {{ row.guardianName }}</small>
+            }
+          </td>
+          <td>{{ row.phone || '—' }}</td>
+          <td>
+            {{ row.courseName || '—' }}
+            @if (row.courseDuration) {
+              <small class="app-muted rpt__cell-sub">{{ row.courseDuration }} months</small>
+            }
+          </td>
+          <td>{{ row.dateOfJoining ? (row.dateOfJoining | date: 'd MMM y') : '—' }}</td>
+          <td class="rpt__num">{{ row.monthlyFees | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</td>
+          <td>
+            <div class="sbt__team">
+              @if (row.teacher1Name) {
+                <span class="sbt__teacher" [class.sbt__teacher--match]="row.matchedSlot === 1">
+                  {{ row.teacher1Name }}
+                </span>
+              }
+              @if (row.teacher2Name) {
+                <span class="sbt__teacher" [class.sbt__teacher--match]="row.matchedSlot === 2">
+                  {{ row.teacher2Name }}
+                </span>
+              }
+              @if (row.teacher3Name) {
+                <span class="sbt__teacher" [class.sbt__teacher--match]="row.matchedSlot === 3">
+                  {{ row.teacher3Name }}
+                </span>
+              }
+              @if (!row.teacher1Name && !row.teacher2Name && !row.teacher3Name) {
+                <span class="app-muted">—</span>
+              }
+            </div>
+          </td>
+          <td>
+            @if (row.isComplete) {
+              <p-tag severity="info" value="Complete" />
+            } @else if (row.isActive) {
+              <p-tag severity="success" value="Active" />
+            } @else {
+              <p-tag severity="secondary" value="Inactive" />
+            }
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="7" class="app-muted rpt__empty">
+            No students assigned to this teacher.
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+
+    <p class="rpt__note">
+      The teacher you filtered on is highlighted in the teaching team. The legacy
+      version fetched every row into the browser to page it there, and its Excel
+      export used raw column names as headers — <code>Stuname</code>,
+      <code>TecName1</code> and the teacher ids those columns hold rather than names.
+    </p>
+
+    <p class="app-muted rpt__generated">Generated {{ r.generatedOn | date: 'd MMM y, h:mm a' }}</p>
+  </section>
+} @else {
+  <section class="app-card rpt__result">
+    <p class="app-muted rpt__empty">Choose a teacher, then press Run.</p>
+  </section>
+}

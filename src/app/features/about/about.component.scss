@@ -1,0 +1,346 @@
+:host {
+  display: block;
+}
+
+.about {
+  --about-max: 1120px;
+  background: var(--app-page-bg);
+  min-height: 100vh;
+}
+
+/* ------------------------------------------------------------------ topbar */
+.about__topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  height: var(--app-topbar-height);
+  padding: 0 1.5rem;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--app-border);
+}
+
+.about__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--app-text);
+  text-decoration: none;
+}
+
+.about__logo {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--app-brand), var(--app-accent));
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+.about__nav {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+
+  a {
+    font-size: 0.88rem;
+    color: var(--app-text-muted);
+    text-decoration: none;
+
+    &:hover { color: var(--app-brand); }
+  }
+}
+
+/* -------------------------------------------------------------------- hero */
+.about__hero {
+  padding: 4rem 1.5rem 5.5rem;
+  color: #fff;
+  background:
+    radial-gradient(circle at 82% 15%, rgba(255, 255, 255, 0.14), transparent 42%),
+    linear-gradient(135deg, #4c1d95 0%, #6d28d9 48%, #0ea5e9 130%);
+}
+
+.about__hero-inner {
+  max-width: var(--about-max);
+  margin: 0 auto;
+}
+
+.about__eyebrow {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.78;
+}
+
+.about__hero h1 {
+  font-size: clamp(2.1rem, 5vw, 3.1rem);
+  letter-spacing: -0.025em;
+}
+
+.about__tagline {
+  margin: 0.7rem 0 0;
+  max-width: 46rem;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  opacity: 0.9;
+}
+
+/* ------------------------------------------------------------------- stats */
+.about__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1rem;
+  max-width: var(--about-max);
+  margin: -3.25rem auto 0;
+  padding: 0 1.5rem;
+}
+
+.about__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 1.15rem 1.2rem;
+
+  strong {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  span { font-size: 0.82rem; }
+}
+
+.about__stat-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin-bottom: 0.35rem;
+  border-radius: 10px;
+  background: var(--app-brand-soft);
+  color: var(--app-brand);
+  font-size: 0.9rem;
+}
+
+/* ------------------------------------------------------------------- intro */
+.about__intro {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 2.5rem;
+  max-width: var(--about-max);
+  margin: 0 auto;
+  padding: 3.25rem 1.5rem 1rem;
+}
+
+.about__intro-text p:last-child {
+  margin: 0.6rem 0 0;
+  font-size: 0.98rem;
+  line-height: 1.75;
+  color: #384152;
+}
+
+.about__highlights {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.85rem;
+  align-content: start;
+
+  li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
+
+  i {
+    margin-top: 0.15rem;
+    color: var(--app-brand);
+  }
+}
+
+/* ---------------------------------------------------------------- sections */
+.about__section {
+  max-width: var(--about-max);
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+
+  h2 {
+    margin: 0.3rem 0 1.5rem;
+    font-size: 1.5rem;
+  }
+}
+
+.about__courses {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.about__course {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.8rem;
+  padding: 1.2rem;
+
+  h3 {
+    font-size: 1.02rem;
+  }
+}
+
+/* ----------------------------------------------------------------- contact */
+.about__contact {
+  display: grid;
+  grid-template-columns: 1fr 1.05fr;
+  gap: 2.5rem;
+  align-items: start;
+}
+
+.about__contact-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 1.2rem;
+
+  li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+  }
+
+  i {
+    display: grid;
+    place-items: center;
+    flex: 0 0 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    color: var(--app-brand);
+    font-size: 0.9rem;
+  }
+
+  div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    font-size: 0.92rem;
+    padding-top: 0.35rem;
+  }
+
+  a {
+    text-decoration: none;
+    &:hover { text-decoration: underline; }
+  }
+}
+
+.about__form {
+  padding: 1.6rem;
+
+  h3 { font-size: 1.1rem; }
+}
+
+.about__form-lead {
+  margin: 0.25rem 0 1.35rem;
+  font-size: 0.85rem;
+}
+
+.about__sent {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1.2rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 10px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  font-size: 0.86rem;
+}
+
+.about__field {
+  margin-bottom: 1.05rem;
+
+  label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  input,
+  textarea {
+    width: 100%;
+    font-family: inherit;
+  }
+}
+
+.about__error {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.76rem;
+  color: var(--app-negative);
+}
+
+:host ::ng-deep .about__submit {
+  width: 100%;
+
+  .p-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+.about__error-card {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  padding: 1.5rem;
+
+  > i { font-size: 1.6rem; color: #d97706; }
+  h3 { font-size: 1rem; margin-bottom: 0.25rem; }
+  p  { margin: 0; font-size: 0.86rem; }
+}
+
+/* ------------------------------------------------------------------ footer */
+.about__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: var(--about-max);
+  margin: 0 auto;
+  padding: 1.75rem 1.5rem 2.5rem;
+  border-top: 1px solid var(--app-border);
+  font-size: 0.82rem;
+  color: var(--app-text-muted);
+
+  a {
+    text-decoration: none;
+    &:hover { text-decoration: underline; }
+  }
+}
+
+@media (max-width: 900px) {
+  .about__intro,
+  .about__contact {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .about__nav a { display: none; }
+}

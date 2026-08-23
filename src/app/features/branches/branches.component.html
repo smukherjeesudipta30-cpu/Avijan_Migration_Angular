@@ -1,0 +1,158 @@
+<p-confirmDialog />
+
+<header class="brn__header">
+  <div>
+    <p class="app-section-title">Master</p>
+    <h1>Branch details</h1>
+  </div>
+</header>
+
+<p-message
+  severity="info"
+  styleClass="brn__notice"
+  text="The branch code becomes part of every registration id issued for that branch — Rajpur gives AVI/Raj/3463/26. Once ids have been issued the code is locked, because changing it would leave those students carrying a code that no longer exists." />
+
+<!-- ------------------------------------------------------------- entry form -->
+<section class="app-card brn__form" id="branch-form">
+  <header class="brn__form-head">
+    <h2>{{ isEditing() ? 'Edit branch' : 'New branch' }}</h2>
+  </header>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="brn__grid">
+      <div class="brn__field">
+        <label for="name">Branch name <span class="brn__req">*</span></label>
+        <input pInputText id="name" formControlName="name" placeholder="e.g. Rajpur" />
+        @if (form.controls.name.touched && form.controls.name.invalid) {
+          <small class="brn__error">Branch name is required.</small>
+        }
+      </div>
+
+      <div class="brn__field">
+        <label for="code">
+          Branch code <span class="brn__req">*</span>
+          @if (codeLocked()) {
+            <i class="pi pi-lock brn__lock"
+               pTooltip="Locked — registration ids have already been issued with this code"
+               tooltipPosition="top"></i>
+          }
+        </label>
+        <input pInputText id="code" formControlName="code" maxlength="10" placeholder="e.g. Raj" />
+
+        @if (form.controls.code.touched && form.controls.code.hasError('required')) {
+          <small class="brn__error">Branch code is required.</small>
+        } @else if (form.controls.code.touched && form.controls.code.hasError('pattern')) {
+          <small class="brn__error">Letters and digits only — no spaces or slashes.</small>
+        } @else if (codeLocked()) {
+          <small class="brn__help">
+            Cannot be changed. You can still rename the branch; existing students move with it.
+          </small>
+        } @else {
+          <small class="brn__help">
+            New registrations will read <code>{{ samplePreview() }}</code>
+          </small>
+        }
+      </div>
+
+      <div class="brn__field brn__field--check">
+        <label class="brn__check">
+          <p-checkbox formControlName="isActive" [binary]="true" inputId="isActive" />
+          <span>Active — offer this branch on the student form</span>
+        </label>
+      </div>
+    </div>
+
+    <footer class="brn__form-actions">
+      <p-button
+        type="submit"
+        [label]="isEditing() ? 'Update branch' : 'Add branch'"
+        [icon]="isEditing() ? 'pi pi-save' : 'pi pi-plus'"
+        [loading]="saving()"
+        [disabled]="saving()" />
+
+      <p-button
+        type="button"
+        label="Reset"
+        icon="pi pi-refresh"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="resetForm()" />
+    </footer>
+  </form>
+</section>
+
+<!-- ------------------------------------------------------------------ list -->
+<section class="app-card brn__list">
+  <header class="brn__list-head">
+    <h2>Branches</h2>
+    <span class="app-muted">{{ rows().length }} branch(es)</span>
+  </header>
+
+  <p-table
+    [value]="rows()"
+    [loading]="loading()"
+    styleClass="p-datatable-sm"
+    [tableStyle]="{ 'min-width': '46rem' }">
+
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Branch</th>
+        <th>Code</th>
+        <th>Registration id format</th>
+        <th class="brn__num">Students</th>
+        <th class="brn__num">Ids issued</th>
+        <th>Status</th>
+        <th style="width: 9rem">Actions</th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-branch>
+      <tr>
+        <td><strong>{{ branch.name }}</strong></td>
+        <td><code class="brn__code">{{ branch.code || '—' }}</code></td>
+        <td>
+          <code class="brn__code brn__code--sample">AVI/{{ branch.code }}/&lt;n&gt;/&lt;yy&gt;</code>
+        </td>
+        <td class="brn__num">{{ branch.studentCount }}</td>
+        <td class="brn__num">
+          {{ branch.issuedRegistrations }}
+          @if (branch.issuedRegistrations > 0) {
+            <i class="pi pi-lock brn__lock"
+               pTooltip="Code locked because ids have been issued"
+               tooltipPosition="top"></i>
+          }
+        </td>
+        <td>
+          @if (branch.isActive) {
+            <p-tag severity="success" value="Active" />
+          } @else {
+            <p-tag severity="secondary" value="Inactive" />
+          }
+        </td>
+        <td>
+          <div class="brn__actions">
+            <p-button
+              icon="pi pi-pencil"
+              severity="secondary"
+              [text]="true"
+              pTooltip="Edit"
+              tooltipPosition="top"
+              (onClick)="edit(branch)" />
+
+            <p-button
+              [icon]="branch.isActive ? 'pi pi-ban' : 'pi pi-check-circle'"
+              [severity]="branch.isActive ? 'danger' : 'success'"
+              [text]="true"
+              [pTooltip]="branch.isActive ? 'Deactivate' : 'Activate'"
+              tooltipPosition="top"
+              (onClick)="toggleStatus(branch)" />
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr><td colspan="7" class="app-muted brn__empty">No branches yet. Add one above.</td></tr>
+    </ng-template>
+  </p-table>
+</section>

@@ -1,0 +1,257 @@
+<header class="fee__header">
+  <div>
+    <p class="app-section-title">Master</p>
+    <h1>Monthly course fees</h1>
+  </div>
+</header>
+
+<!-- --------------------------------------------------------- student lookup -->
+<section class="app-card fee__lookup">
+  <div class="fee__lookup-field">
+    <label for="regId">Enter student's RegId</label>
+    <input
+      pInputText
+      id="regId"
+      [ngModel]="registrationId()"
+      (ngModelChange)="registrationId.set($event)"
+      (keyup.enter)="loadStudent()"
+      [ngModelOptions]="{ standalone: true }"
+      placeholder="e.g. AVI/2440/25" />
+  </div>
+
+  <div class="fee__lookup-actions">
+    <p-button label="Go" icon="pi pi-arrow-right" [loading]="loadingBill()" (onClick)="loadStudent()" />
+    @if (hasStudent()) {
+      <p-button label="Clear" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="clearStudent()" />
+    }
+  </div>
+</section>
+
+@if (notFound(); as message) {
+  <p-message severity="warn" [text]="message" styleClass="fee__notice" />
+}
+
+@if (bill(); as student) {
+  <div class="fee__grid">
+
+    <!-- ---------------------------------------------- admission details -->
+    <section class="app-card fee__panel">
+      <header class="fee__panel-head"><h2>Student's admission details</h2></header>
+
+      <dl class="fee__details">
+        <div><dt>Name</dt><dd><strong>{{ student.studentName || '—' }}</strong></dd></div>
+        <div><dt>Registration</dt><dd><code class="fee__code">{{ student.registrationId }}</code></dd></div>
+        <div><dt>Course</dt><dd>{{ student.courseName || '—' }}</dd></div>
+        <div><dt>Duration</dt><dd>{{ student.courseDuration ? student.courseDuration + ' months' : '—' }}</dd></div>
+        <div><dt>Admission fees</dt><dd>{{ money(student.admissionFees) }}</dd></div>
+        <div><dt>Monthly fees</dt><dd>{{ money(student.monthlyFees) }}</dd></div>
+        <div><dt>Date of joining</dt><dd>{{ student.dateOfJoining ? (student.dateOfJoining | date: 'd MMM y') : '—' }}</dd></div>
+        <div>
+          <dt>Teachers</dt>
+          <dd>
+            {{ student.primaryTeacherName || '—' }}
+            @if (student.secondTeacherName) { <br />{{ student.secondTeacherName }} }
+            @if (student.thirdTeacherName) { <br />{{ student.thirdTeacherName }} }
+          </dd>
+        </div>
+        <div>
+          <dt>Payments already made</dt>
+          <dd><strong>{{ student.installmentsPaid }}</strong> month(s)</dd>
+        </div>
+        <div>
+          <dt>Last payment</dt>
+          <dd>{{ student.lastPaymentDate ? (student.lastPaymentDate | date: 'd MMM y') : 'None yet' }}</dd>
+        </div>
+        <div>
+          <dt>Outstanding due</dt>
+          <dd [class.fee__due]="student.outstandingDue > 0">{{ money(student.outstandingDue) }}</dd>
+        </div>
+      </dl>
+    </section>
+
+    <!-- ------------------------------------------------ fee entry form -->
+    <section class="app-card fee__panel" id="fee-form">
+      <header class="fee__panel-head">
+        <h2>{{ isEditing() ? 'Amend payment' : "Enter student's monthly fees" }}</h2>
+        @if (isEditing()) {
+          <span class="app-muted">Bill {{ editingBillNo() }}</span>
+        }
+      </header>
+
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div class="fee__field">
+          <label for="feeDate">Date <span class="fee__req">*</span></label>
+          <p-datePicker
+            inputId="feeDate"
+            formControlName="feeDate"
+            dateFormat="dd/mm/yy"
+            [showIcon]="true"
+            appendTo="body"
+            styleClass="fee__datepicker" />
+          @if (form.controls.feeDate.touched && form.controls.feeDate.invalid) {
+            <small class="fee__error">A date is required.</small>
+          }
+        </div>
+
+        <div class="fee__field">
+          <label for="installmentAmount">Installment amount <span class="fee__req">*</span></label>
+          <p-inputNumber
+            inputId="installmentAmount"
+            formControlName="installmentAmount"
+            mode="currency" currency="INR" locale="en-IN"
+            [min]="0" [maxFractionDigits]="2" />
+          @if (form.controls.installmentAmount.touched && form.controls.installmentAmount.invalid) {
+            <small class="fee__error">Enter the installment amount.</small>
+          }
+        </div>
+
+        <div class="fee__field">
+          <label for="teacherPercentage">Teacher percentage <span class="fee__req">*</span></label>
+          <p-inputNumber
+            inputId="teacherPercentage"
+            formControlName="teacherPercentage"
+            suffix=" %"
+            [min]="0" [max]="100" [maxFractionDigits]="2" />
+          @if (form.controls.teacherPercentage.touched && form.controls.teacherPercentage.invalid) {
+            <small class="fee__error">Enter a percentage between 0 and 100.</small>
+          }
+        </div>
+
+        <!-- ----------------------------------- server-calculated figures -->
+        <div class="fee__calc" [class.fee__calc--busy]="calculating()">
+          @if (calculation(); as calc) {
+            <div class="fee__calc-row">
+              <span>Payment is happening after</span>
+              <strong>{{ calc.daysSincePrevious }} day(s)</strong>
+            </div>
+
+            <div class="fee__calc-row">
+              <span>Late fine for this month</span>
+              <strong [class.fee__due]="calc.lateFine > 0">{{ money(calc.lateFine) }}</strong>
+            </div>
+
+            <div class="fee__calc-row fee__calc-row--total">
+              <span>Total installment for this month</span>
+              <strong>{{ money(calc.totalForMonth) }}</strong>
+            </div>
+
+            <div class="fee__calc-row">
+              <span>Old due</span>
+              <strong>{{ money(calc.oldDue) }}</strong>
+            </div>
+
+            <div class="fee__calc-row fee__calc-row--total">
+              <span>New due after this payment</span>
+              <strong [class.fee__due]="calc.newDue > 0">{{ money(calc.newDue) }}</strong>
+            </div>
+
+            <p class="fee__calc-note app-muted">
+              <i class="pi pi-info-circle" aria-hidden="true"></i>
+              {{ calc.explanation }}
+            </p>
+          } @else {
+            <p class="app-muted fee__calc-empty">
+              Fill in the date and installment amount to see the fine and totals.
+            </p>
+          }
+        </div>
+
+        <div class="fee__field">
+          <label for="amountPaid">Amount received now <span class="fee__req">*</span></label>
+          <p-inputNumber
+            inputId="amountPaid"
+            formControlName="amountPaid"
+            mode="currency" currency="INR" locale="en-IN"
+            [min]="0" [maxFractionDigits]="2" />
+          @if (form.controls.amountPaid.touched && form.controls.amountPaid.invalid) {
+            <small class="fee__error">Enter what the student actually paid.</small>
+          }
+        </div>
+
+        <footer class="fee__form-actions">
+          <p-button
+            type="submit"
+            [label]="isEditing() ? 'Update payment' : 'Save payment'"
+            [icon]="isEditing() ? 'pi pi-save' : 'pi pi-check'"
+            [loading]="saving()"
+            [disabled]="saving() || !calculation()" />
+
+          <p-button
+            type="button"
+            label="Reset"
+            icon="pi pi-refresh"
+            severity="secondary"
+            [outlined]="true"
+            (onClick)="resetForm()" />
+        </footer>
+      </form>
+    </section>
+  </div>
+
+  <!-- ------------------------------------------------- payment history -->
+  <section class="app-card fee__list">
+    <header class="fee__list-head">
+      <h2>Payment history</h2>
+      <span class="app-muted">{{ paymentsTotal() }} payment(s)</span>
+    </header>
+
+    <p-table
+      [value]="payments()"
+      [loading]="loadingPayments()"
+      [paginator]="payments().length > 10"
+      [rows]="10"
+      styleClass="p-datatable-sm"
+      [tableStyle]="{ 'min-width': '62rem' }">
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Bill</th>
+          <th>Fee month</th>
+          <th class="fee__num">Installment</th>
+          <th class="fee__num">Fine</th>
+          <th class="fee__num">Paid</th>
+          <th class="fee__num">Old due</th>
+          <th class="fee__num">New due</th>
+          <th class="fee__num">Teacher %</th>
+          <th style="width: 7rem">Actions</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-payment>
+        <tr>
+          <td><code class="fee__code">{{ payment.billNo || '—' }}</code></td>
+          <td>{{ payment.feeDate ? (payment.feeDate | date: 'd MMM y') : '—' }}</td>
+          <td class="fee__num">{{ money(payment.installment) }}</td>
+          <td class="fee__num" [class.fee__due]="payment.lateFine > 0">{{ money(payment.lateFine) }}</td>
+          <td class="fee__num">{{ money(payment.amountPaid) }}</td>
+          <td class="fee__num">{{ money(payment.oldDue) }}</td>
+          <td class="fee__num" [class.fee__due]="payment.newDue > 0">{{ money(payment.newDue) }}</td>
+          <td class="fee__num">{{ payment.percentage ?? '—' }}</td>
+          <td>
+            <div class="fee__actions">
+              <p-button
+                icon="pi pi-pencil"
+                severity="secondary"
+                [text]="true"
+                pTooltip="Amend"
+                tooltipPosition="top"
+                (onClick)="edit(payment)" />
+
+              <p-button
+                icon="pi pi-print"
+                severity="secondary"
+                [text]="true"
+                pTooltip="Print money receipt"
+                tooltipPosition="top"
+                (onClick)="printReceipt(payment)" />
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr><td colspan="9" class="app-muted fee__empty">No payments recorded for this student yet.</td></tr>
+      </ng-template>
+    </p-table>
+  </section>
+}

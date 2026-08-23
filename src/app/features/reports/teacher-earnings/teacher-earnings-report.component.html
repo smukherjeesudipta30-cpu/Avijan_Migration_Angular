@@ -1,0 +1,208 @@
+<header class="rpt__header">
+  <p class="app-section-title">Reports</p>
+  <h1>Teacher account</h1>
+  <p class="app-muted">
+    What a teacher earned from student fees in the range, what has been handed
+    over, and the balance still pending.
+  </p>
+</header>
+
+<section class="app-card rpt__filter">
+  <!-- A signed-in teacher is pinned to their own record, so there is nothing to pick. -->
+  @if (isStaff()) {
+    <div class="rpt__field">
+      <label for="teacher">Teacher</label>
+      <p-select
+        inputId="teacher"
+        [options]="teachers()"
+        optionLabel="name"
+        optionValue="teacherId"
+        [ngModel]="teacherId()"
+        (ngModelChange)="teacherId.set($event)"
+        [ngModelOptions]="{ standalone: true }"
+        [filter]="true"
+        filterBy="name"
+        placeholder="Select a teacher"
+        appendTo="body"
+        styleClass="rpt__select" />
+    </div>
+  }
+
+  <div class="rpt__field">
+    <label for="from">From</label>
+    <p-datePicker
+      inputId="from"
+      [ngModel]="from()"
+      (ngModelChange)="from.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      dateFormat="dd/mm/yy"
+      [showIcon]="true"
+      appendTo="body"
+      styleClass="rpt__picker" />
+  </div>
+
+  <div class="rpt__field">
+    <label for="to">To</label>
+    <p-datePicker
+      inputId="to"
+      [ngModel]="to()"
+      (ngModelChange)="to.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      dateFormat="dd/mm/yy"
+      [showIcon]="true"
+      appendTo="body"
+      styleClass="rpt__picker" />
+  </div>
+
+  <div class="rpt__filter-actions">
+    <p-button label="Run" icon="pi pi-search" [loading]="loading()" (onClick)="run()" />
+    <p-button
+      label="CSV"
+      icon="pi pi-download"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="!report()"
+      (onClick)="exportCsv()" />
+  </div>
+</section>
+
+@if (report(); as r) {
+  <div class="rpt__tiles">
+    <div class="app-card rpt__tile rpt__tile--positive">
+      <span>Earned</span>
+      <strong>{{ r.totalEarned | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+      <small class="app-muted">Share of fees collected in the range</small>
+    </div>
+
+    <div class="app-card rpt__tile">
+      <span>Paid out</span>
+      <strong>{{ r.totalPaid | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+      <small class="app-muted">Handed to the teacher in the range</small>
+    </div>
+
+    <div
+      class="app-card rpt__tile"
+      [class.rpt__tile--negative]="r.pending > 0"
+      [class.rpt__tile--positive]="r.pending < 0">
+      <span>{{ r.pending < 0 ? 'Overpaid by' : 'Still pending' }}</span>
+      <strong>{{ (r.pending < 0 ? -r.pending : r.pending) | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+      <small class="app-muted">{{ r.teacherName }}{{ r.teacherPhone ? ' · ' + r.teacherPhone : '' }}</small>
+    </div>
+  </div>
+
+  <section class="app-card rpt__result">
+    <header class="rpt__result-head">
+      <h2>Earned from student fees</h2>
+      <div class="rpt__result-head-right">
+        <span class="app-muted">
+          {{ r.from | date: 'd MMM y' }} – {{ r.to | date: 'd MMM y' }} · {{ r.earnings.length }} entries
+        </span>
+      </div>
+    </header>
+
+    <p-table
+      [value]="r.earnings"
+      [paginator]="r.earnings.length > 25"
+      [rows]="25"
+      styleClass="p-datatable-sm"
+      [tableStyle]="{ 'min-width': '48rem' }">
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 10rem">Deposit date</th>
+          <th>Student</th>
+          <th>Course</th>
+          <th class="rpt__num" style="width: 9rem">Earned</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td>{{ row.paidOn ? (row.paidOn | date: 'd MMM y') : '—' }}</td>
+          <td>
+            <strong>{{ row.studentName || '—' }}</strong>
+            <small class="app-muted rpt__cell-sub">
+              <code class="rpt__code">{{ row.registrationId }}</code>
+            </small>
+          </td>
+          <td>{{ row.courseName || '—' }}</td>
+          <td class="rpt__num">{{ row.salary | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="footer">
+        <tr class="rpt__total-row">
+          <td colspan="3">Total earned</td>
+          <td class="rpt__num">{{ r.totalEarned | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="4" class="app-muted rpt__empty">
+            No fee share recorded for this teacher in this range.
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </section>
+
+  <section class="app-card rpt__result">
+    <header class="rpt__result-head">
+      <h2>Paid to the teacher</h2>
+      <div class="rpt__result-head-right">
+        <span class="app-muted">{{ r.payments.length }} entries</span>
+      </div>
+    </header>
+
+    <p-table
+      [value]="r.payments"
+      [paginator]="r.payments.length > 25"
+      [rows]="25"
+      styleClass="p-datatable-sm"
+      [tableStyle]="{ 'min-width': '30rem' }">
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 10rem">Date</th>
+          <th class="rpt__num">Amount</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td>{{ row.paidOn ? (row.paidOn | date: 'd MMM y') : '—' }}</td>
+          <td class="rpt__num">{{ row.amount | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="footer">
+        <tr class="rpt__total-row">
+          <td>Total paid</td>
+          <td class="rpt__num">{{ r.totalPaid | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="2" class="app-muted rpt__empty">Nothing paid out in this range.</td>
+        </tr>
+      </ng-template>
+    </p-table>
+
+    <p class="rpt__note">
+      Two differences from the legacy page. Its earnings query also required the
+      student to still list this teacher, so reassigning a student erased that
+      teacher's past earnings; the <code>TecFees</code> row records who was paid at
+      the time and decides on its own here. And its three totals were browser sums
+      over <code>Math.abs()</code> of each row, which added corrections instead of
+      subtracting them.
+    </p>
+
+    <p class="app-muted rpt__generated">Generated {{ r.generatedOn | date: 'd MMM y, h:mm a' }}</p>
+  </section>
+} @else {
+  <section class="app-card rpt__result">
+    <p class="app-muted rpt__empty">Choose a teacher and a date range, then press Run.</p>
+  </section>
+}

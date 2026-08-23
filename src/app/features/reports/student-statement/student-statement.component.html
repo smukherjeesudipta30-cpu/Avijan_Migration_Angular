@@ -1,0 +1,277 @@
+<header class="rpt__header">
+  <p class="app-section-title">Reports</p>
+  <h1>My statement</h1>
+  <p class="app-muted">
+    Your profile, every fee payment and every exam result on one page.
+  </p>
+</header>
+
+@if (statement(); as s) {
+  <section class="app-card stm__profile">
+    <div class="stm__photo">
+      @if (photoUrl(); as url) {
+        <img [src]="url" [alt]="s.studentName ?? 'Student photo'" />
+      } @else {
+        <div class="stm__photo-empty"><i class="pi pi-user"></i></div>
+      }
+    </div>
+
+    <div class="stm__identity">
+      <h2>{{ s.studentName || '&mdash;' }}</h2>
+      <code class="rpt__code">{{ s.registrationId }}</code>
+
+      <dl class="stm__facts">
+        @if (s.guardianName) {
+          <div><dt>Guardian</dt><dd>{{ s.guardianName }}</dd></div>
+        }
+        <div><dt>Course</dt><dd>{{ s.courseName || '&mdash;' }}</dd></div>
+        @if (s.courseDuration) {
+          <div><dt>Course length</dt><dd>{{ s.courseDuration }} months</dd></div>
+        }
+        <div>
+          <dt>Joined</dt>
+          <dd>{{ s.dateOfJoining ? (s.dateOfJoining | date: 'd MMM y') : '&mdash;' }}</dd>
+        </div>
+        @if (s.dateOfExit) {
+          <div><dt>Left</dt><dd>{{ s.dateOfExit | date: 'd MMM y' }}</dd></div>
+        }
+        @if (s.phone) {
+          <div><dt>Phone</dt><dd>{{ s.phone }}</dd></div>
+        }
+        @if (s.email) {
+          <div><dt>Email</dt><dd>{{ s.email }}</dd></div>
+        }
+        <div>
+          <dt>Status</dt>
+          <dd>
+            @if (s.isComplete) {
+              <p-tag severity="info" value="Course complete" />
+            } @else if (s.isActive) {
+              <p-tag severity="success" value="Active" />
+            } @else {
+              <p-tag severity="secondary" value="Inactive" />
+            }
+          </dd>
+        </div>
+      </dl>
+    </div>
+
+    <div class="stm__profile-actions">
+      <p-button
+        label="Print"
+        icon="pi pi-print"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="print()" />
+      <p-button
+        label="CSV"
+        icon="pi pi-download"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="s.payments.length === 0"
+        (onClick)="exportCsv()" />
+    </div>
+  </section>
+
+  <div class="rpt__tiles">
+    <div class="app-card rpt__tile">
+      <span>Admission fee</span>
+      <strong>{{ s.admissionFees | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+    </div>
+
+    <div class="app-card rpt__tile">
+      <span>Agreed monthly fee</span>
+      <strong>{{ s.agreedMonthlyFees | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+    </div>
+
+    <div class="app-card rpt__tile rpt__tile--positive">
+      <span>Total paid</span>
+      <strong>{{ s.totalPaid | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+      <small class="app-muted">
+        {{ s.paymentCount }} payment(s)
+        @if (s.totalFines > 0) {
+          &middot; {{ s.totalFines | currency: 'INR' : 'symbol-narrow' : '1.2-2' }} of it fines
+        }
+      </small>
+    </div>
+
+    <div class="app-card rpt__tile" [class.rpt__tile--negative]="s.currentDue > 0">
+      <span>Current due</span>
+      <strong>{{ s.currentDue | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+      <small class="app-muted">Carried on the last payment</small>
+    </div>
+
+    <div class="app-card rpt__tile">
+      <span>Months paid</span>
+      <strong>
+        {{ s.monthsPaid }}
+        @if (s.courseDuration) { / {{ s.courseDuration }} }
+      </strong>
+    </div>
+  </div>
+
+  <section class="app-card rpt__result">
+    <header class="rpt__result-head">
+      <h2>Fee payments</h2>
+      <div class="rpt__result-head-right">
+        <span class="app-muted">{{ s.paymentCount }} payment(s)</span>
+      </div>
+    </header>
+
+    <p-table
+      [value]="s.payments"
+      [paginator]="s.payments.length > 25"
+      [rows]="25"
+      styleClass="p-datatable-sm"
+      [tableStyle]="{ 'min-width': '48rem' }">
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 11rem">Bill no</th>
+          <th style="width: 10rem">Paid on</th>
+          <th class="rpt__num">Instalment</th>
+          <th class="rpt__num">Fine</th>
+          <th class="rpt__num">Paid</th>
+          <th class="rpt__num">Due after</th>
+          <th style="width: 8rem"></th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td><code class="rpt__code">{{ row.billNo || '&mdash;' }}</code></td>
+          <td>{{ row.paymentDate ? (row.paymentDate | date: 'd MMM y') : '&mdash;' }}</td>
+          <td class="rpt__num">{{ row.instalmentOnly | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</td>
+          <td class="rpt__num">
+            @if (row.fine > 0) {
+              <span class="stm__fine">{{ row.fine | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</span>
+            } @else {
+              <span class="app-muted">&mdash;</span>
+            }
+          </td>
+          <td class="rpt__num">{{ row.amountPaid | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</td>
+          <td class="rpt__num">{{ row.dueAfter | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</td>
+          <td>
+            <p-button
+              label="Download"
+              icon="pi pi-download"
+              size="small"
+              [outlined]="true"
+              (onClick)="downloadReceipt(row)" />
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="footer">
+        <tr class="rpt__total-row">
+          <td colspan="4">Total paid</td>
+          <td class="rpt__num">{{ s.totalPaid | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</td>
+          <td class="rpt__num">{{ s.currentDue | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</td>
+          <td></td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr><td colspan="7" class="app-muted rpt__empty">No payments recorded yet.</td></tr>
+      </ng-template>
+    </p-table>
+
+    <p class="rpt__note">
+      The instalment and fine columns are shown apart. In the database
+      <code>Installment</code> is stored with the fine already inside it, so the
+      legacy page's "monthly fees" column silently included fines.
+    </p>
+  </section>
+
+  <section class="app-card rpt__result">
+    <header class="rpt__result-head">
+      <h2>Exam results</h2>
+      <div class="rpt__result-head-right">
+        <span class="app-muted">{{ s.marks.length }} exam(s)</span>
+      </div>
+    </header>
+
+    <p-table
+      [value]="s.marks"
+      [paginator]="s.marks.length > 25"
+      [rows]="25"
+      styleClass="p-datatable-sm"
+      [tableStyle]="{ 'min-width': '44rem' }">
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 10rem">Exam date</th>
+          <th>Subjects</th>
+          <th class="rpt__num" style="width: 8rem">Total</th>
+          <th style="width: 6rem">Score</th>
+          <th style="width: 6rem">Grade</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td>{{ row.examDate ? (row.examDate | date: 'd MMM y') : '&mdash;' }}</td>
+          <td>
+            <div class="stm__subjects">
+              @for (subject of row.subjects; track $index) {
+                <span class="stm__subject">
+                  {{ subject.subject }}
+                  <strong>{{ subject.obtainedMarks }}/{{ subject.fullMarks }}</strong>
+                </span>
+              } @empty {
+                <span class="app-muted">&mdash;</span>
+              }
+            </div>
+          </td>
+          <td class="rpt__num">{{ row.totalObtainedMarks }} / {{ row.totalFullMarks }}</td>
+          <td>{{ row.percentScored }}%</td>
+          <td><p-tag [severity]="gradeSeverity(row.grade)" [value]="row.grade" /></td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr><td colspan="5" class="app-muted rpt__empty">No exam results recorded yet.</td></tr>
+      </ng-template>
+    </p-table>
+
+    <p class="rpt__note">
+      The grade uses the certificate bands from the legacy code &mdash; 95 AA, 90 A+,
+      80 A, 75 B+, 60 B, 50 C, below that D &mdash; but counts every subject. The
+      legacy function added only subjects 1 and 2, so a four-subject exam was graded
+      on half its papers.
+    </p>
+
+    <p class="app-muted rpt__generated">Generated {{ s.generatedOn | date: 'd MMM y, h:mm a' }}</p>
+  </section>
+
+  <!-- The Download Certificate button at the foot of the legacy student report. -->
+  <section class="app-card stm__certificate">
+    <div>
+      <h2>Course certificate</h2>
+      <p class="app-muted">
+        @if (s.marks.length === 0) {
+          A certificate can be issued once your exam results have been recorded.
+        } @else if (!s.isComplete) {
+          Your course is not marked complete yet, so the certificate will be
+          issued as provisional.
+        } @else {
+          Your completion certificate is ready to download.
+        }
+      </p>
+    </div>
+
+    <p-button
+      label="Download Certificate"
+      icon="pi pi-verified"
+      [loading]="certificateLoading()"
+      [disabled]="s.marks.length === 0"
+      (onClick)="downloadCertificate()" />
+  </section>
+} @else if (!loading()) {
+  <section class="app-card rpt__result">
+    <p class="app-muted rpt__empty">
+      No statement is available for your sign-in yet. Ask the office to check the
+      email on your registration.
+    </p>
+  </section>
+}

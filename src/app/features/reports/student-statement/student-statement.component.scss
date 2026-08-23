@@ -1,0 +1,164 @@
+@use '../report.shared.scss';
+
+/* Registration ids are stored upper-case. */
+.stm__upper {
+  text-transform: uppercase;
+}
+
+/* ----------------------------------------------------------------- profile */
+.stm__profile {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.4rem;
+  padding: 1.25rem 1.35rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.stm__photo {
+  flex: 0 0 auto;
+
+  img {
+    width: 108px;
+    height: 128px;
+    object-fit: cover;
+    border-radius: var(--app-radius);
+    border: 1px solid var(--app-border);
+    display: block;
+  }
+}
+
+.stm__photo-empty {
+  width: 108px;
+  height: 128px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--app-radius);
+  border: 1px dashed var(--app-border);
+  background: var(--app-page-bg);
+  color: var(--app-text-muted);
+
+  i {
+    font-size: 2rem;
+  }
+}
+
+.stm__identity {
+  flex: 1 1 320px;
+  min-width: 0;
+
+  h2 {
+    font-size: 1.25rem;
+    margin-bottom: 0.3rem;
+  }
+}
+
+.stm__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.55rem 1.4rem;
+  margin: 1rem 0 0;
+
+  div {
+    min-width: 0;
+  }
+
+  dt {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--app-text-muted);
+  }
+
+  dd {
+    margin: 0.15rem 0 0;
+    font-size: 0.87rem;
+    word-break: break-word;
+  }
+}
+
+.stm__profile-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+/* A fine charged on top of the instalment. */
+.stm__fine {
+  color: var(--app-negative);
+  font-weight: 600;
+}
+
+.stm__subjects {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.stm__subject {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--app-page-bg);
+  border: 1px solid var(--app-border);
+  font-size: 0.73rem;
+  white-space: nowrap;
+
+  strong {
+    font-size: 0.73rem;
+  }
+}
+
+/* Printing gives real selectable text, unlike the legacy html2canvas bitmap. */
+@media print {
+  .rpt__filter,
+  .stm__profile-actions,
+  .rpt__note,
+  :host ::ng-deep .p-paginator {
+    display: none !important;
+  }
+
+  .app-card {
+    border: 1px solid #ddd;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+}
+
+@media (max-width: 760px) {
+  .stm__profile-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+/* The Download Certificate panel at the foot of the page. */
+.stm__certificate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: 1.15rem 1.35rem;
+  flex-wrap: wrap;
+
+  h2 {
+    font-size: 1.05rem;
+  }
+
+  p {
+    margin: 0.3rem 0 0;
+    font-size: 0.82rem;
+    max-width: 60ch;
+  }
+}
+
+@media (max-width: 620px) {
+  .stm__certificate {
+    align-items: stretch;
+  }
+}

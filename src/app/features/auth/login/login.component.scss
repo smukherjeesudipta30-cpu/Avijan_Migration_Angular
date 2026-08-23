@@ -1,0 +1,185 @@
+:host {
+  display: block;
+}
+
+.login {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  min-height: 100vh;
+}
+
+/* -------------------------------------------------------------- brand panel */
+.login__brand {
+  display: grid;
+  place-items: center;
+  padding: 3rem;
+  color: #fff;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.16), transparent 45%),
+    linear-gradient(140deg, #4c1d95 0%, #6d28d9 45%, #0ea5e9 120%);
+}
+
+.login__brand-inner {
+  max-width: 400px;
+}
+
+.login__logo {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 1.4rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.login__brand h1 {
+  font-size: 2.4rem;
+  letter-spacing: -0.02em;
+}
+
+.login__brand-tagline {
+  margin: 0.35rem 0 2.2rem;
+  font-size: 1rem;
+  opacity: 0.82;
+}
+
+.login__brand-points {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.95rem;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.92rem;
+    opacity: 0.92;
+  }
+
+  i {
+    display: grid;
+    place-items: center;
+    flex: 0 0 32px;
+    height: 32px;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.15);
+    font-size: 0.9rem;
+  }
+}
+
+/* --------------------------------------------------------------- form panel */
+.login__panel {
+  display: grid;
+  place-items: center;
+  padding: 2rem 1.5rem;
+  background: var(--app-page-bg);
+}
+
+.login__card {
+  width: 100%;
+  max-width: 420px;
+  padding: 2rem;
+}
+
+.login__header {
+  margin-bottom: 1.5rem;
+
+  h2 {
+    font-size: 1.35rem;
+    margin-bottom: 0.3rem;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.88rem;
+  }
+}
+
+.login__badge {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 1rem;
+  border-radius: 12px;
+  background: var(--app-brand-soft);
+  color: var(--app-brand);
+}
+
+:host ::ng-deep .login__error {
+  display: block;
+  margin-bottom: 1.1rem;
+}
+
+.login__field {
+  margin-bottom: 1.15rem;
+
+  label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--app-text);
+  }
+
+  input {
+    width: 100%;
+  }
+}
+
+:host ::ng-deep .login__password,
+:host ::ng-deep .login__password input {
+  width: 100%;
+}
+
+:host ::ng-deep .login__submit {
+  width: 100%;
+  margin-top: 0.25rem;
+
+  .p-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+.login__hint {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.76rem;
+
+  &--error {
+    color: var(--app-negative);
+  }
+}
+
+.login__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1.6rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--app-border);
+  font-size: 0.8rem;
+
+  a {
+    text-decoration: none;
+
+    &:hover { text-decoration: underline; }
+  }
+}
+
+@media (max-width: 860px) {
+  .login {
+    grid-template-columns: 1fr;
+  }
+
+  .login__brand {
+    display: none;
+  }
+}

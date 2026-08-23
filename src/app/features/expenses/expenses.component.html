@@ -1,0 +1,234 @@
+<p-confirmDialog />
+
+<header class="exp__header">
+  <div>
+    <p class="app-section-title">Finance</p>
+    <h1>Expenses</h1>
+  </div>
+</header>
+
+<!-- ------------------------------------------------------------- entry form -->
+<section class="app-card exp__form" id="expense-form">
+  <header class="exp__form-head">
+    <div>
+      <h2>{{ isEditing() ? 'Edit expense' : 'Record an expense' }}</h2>
+      <p class="app-muted">
+        Everything recorded here counts against profit in the income report.
+      </p>
+    </div>
+  </header>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="exp__grid">
+      <div class="exp__field exp__field--details">
+        <label for="details">Expense details <span class="exp__req">*</span></label>
+        <input
+          pInputText
+          id="details"
+          formControlName="details"
+          maxlength="500"
+          placeholder="e.g. Electric bill, Rent, Receptionist salary" />
+        @if (form.controls.details.touched && form.controls.details.invalid) {
+          <small class="exp__error">Expense details are required.</small>
+        }
+      </div>
+
+      <div class="exp__field">
+        <label for="expenseDate">Date of expense <span class="exp__req">*</span></label>
+        <p-datePicker
+          inputId="expenseDate"
+          formControlName="expenseDate"
+          dateFormat="dd/mm/yy"
+          [showIcon]="true"
+          [maxDate]="today"
+          appendTo="body"
+          styleClass="exp__picker" />
+        @if (form.controls.expenseDate.touched && form.controls.expenseDate.invalid) {
+          <small class="exp__error">Date of expense is required.</small>
+        }
+      </div>
+
+      <div class="exp__field">
+        <label for="amount">Amount <span class="exp__req">*</span></label>
+        <p-inputNumber
+          inputId="amount"
+          formControlName="amount"
+          mode="currency"
+          currency="INR"
+          locale="en-IN"
+          [min]="0"
+          [maxFractionDigits]="2" />
+        @if (form.controls.amount.touched && form.controls.amount.invalid) {
+          <small class="exp__error">Enter an amount greater than zero.</small>
+        }
+      </div>
+    </div>
+
+    <footer class="exp__form-actions">
+      <p-button
+        type="submit"
+        [label]="isEditing() ? 'Update expense' : 'Save expense'"
+        [icon]="isEditing() ? 'pi pi-save' : 'pi pi-plus'"
+        [loading]="saving()"
+        [disabled]="saving()" />
+
+      <p-button
+        type="button"
+        [label]="isEditing() ? 'Cancel' : 'Reset'"
+        icon="pi pi-refresh"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="resetForm()" />
+    </footer>
+  </form>
+</section>
+
+<!-- ---------------------------------------------------------------- filter -->
+<section class="app-card exp__filter">
+  <div class="exp__filter-field">
+    <label for="from">From</label>
+    <p-datePicker
+      inputId="from"
+      [ngModel]="from()"
+      (ngModelChange)="from.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      dateFormat="dd/mm/yy"
+      [showIcon]="true"
+      [showClear]="true"
+      appendTo="body"
+      styleClass="exp__picker" />
+  </div>
+
+  <div class="exp__filter-field">
+    <label for="to">To</label>
+    <p-datePicker
+      inputId="to"
+      [ngModel]="to()"
+      (ngModelChange)="to.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      dateFormat="dd/mm/yy"
+      [showIcon]="true"
+      [showClear]="true"
+      appendTo="body"
+      styleClass="exp__picker" />
+  </div>
+
+  <div class="exp__filter-field">
+    <label for="search">Details contain</label>
+    <input
+      pInputText
+      id="search"
+      [ngModel]="search()"
+      (ngModelChange)="search.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      (keyup.enter)="applyFilter()"
+      placeholder="e.g. Rent" />
+  </div>
+
+  <div class="exp__filter-actions">
+    <p-button label="Filter" icon="pi pi-search" [loading]="loading()" (onClick)="applyFilter()" />
+    <p-button
+      label="Clear"
+      icon="pi pi-times"
+      severity="secondary"
+      [outlined]="true"
+      (onClick)="clearFilter()" />
+  </div>
+</section>
+
+@if (data(); as d) {
+  <div class="exp__tiles">
+    <div class="app-card exp__tile">
+      <span>Entries</span>
+      <strong>{{ d.summary.entryCount }}</strong>
+    </div>
+
+    <div class="app-card exp__tile exp__tile--negative">
+      <span>Total spent</span>
+      <strong>{{ d.summary.totalAmount | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+      <small class="app-muted">
+        @if (d.summary.from || d.summary.to) {
+          Filtered range
+        } @else {
+          All time
+        }
+      </small>
+    </div>
+  </div>
+
+  <section class="app-card exp__list">
+    <header class="exp__list-head">
+      <h2>Expense register</h2>
+      <span class="app-muted">{{ d.rows.totalCount }} entr(y/ies)</span>
+    </header>
+
+    <p-table
+      [value]="d.rows.items"
+      [lazy]="true"
+      [paginator]="true"
+      [rows]="pageSize()"
+      [totalRecords]="d.rows.totalCount"
+      [loading]="loading()"
+      [rowsPerPageOptions]="[25, 50, 100]"
+      (onLazyLoad)="onLazyLoad($event)"
+      styleClass="p-datatable-sm"
+      [tableStyle]="{ 'min-width': '44rem' }"
+      currentPageReportTemplate="{first}&ndash;{last} of {totalRecords}"
+      [showCurrentPageReport]="true">
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 10rem">Date</th>
+          <th>Expense details</th>
+          <th class="exp__num" style="width: 10rem">Amount</th>
+          <th style="width: 7rem">Actions</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-row>
+        <tr [class.exp__row--editing]="editingId() === row.expenseId">
+          <td>{{ row.expenseDate ? (row.expenseDate | date: 'd MMM y') : '&mdash;' }}</td>
+          <td>{{ row.details || '&mdash;' }}</td>
+          <td class="exp__num">{{ row.amount | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</td>
+          <td>
+            <div class="exp__actions">
+              <p-button
+                icon="pi pi-pencil"
+                severity="secondary"
+                [text]="true"
+                pTooltip="Edit"
+                tooltipPosition="top"
+                (onClick)="edit(row)" />
+
+              @if (canDelete()) {
+                <p-button
+                  icon="pi pi-trash"
+                  severity="danger"
+                  [text]="true"
+                  pTooltip="Delete"
+                  tooltipPosition="top"
+                  (onClick)="remove(row)" />
+              }
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="4" class="app-muted exp__empty">
+            No expenses recorded for this filter.
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+
+    <p class="exp__note">
+      The total above covers every entry the filter selects. The legacy page summed
+      rows as the grid drew them, so it only ever totalled the rows on screen.
+      @if (!canDelete()) {
+        Deleting an expense is restricted to administrators.
+      }
+    </p>
+  </section>
+}

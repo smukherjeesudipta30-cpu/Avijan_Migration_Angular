@@ -1,0 +1,18 @@
+@use '../report.shared.scss';
+
+.sbt__team {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.sbt__teacher {
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+/* The teacher the report was filtered on. */
+.sbt__teacher--match {
+  font-weight: 700;
+  color: var(--app-brand);
+}

@@ -1,0 +1,83 @@
+<div class="login">
+  <!-- Left: brand panel. Hidden on small screens so the form gets the space. -->
+  <section class="login__brand" aria-hidden="true">
+    <div class="login__brand-inner">
+      <span class="login__logo">A</span>
+      <h1>Avijan</h1>
+      <p class="login__brand-tagline">Institute Management</p>
+
+      <ul class="login__brand-points">
+        <li><i class="pi pi-users"></i> Students, courses and faculty in one place</li>
+        <li><i class="pi pi-wallet"></i> Monthly fee ledger with printable receipts</li>
+        <li><i class="pi pi-chart-line"></i> Income, expense and dues at a glance</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Right: sign-in form -->
+  <section class="login__panel">
+    <div class="login__card app-card">
+      <header class="login__header">
+        <span class="login__badge"><i class="pi pi-lock" aria-hidden="true"></i></span>
+        <h2>Administrator sign in</h2>
+        <p class="app-muted">Use your institute account to continue.</p>
+      </header>
+
+      @if (errorMessage(); as message) {
+        <p-message severity="error" [text]="message" styleClass="login__error" />
+      }
+
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div class="login__field">
+          <label for="email">Email address</label>
+          <input
+            pInputText
+            id="email"
+            type="email"
+            formControlName="email"
+            autocomplete="username"
+            placeholder="admin@avijan.local"
+            [attr.aria-invalid]="email.invalid && email.touched"
+            [class.ng-invalid-visual]="email.invalid && email.touched" />
+
+          @if (email.touched && email.hasError('required')) {
+            <small class="login__hint login__hint--error">Email is required.</small>
+          } @else if (email.touched && email.hasError('email')) {
+            <small class="login__hint login__hint--error">Enter a valid email address.</small>
+          }
+        </div>
+
+        <div class="login__field">
+          <label for="password">Password</label>
+          <p-password
+            inputId="password"
+            formControlName="password"
+            styleClass="login__password"
+            [feedback]="false"
+            [toggleMask]="true"
+            autocomplete="current-password"
+            placeholder="Enter your password" />
+
+          @if (password.touched && password.hasError('required')) {
+            <small class="login__hint login__hint--error">Password is required.</small>
+          }
+        </div>
+
+        <p-button
+          type="submit"
+          label="Sign in"
+          icon="pi pi-sign-in"
+          styleClass="login__submit"
+          [loading]="submitting()"
+          [disabled]="submitting()" />
+      </form>
+
+      <footer class="login__footer">
+        <a routerLink="/about">
+          <i class="pi pi-arrow-left" aria-hidden="true"></i> Back to About Us
+        </a>
+        <span class="app-muted">&copy; {{ year }} Avijan</span>
+      </footer>
+    </div>
+  </section>
+</div>

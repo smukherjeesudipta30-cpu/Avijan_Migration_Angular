@@ -1,0 +1,264 @@
+<p-confirmDialog />
+
+<header class="crs__header">
+  <div>
+    <p class="app-section-title">Academics</p>
+    <h1>Courses</h1>
+  </div>
+
+  <!-- A Receptionist only ever sees the duration report, so there is nothing to switch. -->
+  @if (canManageCourses()) {
+    <div class="crs__views">
+      <p-button
+        label="Course list"
+        icon="pi pi-book"
+        [severity]="view() === 'list' ? 'primary' : 'secondary'"
+        [outlined]="view() !== 'list'"
+        size="small"
+        (onClick)="view.set('list')" />
+
+      <p-button
+        label="Duration report"
+        icon="pi pi-chart-bar"
+        [severity]="view() === 'progress' ? 'primary' : 'secondary'"
+        [outlined]="view() !== 'progress'"
+        size="small"
+        (onClick)="showProgress()" />
+    </div>
+  }
+</header>
+
+@if (view() === 'list' && canManageCourses()) {
+
+  <!-- ----------------------------------------------------------- form -->
+  <section class="app-card crs__form" id="course-form">
+    <header class="crs__form-head">
+      <h2>{{ isEditing() ? 'Edit course' : 'New course' }}</h2>
+    </header>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="crs__grid">
+        <div class="crs__field">
+          <label for="name">Course name <span class="crs__req">*</span></label>
+          <input pInputText id="name" formControlName="name" />
+          @if (form.controls.name.touched && form.controls.name.invalid) {
+            <small class="crs__error">Course name is required.</small>
+          } @else if (nameTaken()) {
+            <small class="crs__error">A course with that name already exists.</small>
+          }
+        </div>
+
+        <div class="crs__field">
+          <label for="duration">Duration (months) <span class="crs__req">*</span></label>
+          <p-inputNumber
+            inputId="duration"
+            formControlName="duration"
+            [min]="1"
+            [max]="120"
+            [showButtons]="true"
+            suffix=" months" />
+          @if (form.controls.duration.touched && form.controls.duration.invalid) {
+            <small class="crs__error">Enter a duration between 1 and 120 months.</small>
+          }
+        </div>
+      </div>
+
+      <footer class="crs__form-actions">
+        <p-button
+          type="submit"
+          [label]="isEditing() ? 'Update course' : 'Submit'"
+          [icon]="isEditing() ? 'pi pi-save' : 'pi pi-plus'"
+          [loading]="saving()"
+          [disabled]="saving()" />
+
+        <p-button
+          type="button"
+          label="Reset"
+          icon="pi pi-refresh"
+          severity="secondary"
+          [outlined]="true"
+          (onClick)="resetForm()" />
+      </footer>
+    </form>
+  </section>
+
+  <!-- ----------------------------------------------------------- list -->
+  <section class="app-card crs__list">
+    <header class="crs__list-head">
+      <h2>All courses</h2>
+
+      <div class="crs__list-head-right">
+        <input
+          pInputText
+          class="crs__search"
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+          (keyup.enter)="runSearch()"
+          [ngModelOptions]="{ standalone: true }"
+          placeholder="Search course name" />
+        <p-button label="Search" icon="pi pi-search" size="small" (onClick)="runSearch()" />
+        <span class="app-muted">{{ totalCount() }} course(s)</span>
+      </div>
+    </header>
+
+    <p-table
+      [value]="rows()"
+      [loading]="loading()"
+      [paginator]="rows().length > 25"
+      [rows]="25"
+      styleClass="p-datatable-sm"
+      [tableStyle]="{ 'min-width': '42rem' }">
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Course</th>
+          <th class="crs__num">Duration</th>
+          <th class="crs__num">Active students</th>
+          <th class="crs__num">All time</th>
+          <th style="width: 8rem">Actions</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-course>
+        <tr>
+          <td><strong>{{ course.name }}</strong></td>
+          <td class="crs__num">{{ course.duration ? course.duration + ' months' : '—' }}</td>
+          <td class="crs__num">{{ course.activeStudents }}</td>
+          <td class="crs__num">{{ course.totalStudents }}</td>
+          <td>
+            <div class="crs__actions">
+              <p-button
+                icon="pi pi-pencil"
+                severity="secondary"
+                [text]="true"
+                pTooltip="Edit"
+                tooltipPosition="top"
+                (onClick)="edit(course)" />
+
+              <p-button
+                icon="pi pi-trash"
+                severity="danger"
+                [text]="true"
+                [disabled]="course.isReferenced"
+                [pTooltip]="course.isReferenced ? 'Students are enrolled on this course' : 'Delete'"
+                tooltipPosition="top"
+                (onClick)="remove(course)" />
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr><td colspan="5" class="app-muted crs__empty">No courses match the search.</td></tr>
+      </ng-template>
+    </p-table>
+  </section>
+
+} @else {
+
+  <!-- ------------------------------------------------- duration report -->
+  <section class="app-card crs__filter">
+    <div class="crs__filter-field">
+      <label for="fCourse">Course</label>
+      <p-select
+        inputId="fCourse"
+        [ngModel]="progressCourseId()"
+        (ngModelChange)="progressCourseId.set($event)"
+        [ngModelOptions]="{ standalone: true }"
+        [options]="courseOptions()"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="All courses"
+        [showClear]="true"
+        [filter]="true"
+        appendTo="body"
+        styleClass="crs__select" />
+    </div>
+
+    <div class="crs__filter-field">
+      <label for="fReg">Registration id</label>
+      <input
+        pInputText
+        id="fReg"
+        [ngModel]="progressReg()"
+        (ngModelChange)="progressReg.set($event)"
+        (keyup.enter)="applyProgressFilter()"
+        [ngModelOptions]="{ standalone: true }"
+        placeholder="e.g. AVI/2440/25" />
+    </div>
+
+    <p-button label="Apply" icon="pi pi-filter" (onClick)="applyProgressFilter()" />
+    <p-button label="Clear" severity="secondary" [outlined]="true" (onClick)="clearProgressFilter()" />
+  </section>
+
+  <section class="app-card crs__list">
+    <header class="crs__list-head">
+      <h2>Course duration report</h2>
+      <span class="app-muted">
+        {{ progressTotal() }} active student(s) — months paid comes from the fee ledger
+      </span>
+    </header>
+
+    <p-table
+      [value]="progress()"
+      [lazy]="true"
+      [paginator]="true"
+      [rows]="progressPageSize()"
+      [totalRecords]="progressTotal()"
+      [loading]="progressLoading()"
+      [rowsPerPageOptions]="[25, 50, 100]"
+      (onLazyLoad)="onProgressLazyLoad($event)"
+      styleClass="p-datatable-sm"
+      [tableStyle]="{ 'min-width': '62rem' }"
+      currentPageReportTemplate="{first}–{last} of {totalRecords}"
+      [showCurrentPageReport]="true">
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Student</th>
+          <th>Registration</th>
+          <th>Course</th>
+          <th>Joined</th>
+          <th class="crs__num">Total</th>
+          <th class="crs__num">Paid</th>
+          <th class="crs__num">Remaining</th>
+          <th style="width: 12rem">Progress</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td>
+            <strong>{{ row.studentName }}</strong>
+            @if (row.phone) {
+              <small class="app-muted crs__cell-sub">{{ row.phone }}</small>
+            }
+          </td>
+          <td><code class="crs__code">{{ row.registrationId }}</code></td>
+          <td>{{ row.courseName || '—' }}</td>
+          <td>{{ row.dateOfJoining ? (row.dateOfJoining | date: 'd MMM y') : '—' }}</td>
+          <td class="crs__num">{{ row.totalMonths || '—' }}</td>
+          <td class="crs__num">{{ row.paidMonths }}</td>
+          <td class="crs__num" [class.crs__done]="row.remainingMonths === 0">
+            {{ row.remainingMonths }}
+          </td>
+          <td>
+            @if (row.totalMonths > 0) {
+              <p-progressBar
+                [value]="row.percentComplete"
+                [showValue]="true"
+                [style]="{ height: '1.15rem' }"
+                [styleClass]="'crs__bar crs__bar--' + progressSeverity(row)" />
+            } @else {
+              <span class="app-muted crs__no-duration">Course length not set</span>
+            }
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr><td colspan="8" class="app-muted crs__empty">No students match the filter.</td></tr>
+      </ng-template>
+    </p-table>
+  </section>
+}

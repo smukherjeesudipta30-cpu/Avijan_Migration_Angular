@@ -1,0 +1,317 @@
+:host {
+  display: block;
+}
+
+.inc__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+
+  h1 {
+    margin-top: 0.25rem;
+    font-size: 1.5rem;
+  }
+}
+
+.inc__generated {
+  font-size: 0.78rem;
+  padding-top: 0.4rem;
+}
+
+/* ------------------------------------------------------------------- range */
+.inc__range {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.inc__range-field {
+  label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--app-text-muted);
+  }
+}
+
+:host ::ng-deep .inc__datepicker {
+  width: 11rem;
+}
+
+.inc__presets {
+  display: flex;
+  gap: 0.15rem;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+/* --------------------------------------------------------- profit and loss */
+.inc__pnl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.inc__pnl-card {
+  padding: 1.15rem 1.25rem 1.25rem;
+  border-left: 3px solid var(--app-border);
+
+  &--income { border-left-color: var(--app-brand); }
+  &--cost   { border-left-color: var(--app-accent); }
+
+  &[data-tone='positive'] { border-left-color: var(--app-positive); }
+  &[data-tone='negative'] { border-left-color: var(--app-negative); }
+}
+
+.inc__pnl-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--app-text-muted);
+}
+
+.inc__pnl-value {
+  display: block;
+  font-size: 1.65rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.inc__pnl-breakdown {
+  margin: 1rem 0 0;
+  padding: 0.85rem 0 0;
+  list-style: none;
+  border-top: 1px dashed var(--app-border);
+  display: grid;
+  gap: 0.4rem;
+
+  li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.82rem;
+
+    > span:first-child { color: var(--app-text-muted); }
+    > span:last-child { font-weight: 500; white-space: nowrap; }
+
+    i {
+      font-size: 0.7rem;
+      margin-left: 0.2rem;
+      opacity: 0.6;
+      cursor: help;
+    }
+  }
+}
+
+/* Late fines: shown indented, since they are already inside fee collections. */
+.inc__pnl-of-which {
+  padding-left: 0.85rem;
+  font-style: italic;
+  opacity: 0.85;
+}
+
+/* ------------------------------------------------------------------ panels */
+.inc__panel {
+  padding: 1.15rem 1.25rem 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+.inc__panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  h2 { font-size: 1.05rem; }
+  span { font-size: 0.8rem; }
+}
+
+.inc__chart {
+  min-height: 320px;
+  padding-bottom: 0.75rem;
+}
+
+:host ::ng-deep .inc__notice {
+  display: block;
+  margin-bottom: 1.25rem;
+}
+
+/* -------------------------------------------------------------------- tabs */
+.inc__tabs {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--app-border);
+  overflow-x: auto;
+}
+
+.inc__tab {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--app-page-bg);
+  }
+
+  &--active {
+    background: var(--app-brand-soft);
+    border-color: var(--app-brand);
+
+    .inc__tab-label,
+    .inc__tab-amount { color: var(--app-brand); }
+  }
+
+  &--cost.inc__tab--active {
+    background: rgba(14, 165, 233, 0.12);
+    border-color: var(--app-accent);
+
+    .inc__tab-label,
+    .inc__tab-amount { color: var(--app-accent); }
+  }
+}
+
+.inc__tab-label {
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: var(--app-text-muted);
+}
+
+/* The figure is the point of the tab, so it is the largest thing on it. */
+.inc__tab-amount {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--app-text);
+}
+
+.inc__tab-count {
+  font-size: 0.68rem;
+  color: var(--app-text-muted);
+
+  &::after { content: ' rows'; }
+}
+
+/* --------------------------------------------------- open section's total */
+.inc__section-total {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: var(--app-radius);
+  background: var(--app-page-bg);
+  border-left: 3px solid var(--app-brand);
+
+  &--cost { border-left-color: var(--app-accent); }
+}
+
+.inc__section-total-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.inc__section-total-label {
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.inc__section-total-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.inc__section-total-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+
+  i { font-size: 0.7rem; margin-right: 0.15rem; }
+}
+
+.inc__section-total-note {
+  font-style: italic;
+}
+
+/* Total row pinned under the detail table. */
+:host ::ng-deep .inc__foot td {
+  border-top: 2px solid var(--app-border);
+  font-weight: 600;
+  background: var(--app-page-bg);
+}
+
+.inc__foot-note {
+  margin-left: 0.4rem;
+  font-weight: 400;
+  font-size: 0.74rem;
+}
+
+/* ------------------------------------------------------------------ table */
+.inc__num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.inc__code {
+  padding: 0.1rem 0.4rem;
+  border-radius: 5px;
+  background: var(--app-page-bg);
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.inc__cell-sub {
+  display: block;
+  font-size: 0.73rem;
+  line-height: 1.35;
+}
+
+.inc__desc {
+  max-width: 22rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inc__empty {
+  padding: 1.75rem 0.5rem;
+  text-align: center;
+}
+
+@media (max-width: 800px) {
+  .inc__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .inc__presets {
+    margin-left: 0;
+    width: 100%;
+  }
+}

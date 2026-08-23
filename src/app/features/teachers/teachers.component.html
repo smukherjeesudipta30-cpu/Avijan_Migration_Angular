@@ -1,0 +1,275 @@
+<p-confirmDialog />
+
+<header class="tch__header">
+  <div>
+    <p class="app-section-title">Master</p>
+    <h1>Teachers</h1>
+  </div>
+</header>
+
+<!-- ------------------------------------------------------------- entry form -->
+<section class="app-card tch__form" id="teacher-form">
+  <header class="tch__form-head">
+    <div>
+      <h2>{{ isEditing() ? 'Edit teacher' : 'New teacher' }}</h2>
+      @if (editingIsPlaceholder()) {
+        <p class="tch__warn">
+          <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+          This is a stand-in created during the migration for a teacher who had been
+          deleted while students still referenced them. Enter the real name and user id
+          to turn it back into a proper record.
+        </p>
+      } @else if (!isEditing()) {
+        <p class="app-muted">The user id must be unique — it is how the teacher signs in.</p>
+      }
+    </div>
+  </header>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="tch__grid">
+      <div class="tch__field">
+        <label for="name">Teacher name <span class="tch__req">*</span></label>
+        <input pInputText id="name" formControlName="name" />
+        @if (form.controls.name.touched && form.controls.name.invalid) {
+          <small class="tch__error">Teacher name is required.</small>
+        }
+      </div>
+
+      <div class="tch__field">
+        <label for="loginId">Teacher's user id <span class="tch__req">*</span></label>
+        <input pInputText id="loginId" formControlName="loginId" autocomplete="off" />
+        @if (form.controls.loginId.touched && form.controls.loginId.hasError('required')) {
+          <small class="tch__error">User id is required.</small>
+        } @else if (form.controls.loginId.touched && form.controls.loginId.hasError('pattern')) {
+          <small class="tch__error">Letters, digits, dot, underscore or hyphen only.</small>
+        } @else if (loginTaken()) {
+          <small class="tch__error">That user id belongs to another teacher.</small>
+        }
+      </div>
+
+      <div class="tch__field">
+        <label for="phone">Phone number</label>
+        <input pInputText id="phone" formControlName="phone" maxlength="10" inputmode="numeric" />
+        @if (form.controls.phone.touched && form.controls.phone.invalid) {
+          <small class="tch__error">Enter a valid 10-digit phone number.</small>
+        }
+      </div>
+    </div>
+
+    <footer class="tch__form-actions">
+      <p-button
+        type="submit"
+        [label]="isEditing() ? 'Update teacher' : 'Submit'"
+        [icon]="isEditing() ? 'pi pi-save' : 'pi pi-plus'"
+        [loading]="saving()"
+        [disabled]="saving()" />
+
+      <p-button
+        type="button"
+        label="Reset"
+        icon="pi pi-refresh"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="resetForm()" />
+    </footer>
+  </form>
+</section>
+
+<!-- ------------------------------------------------------------------ list -->
+<section class="app-card tch__list">
+  <header class="tch__list-head">
+    <h2>All teachers</h2>
+
+    <div class="tch__list-head-right">
+      <input
+        pInputText
+        class="tch__search"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        (keyup.enter)="runSearch()"
+        [ngModelOptions]="{ standalone: true }"
+        placeholder="Search name, user id or phone" />
+      <p-button label="Search" icon="pi pi-search" size="small" (onClick)="runSearch()" />
+
+      <label class="tch__toggle">
+        <p-toggleSwitch
+          [ngModel]="includePlaceholders()"
+          (ngModelChange)="togglePlaceholders($event)"
+          [ngModelOptions]="{ standalone: true }" />
+        <span>Show stand-ins</span>
+      </label>
+
+      <span class="app-muted">{{ totalCount() }} teacher(s)</span>
+    </div>
+  </header>
+
+  <p-table
+    [value]="rows()"
+    [lazy]="true"
+    [paginator]="true"
+    [rows]="pageSize()"
+    [totalRecords]="totalCount()"
+    [loading]="loading()"
+    [rowsPerPageOptions]="[10, 25, 50]"
+    (onLazyLoad)="onLazyLoad($event)"
+    styleClass="p-datatable-sm"
+    [tableStyle]="{ 'min-width': '54rem' }"
+    currentPageReportTemplate="{first}–{last} of {totalRecords}"
+    [showCurrentPageReport]="true">
+
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Teacher</th>
+        <th>User id</th>
+        <th>Phone</th>
+        <th class="tch__num">Students</th>
+        <th class="tch__num">Total earned</th>
+        <th>Last paid</th>
+        <th style="width: 10rem">Actions</th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-teacher>
+      <tr [class.tch__row--placeholder]="teacher.isPlaceholder">
+        <td>
+          <strong>{{ teacher.name }}</strong>
+          @if (teacher.isPlaceholder) {
+            <p-tag
+              severity="warn"
+              value="stand-in"
+              styleClass="tch__tag"
+              pTooltip="Created by the migration for a deleted teacher that students still referenced"
+              tooltipPosition="top" />
+          }
+        </td>
+        <td><code class="tch__code">{{ teacher.loginId || '—' }}</code></td>
+        <td>{{ teacher.phone || '—' }}</td>
+        <td class="tch__num">
+          <strong>{{ teacher.activeStudents }}</strong>
+          @if (teacher.totalStudents !== teacher.activeStudents) {
+            <small class="app-muted tch__cell-sub">{{ teacher.totalStudents }} all time</small>
+          }
+        </td>
+        <td class="tch__num">{{ money(teacher.totalEarnings) }}</td>
+        <td>{{ teacher.lastPaidOn ? (teacher.lastPaidOn | date: 'd MMM y') : '—' }}</td>
+        <td>
+          <div class="tch__actions">
+            <p-button
+              icon="pi pi-pencil"
+              severity="secondary"
+              [text]="true"
+              pTooltip="Edit"
+              tooltipPosition="top"
+              (onClick)="edit(teacher)" />
+
+            <p-button
+              icon="pi pi-wallet"
+              severity="secondary"
+              [text]="true"
+              pTooltip="Earnings"
+              tooltipPosition="top"
+              (onClick)="openEarnings(teacher)" />
+
+            <p-button
+              icon="pi pi-trash"
+              severity="danger"
+              [text]="true"
+              [disabled]="teacher.isReferenced"
+              [pTooltip]="teacher.isReferenced
+                ? 'Students or payouts still reference this teacher'
+                : 'Delete'"
+              tooltipPosition="top"
+              (onClick)="remove(teacher)" />
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr><td colspan="7" class="app-muted tch__empty">No teachers match the current filters.</td></tr>
+    </ng-template>
+  </p-table>
+</section>
+
+<!-- -------------------------------------------------------------- earnings -->
+<p-dialog
+  [header]="'Earnings — ' + (earningsFor()?.name ?? '')"
+  [visible]="earningsVisible()"
+  (visibleChange)="earningsVisible.set($event)"
+  [modal]="true"
+  [style]="{ width: '56rem' }"
+  [draggable]="false">
+
+  <div class="tch__earn-range">
+    <div>
+      <label for="earnFrom">From</label>
+      <p-datePicker
+        inputId="earnFrom"
+        [ngModel]="earningsFrom()"
+        (ngModelChange)="earningsFrom.set($event)"
+        [ngModelOptions]="{ standalone: true }"
+        dateFormat="dd/mm/yy"
+        [showIcon]="true"
+        [maxDate]="today"
+        appendTo="body" />
+    </div>
+
+    <div>
+      <label for="earnTo">To</label>
+      <p-datePicker
+        inputId="earnTo"
+        [ngModel]="earningsTo()"
+        (ngModelChange)="earningsTo.set($event)"
+        [ngModelOptions]="{ standalone: true }"
+        dateFormat="dd/mm/yy"
+        [showIcon]="true"
+        [maxDate]="today"
+        appendTo="body" />
+    </div>
+
+    <p-button label="Apply" icon="pi pi-filter" size="small" (onClick)="loadEarnings()" />
+    <p-button label="All time" severity="secondary" [text]="true" size="small" (onClick)="clearEarningsRange()" />
+  </div>
+
+  <div class="tch__earn-total">
+    <span>Showing {{ earnings().length }} of {{ earningsTotal() }} payout(s)</span>
+    <strong>{{ money(earningsPageTotal()) }}</strong>
+  </div>
+
+  <p-table
+    [value]="earnings()"
+    [loading]="earningsLoading()"
+    styleClass="p-datatable-sm"
+    [scrollable]="true"
+    scrollHeight="340px">
+
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Paid on</th>
+        <th>Bill</th>
+        <th>Student</th>
+        <th>Course</th>
+        <th class="tch__num">Amount</th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-row>
+      <tr>
+        <td>{{ row.paidOn ? (row.paidOn | date: 'd MMM y') : '—' }}</td>
+        <td><code class="tch__code">{{ row.billNo || '—' }}</code></td>
+        <td>
+          {{ row.studentName || '—' }}
+          @if (row.registrationId) {
+            <small class="app-muted tch__cell-sub">{{ row.registrationId }}</small>
+          }
+        </td>
+        <td>{{ row.courseName || '—' }}</td>
+        <td class="tch__num">{{ money(row.amount) }}</td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr><td colspan="5" class="app-muted tch__empty">No payouts in this period.</td></tr>
+    </ng-template>
+  </p-table>
+</p-dialog>

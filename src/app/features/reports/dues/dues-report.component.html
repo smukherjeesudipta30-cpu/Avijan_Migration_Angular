@@ -1,0 +1,175 @@
+<header class="rpt__header">
+  <p class="app-section-title">Reports</p>
+  <h1>Outstanding dues</h1>
+  <p class="app-muted">
+    Active students on one course with no payment recorded between the two dates,
+    and what each of them still owes.
+  </p>
+</header>
+
+<section class="app-card rpt__filter">
+  <div class="rpt__field">
+    <label for="course">Course</label>
+    <p-select
+      inputId="course"
+      [options]="courses()"
+      optionLabel="name"
+      optionValue="courseId"
+      [ngModel]="courseId()"
+      (ngModelChange)="courseId.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      [filter]="true"
+      filterBy="name"
+      placeholder="Select a course"
+      appendTo="body"
+      styleClass="rpt__select" />
+  </div>
+
+  <div class="rpt__field">
+    <label for="from">From</label>
+    <p-datePicker
+      inputId="from"
+      [ngModel]="from()"
+      (ngModelChange)="from.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      dateFormat="dd/mm/yy"
+      [showIcon]="true"
+      appendTo="body"
+      styleClass="rpt__picker" />
+  </div>
+
+  <div class="rpt__field">
+    <label for="to">To</label>
+    <p-datePicker
+      inputId="to"
+      [ngModel]="to()"
+      (ngModelChange)="to.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      dateFormat="dd/mm/yy"
+      [showIcon]="true"
+      appendTo="body"
+      styleClass="rpt__picker" />
+  </div>
+
+  <div class="rpt__field--check">
+    <p-toggleswitch
+      inputId="neverPaid"
+      [ngModel]="includeNeverPaid()"
+      (ngModelChange)="includeNeverPaid.set($event)"
+      [ngModelOptions]="{ standalone: true }" />
+    <label for="neverPaid">Include students who never paid</label>
+  </div>
+
+  <div class="rpt__filter-actions">
+    <p-button label="Run" icon="pi pi-search" [loading]="loading()" (onClick)="run()" />
+    <p-button
+      label="CSV"
+      icon="pi pi-download"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="!report() || report()!.studentCount === 0"
+      (onClick)="exportCsv()" />
+  </div>
+</section>
+
+@if (report(); as r) {
+  <div class="rpt__tiles">
+    <div class="app-card rpt__tile">
+      <span>Students not paid</span>
+      <strong>{{ r.studentCount }}</strong>
+      <small class="app-muted">{{ r.courseName }}</small>
+    </div>
+
+    <div class="app-card rpt__tile rpt__tile--negative">
+      <span>Total outstanding</span>
+      <strong>{{ r.totalOutstanding | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+      <small class="app-muted">Carried on each student's last payment</small>
+    </div>
+
+    <div class="app-card rpt__tile">
+      <span>Never paid at all</span>
+      <strong>{{ r.neverPaidCount }}</strong>
+      <small class="app-muted">Invisible in the legacy report</small>
+    </div>
+  </div>
+
+  <section class="app-card rpt__result">
+    <header class="rpt__result-head">
+      <h2>Students with nothing paid in this range</h2>
+      <div class="rpt__result-head-right">
+        <span class="app-muted">
+          {{ r.from | date: 'd MMM y' }} – {{ r.to | date: 'd MMM y' }}
+        </span>
+      </div>
+    </header>
+
+    <p-table
+      [value]="r.rows.items"
+      [lazy]="true"
+      [paginator]="true"
+      [rows]="pageSize()"
+      [totalRecords]="r.rows.totalCount"
+      [loading]="loading()"
+      [rowsPerPageOptions]="[25, 50, 100]"
+      (onLazyLoad)="onLazyLoad($event)"
+      styleClass="p-datatable-sm"
+      [tableStyle]="{ 'min-width': '58rem' }"
+      currentPageReportTemplate="{first}–{last} of {totalRecords}"
+      [showCurrentPageReport]="true">
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Student</th>
+          <th style="width: 9rem">Phone</th>
+          <th style="width: 9rem">Joined</th>
+          <th style="width: 10rem">Last payment</th>
+          <th class="rpt__num" style="width: 9rem">Outstanding</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td>
+            <strong>{{ row.studentName || '—' }}</strong>
+            <small class="app-muted rpt__cell-sub">
+              <code class="rpt__code">{{ row.registrationId }}</code>
+            </small>
+          </td>
+          <td>{{ row.phone || '—' }}</td>
+          <td>{{ row.dateOfJoining ? (row.dateOfJoining | date: 'd MMM y') : '—' }}</td>
+          <td>
+            @if (row.hasEverPaid) {
+              {{ row.lastPaymentDate ? (row.lastPaymentDate | date: 'd MMM y') : '—' }}
+            } @else {
+              <p-tag severity="danger" value="Never paid" />
+            }
+          </td>
+          <td class="rpt__num">
+            {{ row.outstandingDue | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="5" class="app-muted rpt__empty">
+            Everyone on this course paid in this range.
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+
+    <p class="rpt__note">
+      The legacy procedure joined students to the fee ledger, so a student with no
+      payment at all matched nothing and never appeared — the report on unpaid
+      students quietly omitted the students furthest behind. They are included here
+      and flagged <em>Never paid</em>. Switch the toggle off for the exact legacy row set.
+    </p>
+
+    <p class="app-muted rpt__generated">Generated {{ r.generatedOn | date: 'd MMM y, h:mm a' }}</p>
+  </section>
+} @else {
+  <section class="app-card rpt__result">
+    <p class="app-muted rpt__empty">Choose a course and a date range, then press Run.</p>
+  </section>
+}

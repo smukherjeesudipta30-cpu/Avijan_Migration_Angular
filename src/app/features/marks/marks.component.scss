@@ -1,0 +1,206 @@
+:host {
+  display: block;
+}
+
+.mrk__header {
+  margin-bottom: 1.25rem;
+
+  h1 {
+    margin-top: 0.25rem;
+    font-size: 1.5rem;
+  }
+}
+
+/* -------------------------------------------------------------------- form */
+.mrk__form {
+  padding: 1.25rem 1.35rem 1.4rem;
+  margin-bottom: 1.25rem;
+}
+
+.mrk__form-head {
+  padding-bottom: 1rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--app-border);
+
+  h2 { font-size: 1.05rem; }
+  p { margin: 0.25rem 0 0; font-size: 0.82rem; }
+}
+
+.mrk__top {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem 1.35rem;
+  margin-bottom: 1.35rem;
+}
+
+.mrk__field {
+  min-width: 0;
+
+  label {
+    display: block;
+    margin-bottom: 0.32rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+
+  input { width: 100%; }
+}
+
+/* Registration ids are stored upper-case. */
+.mrk__upper {
+  text-transform: uppercase;
+}
+
+.mrk__req { color: var(--app-negative); }
+
+.mrk__error {
+  display: block;
+  margin-top: 0.28rem;
+  font-size: 0.74rem;
+  color: var(--app-negative);
+}
+
+:host ::ng-deep .mrk__datepicker,
+:host ::ng-deep .mrk__datepicker input,
+:host ::ng-deep .p-inputnumber,
+:host ::ng-deep .p-inputnumber input {
+  width: 100%;
+}
+
+/* ---------------------------------------------------------- subject slots */
+.mrk__subjects {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1rem;
+}
+
+.mrk__slot {
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  padding: 0.9rem 1rem 1rem;
+  margin: 0;
+  min-width: 0;
+
+  legend {
+    padding: 0 0.45rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--app-text-muted);
+  }
+
+  .mrk__field { margin-bottom: 0.7rem; }
+}
+
+.mrk__slot-marks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+
+  .mrk__field { margin-bottom: 0; }
+}
+
+/* --------------------------------------------------------------- totals */
+.mrk__totals {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.2rem;
+  padding: 0.7rem 1rem;
+  border-radius: var(--app-radius);
+  background: var(--app-page-bg);
+  border-left: 3px solid var(--app-brand);
+
+  span { font-size: 0.8rem; color: var(--app-text-muted); }
+  strong { font-size: 1.05rem; letter-spacing: -0.01em; }
+}
+
+.mrk__form-actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 1.3rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--app-border);
+}
+
+/* -------------------------------------------------------------------- list */
+.mrk__list {
+  padding: 1.15rem 1.25rem 0.6rem;
+}
+
+.mrk__list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+
+  h2 { font-size: 1.05rem; }
+}
+
+.mrk__list-head-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+
+  span { font-size: 0.8rem; }
+}
+
+.mrk__search {
+  width: 17rem;
+}
+
+.mrk__subject-list {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.mrk__subject-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--app-page-bg);
+  border: 1px solid var(--app-border);
+  font-size: 0.73rem;
+  white-space: nowrap;
+
+  strong { font-size: 0.73rem; }
+}
+
+.mrk__code {
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  background: var(--app-page-bg);
+  font-size: 0.72rem;
+}
+
+.mrk__cell-sub {
+  display: block;
+  margin-top: 0.15rem;
+  line-height: 1.35;
+}
+
+.mrk__num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.mrk__actions {
+  display: flex;
+  gap: 0.1rem;
+}
+
+.mrk__empty {
+  padding: 1.75rem 0.5rem;
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .mrk__search { width: 100%; }
+}

@@ -1,0 +1,187 @@
+:host {
+  display: block;
+}
+
+.crs__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+
+  h1 {
+    margin-top: 0.25rem;
+    font-size: 1.5rem;
+  }
+}
+
+.crs__views {
+  display: flex;
+  gap: 0.4rem;
+}
+
+/* -------------------------------------------------------------------- form */
+.crs__form {
+  padding: 1.25rem 1.35rem 1.4rem;
+  margin-bottom: 1.25rem;
+}
+
+.crs__form-head {
+  padding-bottom: 1rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--app-border);
+
+  h2 { font-size: 1.05rem; }
+}
+
+.crs__grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem 1.35rem;
+}
+
+.crs__field {
+  min-width: 0;
+
+  label {
+    display: block;
+    margin-bottom: 0.32rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  input { width: 100%; }
+}
+
+.crs__req { color: var(--app-negative); }
+
+.crs__error {
+  display: block;
+  margin-top: 0.28rem;
+  font-size: 0.74rem;
+  color: var(--app-negative);
+}
+
+:host ::ng-deep .p-inputnumber,
+:host ::ng-deep .crs__select {
+  width: 100%;
+}
+
+.crs__form-actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 1.3rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--app-border);
+}
+
+/* ------------------------------------------------------------------ filter */
+.crs__filter {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.crs__filter-field {
+  flex: 1 1 220px;
+  min-width: 0;
+
+  label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--app-text-muted);
+  }
+
+  input { width: 100%; }
+}
+
+/* -------------------------------------------------------------------- list */
+.crs__list {
+  padding: 1.15rem 1.25rem 0.6rem;
+}
+
+.crs__list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+
+  h2 { font-size: 1.05rem; }
+  > span { font-size: 0.8rem; }
+}
+
+.crs__list-head-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+
+  span { font-size: 0.8rem; }
+}
+
+.crs__search {
+  width: 15rem;
+}
+
+.crs__num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* A student who has paid the full course length. */
+.crs__done {
+  color: var(--app-positive);
+  font-weight: 600;
+}
+
+.crs__code {
+  padding: 0.1rem 0.4rem;
+  border-radius: 5px;
+  background: var(--app-page-bg);
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.crs__cell-sub {
+  display: block;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.crs__no-duration {
+  font-size: 0.74rem;
+  font-style: italic;
+}
+
+.crs__actions {
+  display: flex;
+  gap: 0.1rem;
+}
+
+.crs__empty {
+  padding: 1.75rem 0.5rem;
+  text-align: center;
+}
+
+/* Progress bar tinted by how far behind the student is. */
+:host ::ng-deep .crs__bar--success .p-progressbar-value { background: var(--app-positive); }
+:host ::ng-deep .crs__bar--info .p-progressbar-value    { background: var(--app-accent); }
+:host ::ng-deep .crs__bar--warn .p-progressbar-value    { background: #f59e0b; }
+
+:host ::ng-deep .crs__bar .p-progressbar-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+@media (max-width: 760px) {
+  .crs__grid { grid-template-columns: 1fr; }
+  .crs__search { width: 100%; }
+}

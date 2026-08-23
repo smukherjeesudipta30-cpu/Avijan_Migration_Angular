@@ -1,0 +1,239 @@
+:host {
+  display: block;
+}
+
+.fee__header {
+  margin-bottom: 1.25rem;
+
+  h1 {
+    margin-top: 0.25rem;
+    font-size: 1.5rem;
+  }
+}
+
+/* ------------------------------------------------------------------ lookup */
+.fee__lookup {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.fee__lookup-field {
+  flex: 1 1 280px;
+
+  label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--app-text-muted);
+  }
+
+  input { width: 100%; }
+}
+
+.fee__lookup-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+:host ::ng-deep .fee__notice {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+/* ------------------------------------------------------------------ panels */
+.fee__grid {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  align-items: start;
+}
+
+.fee__panel {
+  padding: 1.15rem 1.25rem 1.35rem;
+  min-width: 0;
+}
+
+.fee__panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0.85rem;
+  margin-bottom: 1.1rem;
+  border-bottom: 1px solid var(--app-border);
+
+  h2 { font-size: 1rem; }
+  span { font-size: 0.8rem; }
+}
+
+/* ------------------------------------------------------- admission details */
+.fee__details {
+  margin: 0;
+  display: grid;
+  gap: 0.7rem;
+
+  > div {
+    display: grid;
+    grid-template-columns: 11rem 1fr;
+    gap: 0.75rem;
+    align-items: baseline;
+  }
+
+  dt {
+    font-size: 0.8rem;
+    color: var(--app-text-muted);
+  }
+
+  dd {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+}
+
+.fee__due {
+  color: var(--app-negative);
+  font-weight: 600;
+}
+
+.fee__code {
+  padding: 0.1rem 0.4rem;
+  border-radius: 5px;
+  background: var(--app-page-bg);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+/* -------------------------------------------------------------------- form */
+.fee__field {
+  margin-bottom: 1rem;
+
+  label {
+    display: block;
+    margin-bottom: 0.32rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+}
+
+.fee__req { color: var(--app-negative); }
+
+.fee__error {
+  display: block;
+  margin-top: 0.28rem;
+  font-size: 0.74rem;
+  color: var(--app-negative);
+}
+
+:host ::ng-deep .fee__datepicker,
+:host ::ng-deep .fee__datepicker input,
+:host ::ng-deep .p-inputnumber,
+:host ::ng-deep .p-inputnumber input {
+  width: 100%;
+}
+
+/* ------------------------------------------------- calculated figures block */
+.fee__calc {
+  margin: 1.15rem 0;
+  padding: 0.9rem 1rem;
+  border-radius: var(--app-radius);
+  background: var(--app-page-bg);
+  border: 1px solid var(--app-border);
+  transition: opacity 0.15s ease;
+
+  &--busy { opacity: 0.55; }
+}
+
+.fee__calc-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.32rem 0;
+  font-size: 0.85rem;
+
+  span { color: var(--app-text-muted); }
+
+  &--total {
+    padding-top: 0.5rem;
+    margin-top: 0.3rem;
+    border-top: 1px dashed var(--app-border);
+    font-size: 0.9rem;
+
+    span { color: var(--app-text); font-weight: 500; }
+  }
+}
+
+.fee__calc-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin: 0.75rem 0 0;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--app-border);
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
+.fee__calc-empty {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.fee__form-actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 1.2rem;
+  padding-top: 1.05rem;
+  border-top: 1px solid var(--app-border);
+}
+
+/* -------------------------------------------------------------------- list */
+.fee__list {
+  padding: 1.15rem 1.25rem 0.5rem;
+}
+
+.fee__list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  h2 { font-size: 1.05rem; }
+  span { font-size: 0.8rem; }
+}
+
+.fee__num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.fee__actions {
+  display: flex;
+  gap: 0.1rem;
+}
+
+.fee__empty {
+  padding: 1.75rem 0.5rem;
+  text-align: center;
+}
+
+@media (max-width: 1100px) {
+  .fee__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .fee__details > div {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
+}

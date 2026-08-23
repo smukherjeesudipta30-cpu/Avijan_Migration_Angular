@@ -1,0 +1,227 @@
+:host {
+  display: block;
+}
+
+.usr__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+
+  h1 {
+    margin-top: 0.25rem;
+    font-size: 1.5rem;
+  }
+}
+
+/* ------------------------------------------------------------------ search */
+.usr__search {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.usr__search-field {
+  flex: 1 1 260px;
+
+  label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--app-text-muted);
+  }
+
+  input { width: 100%; }
+}
+
+.usr__search-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* -------------------------------------------------------------------- form */
+.usr__form {
+  padding: 1.25rem 1.35rem 1.4rem;
+  margin-bottom: 1.25rem;
+}
+
+.usr__form-head {
+  padding-bottom: 1rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--app-border);
+
+  h2 { font-size: 1.05rem; }
+  p { margin: 0.25rem 0 0; font-size: 0.82rem; }
+}
+
+.usr__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem 1.35rem;
+}
+
+.usr__field {
+  min-width: 0;
+
+  label {
+    display: block;
+    margin-bottom: 0.32rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  input { width: 100%; }
+}
+
+.usr__req { color: var(--app-negative); }
+
+.usr__error {
+  display: block;
+  margin-top: 0.28rem;
+  font-size: 0.74rem;
+  color: var(--app-negative);
+}
+
+:host ::ng-deep .usr__select,
+:host ::ng-deep .usr__datepicker,
+:host ::ng-deep .usr__datepicker input,
+:host ::ng-deep .usr__password,
+:host ::ng-deep .usr__password input {
+  width: 100%;
+}
+
+.usr__checks {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1.1rem;
+  padding-top: 0.9rem;
+  border-top: 1px dashed var(--app-border);
+}
+
+.usr__check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.usr__form-actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 1.3rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--app-border);
+}
+
+/* -------------------------------------------------------------------- list */
+.usr__list {
+  padding: 1.15rem 1.25rem 0.5rem;
+}
+
+.usr__list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+
+  h2 { font-size: 1.05rem; }
+}
+
+.usr__list-head-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+
+  span { font-size: 0.8rem; }
+}
+
+.usr__cell-sub {
+  display: block;
+  font-size: 0.73rem;
+  line-height: 1.35;
+}
+
+:host ::ng-deep .usr__role-tag {
+  margin-right: 0.25rem;
+}
+
+.usr__actions {
+  display: flex;
+  gap: 0.1rem;
+}
+
+.usr__empty {
+  padding: 1.75rem 0.5rem;
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .usr__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* Employee id is only meaningful for staff roles. */
+.usr__code {
+  padding: 0.1rem 0.4rem;
+  border-radius: 5px;
+  background: var(--app-page-bg);
+  font-size: 0.78rem;
+}
+
+.usr__not-required {
+  font-size: 0.75rem;
+  font-style: italic;
+}
+
+.usr__ctc-lead {
+  margin: 0 0 1.1rem;
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+:host ::ng-deep .usr__ctc-lead + .usr__field .p-inputnumber {
+  width: 100%;
+}
+
+/* ------------------------------------------- set a password to share dialog */
+.usr__dialog-lead {
+  margin: 0 0 1.1rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.usr__share {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+/* Shown in clear so the administrator can read it out or copy it. */
+.usr__share-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: 'Cascadia Mono', Consolas, monospace;
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+}
+
+.usr__dialog-note {
+  margin: 1.1rem 0 0;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--app-radius);
+  background: var(--app-page-bg);
+  border-left: 3px solid var(--app-accent);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
