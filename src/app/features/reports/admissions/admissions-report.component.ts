@@ -8,6 +8,8 @@ import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 
 import { CourseLookup } from '../../../core/models/student.model';
 import { AdmissionsReport } from '../../../core/models/report.model';
+import { BranchListItem } from '../../../core/models/master.model';
+import { MasterService } from '../../../core/services/master.service';
 import { ReportService } from '../../../core/services/report.service';
 import { StudentService } from '../../../core/services/student.service';
 import { downloadCsv, reportFileName, startOfMonth, toIsoDate } from '../report-utils';
@@ -32,10 +34,15 @@ import { downloadCsv, reportFileName, startOfMonth, toIsoDate } from '../report-
 })
 export class AdmissionsReportComponent {
   private readonly reports = inject(ReportService);
+  private readonly masters = inject(MasterService);
   private readonly students = inject(StudentService);
 
   readonly report = signal<AdmissionsReport | null>(null);
   readonly loading = signal(false);
+
+  /** Optional branch filter. Null is every branch. */
+  readonly branch = signal<string | null>(null);
+  readonly branches = signal<BranchListItem[]>([]);
   readonly courses = signal<CourseLookup[]>([]);
 
   readonly from = signal<Date>(startOfMonth());
@@ -46,6 +53,10 @@ export class AdmissionsReportComponent {
   readonly pageSize = signal(25);
 
   constructor() {
+    this.masters.branches().subscribe({
+      next: rows => this.branches.set(rows.filter(b => b.isActive))
+    });
+
     this.students.courses().subscribe(list => this.courses.set(list));
     this.run();
   }
@@ -60,7 +71,7 @@ export class AdmissionsReportComponent {
     this.loading.set(true);
 
     this.reports
-      .admissions(from, to, this.page(), this.pageSize(), this.courseId())
+      .admissions(from, to, this.page(), this.pageSize(), this.courseId(), this.branch())
       .subscribe({
         next: report => {
           this.report.set(report);
@@ -91,7 +102,7 @@ export class AdmissionsReportComponent {
     const to = toIsoDate(this.to())!;
 
     this.reports
-      .admissions(from, to, 1, Math.max(report.studentCount, 1), this.courseId())
+      .admissions(from, to, 1, Math.max(report.studentCount, 1), this.courseId(), this.branch())
       .subscribe(full => {
         downloadCsv(
           reportFileName('admissions'),

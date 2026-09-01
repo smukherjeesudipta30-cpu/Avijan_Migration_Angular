@@ -6,6 +6,7 @@ import { ButtonModule } from 'primeng/button';
 import { ChartModule } from 'primeng/chart';
 import { DatePickerModule } from 'primeng/datepicker';
 import { MessageModule } from 'primeng/message';
+import { SelectModule } from 'primeng/select';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
@@ -17,7 +18,15 @@ import {
   IncomeSection,
   IncomeSectionTotal
 } from '../../core/models/income.model';
+import { formatMoney } from '../../core/format/money';
+import { BranchListItem } from '../../core/models/master.model';
 import { IncomeService } from '../../core/services/income.service';
+import { MasterService } from '../../core/services/master.service';
+import { AboutService } from '../../core/services/about.service';
+import { ContactDetails } from '../../core/models/about.model';
+import { incomeSectionDocumentHtml } from '../../core/printing/income-section-document';
+import { incomeSummaryDocumentHtml } from '../../core/printing/income-summary-document';
+import { openDocumentWindow } from '../../core/printing/legacy-documents';
 
 /**
  * Income report — the migration of `Views/Income/Index.cshtml` and
@@ -36,6 +45,7 @@ import { IncomeService } from '../../core/services/income.service';
     ChartModule,
     DatePickerModule,
     MessageModule,
+    SelectModule,
     SelectButtonModule,
     TableModule,
     TagModule,
@@ -46,12 +56,25 @@ import { IncomeService } from '../../core/services/income.service';
 })
 export class IncomeComponent {
   private readonly income = inject(IncomeService);
+  private readonly masters = inject(MasterService);
+  private readonly about = inject(AboutService);
   private readonly messages = inject(MessageService);
 
   readonly report = signal<IncomeReport | null>(null);
   readonly loading = signal(false);
 
+  /** Scopes every figure to one branch. Null is the whole institute. */
+  readonly branch = signal<string | null>(null);
+
+  readonly branches = signal<BranchListItem[]>([]);
+
   readonly detail = signal<IncomeDetail[]>([]);
+
+  /** True while the per-tab sheet is being assembled. */
+  readonly pdfBusy = signal(false);
+
+  /** True while the full statement is being assembled. */
+  readonly summaryBusy = signal(false);
   readonly detailTotal = signal(0);
   readonly detailLoading = signal(false);
   readonly activeSection = signal<IncomeSection>('Fees');
@@ -77,6 +100,20 @@ export class IncomeComponent {
 
   readonly costSections = computed(() =>
     (this.report()?.sections ?? []).filter(s => s.isCost));
+
+  /* The cost card lists these two groups separately, and it matters that it does.
+     "Paid to teachers" is a cost section but a breakdown one, so it is NOT part of
+     Total cost - the teacher's share is counted once, when it is earned, and the
+     cash handed over later settles that rather than adding to it.
+
+     Listed together and styled alike, the card did not add up: four lines summing
+     to Rs 8,08,507 under a total of Rs 5,35,847, with nothing to say which line
+     was not in it. Splitting them is what makes the total checkable by eye. */
+  readonly countedCostSections = computed(() =>
+    (this.report()?.sections ?? []).filter(s => s.isCost && !s.isBreakdown));
+
+  readonly informationalCostSections = computed(() =>
+    (this.report()?.sections ?? []).filter(s => s.isCost && s.isBreakdown));
 
   readonly breakdownSections = computed(() =>
     (this.report()?.sections ?? []).filter(s => s.isBreakdown));
@@ -160,6 +197,10 @@ export class IncomeComponent {
 
   constructor() {
     this.run();
+
+    this.masters.branches().subscribe({
+      next: rows => this.branches.set(rows.filter(b => b.isActive))
+    });
   }
 
   /* --------------------------------------------------------------- run */
@@ -181,7 +222,7 @@ export class IncomeComponent {
 
     this.loading.set(true);
 
-    this.income.report(from, to).subscribe({
+    this.income.report(from, to, this.branch()).subscribe({
       next: data => {
         this.report.set(data);
         this.loading.set(false);
@@ -239,7 +280,7 @@ export class IncomeComponent {
     this.detailLoading.set(true);
 
     this.income
-      .detail(this.activeSection(), data.from, data.to, this.detailPage(), this.detailPageSize())
+      .detail(this.activeSection(), data.from, data.to, this.detailPage(), this.detailPageSize(), this.branch())
       .subscribe({
         next: result => {
           this.detail.set(result.items);
@@ -257,6 +298,141 @@ export class IncomeComponent {
     this.detailPageSize.set(size);
     this.detailPage.set(Math.floor(first / size) + 1);
     this.loadDetail();
+  }
+
+  /**
+   * Prints the whole report - income, expenditure, net and the period-by-period
+   * movement behind it - as one letterheaded statement.
+   *
+   * Needs no extra rows: every figure is already in the report on screen, so
+   * this opens immediately and can never disagree with what the user is
+   * looking at.
+   */
+  downloadSummaryPdf(): void {
+    const data = this.report();
+    if (!data) return;
+
+    this.summaryBusy.set(true);
+
+    this.about.getAboutPage().subscribe({
+      next: page => this.openSummary(data, page.contact),
+      error: () => this.openSummary(data, null)
+    });
+  }
+
+  private openSummary(data: IncomeReport, contact: ContactDetails | null): void {
+    this.summaryBusy.set(false);
+
+    if (!openDocumentWindow(incomeSummaryDocumentHtml(data, contact))) {
+      this.messages.add({
+        severity: 'warn', summary: 'Pop-up blocked',
+        detail: 'Allow pop-ups for this site, then try again.', life: 6000
+      });
+    }
+  }
+
+  /**
+   * Prints the active tab as a letterheaded A4 sheet, for a bank or auditor.
+   *
+   * Fetches EVERY row in the section rather than the twenty-five on screen -
+   * a statement that silently showed one page would be worse than none. The
+   * cap exists so a five-year range cannot try to render fifty thousand rows
+   * into a popup; the sheet says when it has been applied.
+   */
+  downloadPdf(): void {
+    const data = this.report();
+    const section = this.activeSectionTotal();
+
+    if (!data || !section || section.rowCount === 0) {
+      this.messages.add({
+        severity: 'info', summary: 'Nothing to print',
+        detail: 'This section has no entries for the selected period.', life: 4000
+      });
+      return;
+    }
+
+    const cap = 3000;
+    this.pdfBusy.set(true);
+
+    /* The letterhead comes from the API so the address cannot drift out of
+       step with the public site. A failure to fetch it is not worth losing
+       the document over - the sheet falls back to the registered address. */
+    this.about.getAboutPage().subscribe({
+      next: page => this.renderPdf(data, section, page.contact, cap),
+      error: () => this.renderPdf(data, section, null, cap)
+    });
+  }
+
+  /**
+   * Collects every row of the section, a page at a time.
+   *
+   * The API caps a page at 200 rows and that cap is global — it guards every
+   * paged endpoint, so asking for 3,000 silently returns 200 and a document
+   * built from that would look complete while showing a fifth of the entries.
+   * Paging here gets the whole section without weakening the server's limit.
+   */
+  private renderPdf(
+    data: IncomeReport,
+    section: IncomeSectionTotal,
+    contact: ContactDetails | null,
+    cap: number
+  ): void {
+    const serverPage = 200;
+    const collected: IncomeDetail[] = [];
+
+    const fetchPage = (page: number): void => {
+      this.income
+        .detail(this.activeSection(), data.from, data.to, page, serverPage, this.branch())
+        .subscribe({
+          next: result => {
+            collected.push(...result.items);
+
+            const more = collected.length < result.totalCount
+                         && result.items.length > 0
+                         && collected.length < cap;
+
+            if (more) {
+              fetchPage(page + 1);
+              return;
+            }
+
+            this.pdfBusy.set(false);
+            this.openSheet(data, section, contact, collected, result.totalCount);
+          },
+          error: () => this.pdfBusy.set(false)
+        });
+    };
+
+    fetchPage(1);
+  }
+
+  private openSheet(
+    data: IncomeReport,
+    section: IncomeSectionTotal,
+    contact: ContactDetails | null,
+    rows: IncomeDetail[],
+    totalCount: number
+  ): void {
+    const opened = openDocumentWindow(incomeSectionDocumentHtml({
+      sectionLabel: section.label,
+      from: data.from,
+      to: data.to,
+      branch: this.branch(),
+      total: section.amount,
+      rowCount: section.rowCount,
+      rows,
+      truncated: totalCount > rows.length,
+      contact
+    }));
+
+    if (!opened) {
+      this.messages.add({
+        severity: 'warn',
+        summary: 'Pop-up blocked',
+        detail: 'Allow pop-ups for this site, then try again.',
+        life: 6000
+      });
+    }
   }
 
   /** Downloads the visible detail rows as CSV. */
@@ -290,11 +466,7 @@ export class IncomeComponent {
 
   /* ----------------------------------------------------------- helpers */
   money(value?: number | null): string {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(value ?? 0);
+    return formatMoney(value);
   }
 
   sectionOf(total: IncomeSectionTotal): IncomeSection {

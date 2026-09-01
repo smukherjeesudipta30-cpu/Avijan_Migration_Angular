@@ -12,8 +12,11 @@ export class IncomeService {
   private readonly http = inject(HttpClient);
   private readonly base = `${environment.apiBaseUrl}/income`;
 
-  report(from: string, to: string): Observable<IncomeReport> {
-    const params = new HttpParams().set('from', from).set('to', to);
+  /** Pass a branch to scope every figure to it; omit for the whole institute. */
+  report(from: string, to: string, branch?: string | null): Observable<IncomeReport> {
+    let params = new HttpParams().set('from', from).set('to', to);
+
+    if (branch) params = params.set('branch', branch);
 
     return this.http
       .get<ApiResponse<IncomeReport>>(`${this.base}/report`, { params })
@@ -25,14 +28,17 @@ export class IncomeService {
     from: string,
     to: string,
     page = 1,
-    pageSize = 25
+    pageSize = 25,
+    branch?: string | null
   ): Observable<PagedResult<IncomeDetail>> {
-    const params = new HttpParams()
+    let params = new HttpParams()
       .set('section', section)
       .set('from', from)
       .set('to', to)
       .set('page', String(page))
-      .set('pageSize', String(pageSize));
+      .set("pageSize", String(pageSize));
+
+    if (branch) params = params.set("branch", branch);
 
     return this.http
       .get<ApiResponse<PagedResult<IncomeDetail>>>(`${this.base}/detail`, { params })

@@ -1,10 +1,12 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { catchError, throwError } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
+import { AuthService } from '../services/auth.service';
 
 /**
  * Requests whose failures must not raise a toast:
@@ -17,10 +19,21 @@ const SILENT_PATHS = ['/auth/login', '/auth/refresh'];
 /** Surfaces server errors as a PrimeNG toast. */
 export const errorInterceptor: HttpInterceptorFn = (request, next) => {
   const messages = inject(MessageService);
+  const auth = inject(AuthService);
+  const router = inject(Router);
 
   return next(request).pipe(
     catchError((error: unknown) => {
       const silent = SILENT_PATHS.some(path => request.url.includes(path));
+
+      /* The API refuses everything with 403 while a migrated account still owes
+         its password reset. Sending them to the screen that clears it is more
+         use than a "Not permitted" toast, and it catches the case where a stale
+         tab is left open on a page the reset now blocks. */
+      if (error instanceof HttpErrorResponse && error.status === 403 && auth.mustChangePassword()) {
+        void router.navigate(['/change-password']);
+        return throwError(() => error);
+      }
 
       if (error instanceof HttpErrorResponse && !silent) {
         messages.add({

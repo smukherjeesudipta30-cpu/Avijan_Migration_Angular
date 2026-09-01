@@ -163,12 +163,6 @@
     <article class="app-card dash__panel">
       <header class="dash__panel-head">
         <h2>Notice board</h2>
-        @if (data.counts.pendingEnquiries > 0) {
-          <p-tag
-            severity="warn"
-            [value]="data.counts.pendingEnquiries + ' new enquiry'"
-            icon="pi pi-envelope" />
-        }
       </header>
 
       @if (data.recentNotices.length) {
@@ -182,6 +176,231 @@
         </ul>
       } @else {
         <p class="app-muted">No notices published.</p>
+      }
+    </article>
+
+    <!-- Fees students have paid from the portal against the institute's QR code.
+         The QR is static, so nothing confirms the money arrived — every one of
+         these needs checking against the Paytm account. -->
+    <article class="app-card dash__panel dash__panel--wide">
+      <header class="dash__panel-head">
+        <h2>Online payments to confirm</h2>
+        @if (onlinePayments().length) {
+          <p-tag
+            severity="warn"
+            [value]="onlinePayments().length + ' unchecked'"
+            icon="pi pi-indian-rupee" />
+        }
+      </header>
+
+      @if (onlinePayments().length) {
+        <div class="dash__pay-list">
+          @for (payment of onlinePayments(); track payment.feeId) {
+            <div class="dash__pay">
+              <div class="dash__pay-main">
+                <strong>{{ payment.studentName || payment.registrationId }}</strong>
+                <code class="dash__pay-reg">{{ payment.registrationId }}</code>
+                <div class="app-muted dash__pay-sub">
+                  {{ payment.courseName || 'Course not recorded' }}
+                </div>
+              </div>
+
+              <dl class="dash__pay-facts">
+                <div>
+                  <dt>Month</dt>
+                  <dd>{{ payment.feeDate ? (payment.feeDate | date: 'MMM y') : '&mdash;' }}</dd>
+                </div>
+                <div>
+                  <dt>Fee</dt>
+                  <dd>{{ payment.monthlyFee | currency: 'INR' : 'symbol-narrow' : '1.0-2' }}</dd>
+                </div>
+                <div [class.dash__pay-fine]="payment.lateFine > 0">
+                  <dt>Fine</dt>
+                  <dd>{{ payment.lateFine | currency: 'INR' : 'symbol-narrow' : '1.0-2' }}</dd>
+                </div>
+                <div>
+                  <dt>Paid</dt>
+                  <dd><strong>{{ payment.amountPaid | currency: 'INR' : 'symbol-narrow' : '1.0-2' }}</strong></dd>
+                </div>
+                <div class="dash__pay-facts--wide">
+                  <dt>UPI reference</dt>
+                  <dd><code>{{ payment.transactionId }}</code></dd>
+                </div>
+                <div class="dash__pay-facts--wide">
+                  <dt>Submitted</dt>
+                  <dd>{{ payment.paidOn | date: 'd MMM y, h:mm a' }}</dd>
+                </div>
+              </dl>
+
+              <p-button
+                label="Confirm received"
+                icon="pi pi-check"
+                size="small"
+                [loading]="confirming().has(payment.feeId)"
+                (onClick)="confirmPayment(payment)" />
+            </div>
+          }
+        </div>
+
+        <p class="dash__pay-note">
+          Check each reference against the institute's Paytm account before
+          confirming. The fee is already on the student's ledger and the teacher's
+          share is already recorded, so a payment that never arrived has to be
+          corrected on the Monthly Fees screen.
+        </p>
+      } @else {
+        <p class="dash__empty app-muted">
+          No online payments waiting. Fees paid from the student portal appear here
+          for checking.
+        </p>
+      }
+    </article>
+
+    <!-- Alerts for the office. Today that is students changing their portal
+         password; the type field on each row is there so more can be added. -->
+    <article class="app-card dash__panel dash__panel--wide">
+      <header class="dash__panel-head">
+        <h2>Notifications</h2>
+
+        <div class="dash__panel-actions">
+          @if (data.unreadNotifications > 0) {
+            <p-tag
+              severity="warn"
+              [value]="data.unreadNotifications + ' unread'"
+              icon="pi pi-bell" />
+
+            <p-button
+              label="Mark all read"
+              icon="pi pi-check-circle"
+              size="small"
+              severity="secondary"
+              [text]="true"
+              [loading]="clearingAll()"
+              (onClick)="markAllNotificationsRead()" />
+          }
+        </div>
+      </header>
+
+      @if (data.notifications?.length) {
+        <ul class="dash__notices">
+          @for (note of data.notifications; track note.id) {
+            <li class="dash__notice" [class.dash__notice--read]="note.isRead">
+              <div class="dash__notice-head">
+                <strong>{{ note.title }}</strong>
+                <small class="app-muted">{{ note.createdOn | date: 'd MMM y, h:mm a' }}</small>
+              </div>
+
+              <dl class="dash__notice-grid">
+                @if (note.registrationId) {
+                  <dt>Registration id</dt><dd>{{ note.registrationId }}</dd>
+                }
+                @if (note.courseName) {
+                  <dt>Course</dt><dd>{{ note.courseName }}</dd>
+                }
+                @if (note.loginId) {
+                  <dt>User name</dt><dd>{{ note.loginId }}</dd>
+                }
+                @if (note.detailValue) {
+                  <dt>Password</dt>
+                  <dd class="dash__notice-secret">
+                    @if (isRevealed(note.id)) {
+                      <code>{{ note.detailValue }}</code>
+                    } @else {
+                      <span class="app-muted">••••••••</span>
+                    }
+                    <button
+                      type="button"
+                      class="dash__reveal"
+                      (click)="toggleReveal(note.id)"
+                      [attr.aria-label]="isRevealed(note.id) ? 'Hide password' : 'Show password'">
+                      <i class="pi" [class.pi-eye]="!isRevealed(note.id)" [class.pi-eye-slash]="isRevealed(note.id)"></i>
+                      {{ isRevealed(note.id) ? 'Hide' : 'Show' }}
+                    </button>
+                  </dd>
+                }
+              </dl>
+
+              @if (!note.isRead) {
+                <p-button
+                  label="Mark read"
+                  icon="pi pi-check"
+                  size="small"
+                  severity="secondary"
+                  [outlined]="true"
+                  [loading]="isDismissing(note.id)"
+                  (onClick)="markNotificationRead(note.id)" />
+              }
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="app-muted dash__empty">Nothing to report.</p>
+      }
+    </article>
+
+    <!-- Enquiries from the public front page's "Send Us Message" form. The
+         dashboard used to show only a count; the messages were unreadable. -->
+    <article class="app-card dash__panel dash__panel--wide">
+      <header class="dash__panel-head">
+        <h2>New enquiries</h2>
+        @if (data.counts.pendingEnquiries > 0) {
+          <p-tag
+            severity="warn"
+            [value]="data.counts.pendingEnquiries + ' waiting'"
+            icon="pi pi-envelope" />
+        }
+      </header>
+
+      @if (data.pendingEnquiryList?.length) {
+        <ul class="dash__enquiries">
+          @for (enquiry of data.pendingEnquiryList; track enquiry.id) {
+            <li class="dash__enquiry">
+              <div class="dash__enquiry-head">
+                <strong>{{ enquiry.name || 'Someone' }}</strong>
+                <small class="app-muted">{{ enquiry.submittedOn | date: 'd MMM y, h:mm a' }}</small>
+              </div>
+
+              <div class="dash__enquiry-contact">
+                @if (enquiry.email) {
+                  <a [href]="'mailto:' + enquiry.email">
+                    <i class="pi pi-envelope"></i> {{ enquiry.email }}
+                  </a>
+                }
+                @if (enquiry.phone) {
+                  <a [href]="'tel:' + enquiry.phone">
+                    <i class="pi pi-phone"></i> {{ enquiry.phone }}
+                  </a>
+                }
+              </div>
+
+              @if (enquiry.message) {
+                <p class="dash__enquiry-body">{{ enquiry.message }}</p>
+              } @else {
+                <p class="dash__enquiry-body app-muted">
+                  No message was typed &mdash; only contact details were left.
+                </p>
+              }
+
+              <p-button
+                label="Mark handled"
+                icon="pi pi-check"
+                size="small"
+                severity="secondary"
+                [outlined]="true"
+                [loading]="isClearing(enquiry.id)"
+                (onClick)="markHandled(enquiry)" />
+            </li>
+          }
+        </ul>
+
+        @if (data.counts.pendingEnquiries > (data.pendingEnquiryList ?? []).length) {
+          <p class="app-muted dash__enquiry-more">
+            Showing the {{ (data.pendingEnquiryList ?? []).length }} most recent of
+            {{ data.counts.pendingEnquiries }}.
+          </p>
+        }
+      } @else {
+        <p class="app-muted">Nothing waiting — every enquiry has been handled.</p>
       }
     </article>
   </section>

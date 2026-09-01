@@ -4,9 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 
 import { ExpenseReport } from '../../../core/models/report.model';
+import { BranchListItem } from '../../../core/models/master.model';
+import { MasterService } from '../../../core/services/master.service';
 import { ReportService } from '../../../core/services/report.service';
 import { downloadCsv, reportFileName, startOfMonth, toIsoDate } from '../report-utils';
 
@@ -22,6 +25,7 @@ import { downloadCsv, reportFileName, startOfMonth, toIsoDate } from '../report-
     ButtonModule,
     DatePickerModule,
     InputTextModule,
+    SelectModule,
     TableModule
   ],
   templateUrl: './expenses-report.component.html',
@@ -29,6 +33,11 @@ import { downloadCsv, reportFileName, startOfMonth, toIsoDate } from '../report-
 })
 export class ExpensesReportComponent {
   private readonly reports = inject(ReportService);
+  private readonly masters = inject(MasterService);
+
+  /** Optional branch filter. Null is every branch. */
+  readonly branch = signal<string | null>(null);
+  readonly branches = signal<BranchListItem[]>([]);
 
   readonly report = signal<ExpenseReport | null>(null);
   readonly loading = signal(false);
@@ -41,6 +50,10 @@ export class ExpensesReportComponent {
   readonly pageSize = signal(25);
 
   constructor() {
+    this.masters.branches().subscribe({
+      next: rows => this.branches.set(rows.filter(b => b.isActive))
+    });
+
     this.run();
   }
 
@@ -54,7 +67,7 @@ export class ExpensesReportComponent {
     this.loading.set(true);
 
     this.reports
-      .expenses(from, to, this.page(), this.pageSize(), this.search().trim() || null)
+      .expenses(from, to, this.page(), this.pageSize(), this.search().trim() || null, this.branch())
       .subscribe({
         next: report => {
           this.report.set(report);
@@ -83,13 +96,14 @@ export class ExpensesReportComponent {
         toIsoDate(this.to())!,
         1,
         Math.max(report.entryCount, 1),
-        this.search().trim() || null
+        this.search().trim() || null,
+        this.branch()
       )
       .subscribe(full => {
         downloadCsv(
           reportFileName('expenses'),
-          ['Date', 'Details', 'Amount'],
-          full.rows.items.map(r => [r.expenseDate, r.details, r.amount])
+          ['Date', 'Details', 'Branch', 'Amount'],
+          full.rows.items.map(r => [r.expenseDate, r.details, r.branch, r.amount])
         );
       });
   }

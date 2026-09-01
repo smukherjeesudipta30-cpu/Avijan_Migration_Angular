@@ -121,6 +121,32 @@
         </div>
 
         <div class="stu__field">
+          <label for="personalEmail">
+            Personal email
+            @if (!isEditing()) { <span class="stu__req">*</span> }
+          </label>
+          <input pInputText id="personalEmail" type="email" formControlName="personalEmail" />
+          @if (form.controls.personalEmail.touched && form.controls.personalEmail.invalid) {
+            <small class="stu__error">
+              @if (form.controls.personalEmail.hasError('required')) {
+                Personal email is required for a new admission.
+              } @else {
+                Enter a valid email address.
+              }
+            </small>
+          } @else {
+            <small class="app-muted stu__hint">
+              @if (isEditing()) {
+                The student's own address, if different.
+              } @else {
+                The welcome message goes here, so it must be the student's own
+                address &mdash; not the &#64;avijan.in one the institute issues.
+              }
+            </small>
+          }
+        </div>
+
+        <div class="stu__field">
           <label for="dateOfBirth">Date of birth <span class="stu__req">*</span></label>
           <p-datePicker
             inputId="dateOfBirth"
@@ -282,7 +308,12 @@
         </div>
 
         <div class="stu__field">
-          <label for="branchId">Branch</label>
+          <label for="branchId">
+            Branch
+            @if (!isEditing()) {
+              <span class="stu__req">*</span>
+            }
+          </label>
           <p-select
             inputId="branchId"
             formControlName="branchId"
@@ -290,12 +321,16 @@
             optionLabel="name"
             optionValue="branchId"
             placeholder="--Select Branch--"
-            [showClear]="true"
+            [showClear]="isEditing()"
             appendTo="body"
             styleClass="stu__select" />
+          @if (form.controls.branchId.touched && form.controls.branchId.invalid) {
+            <small class="stu__error">Please select a branch.</small>
+          }
           <small class="stu__help">
             The branch code becomes part of the registration id — Rajpur gives
-            <code>AVI/Raj/…</code>. Leave blank for the older <code>AVI/…</code> format.
+            <code>AVI/Raj/…</code>. Required for a new admission; students
+            registered earlier are all recorded against Rajpur.
           </small>
         </div>
 
@@ -309,6 +344,59 @@
             <p-checkbox formControlName="isComplete" [binary]="true" inputId="isComplete" />
             <span>Is Complete</span>
           </label>
+        </div>
+      </fieldset>
+
+      <!-- ------------------------------------------------- portal sign-in -->
+      <fieldset class="stu__fieldset">
+        <legend>Avijan portal sign-in</legend>
+
+        <p class="app-muted stu__legend-note">
+          @if (isEditing()) {
+            The sign-in this student was issued. Changing it here updates their
+            record; to change only the password, use the key icon on the Users page.
+          } @else {
+            Generated from the student's name and issued automatically when the
+            student is saved, along with their account on the Users page. Edit
+            either box to override.
+          }
+        </p>
+
+        <div class="stu__login">
+          <div class="stu__field">
+            <label for="avijanLoginEmail">Login email</label>
+            <input
+              pInputText
+              id="avijanLoginEmail"
+              type="email"
+              formControlName="avijanLoginEmail"
+              (input)="markLoginEdited()"
+              placeholder="generated from the name" />
+          </div>
+
+          <div class="stu__field">
+            <label for="avijanLoginPassword">Password</label>
+            <!-- Shown in clear: the office reads this back to the student. -->
+            <input
+              pInputText
+              id="avijanLoginPassword"
+              formControlName="avijanLoginPassword"
+              (input)="markLoginEdited()"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="generated from the name" />
+          </div>
+
+          <div class="stu__login-action">
+            <p-button
+              type="button"
+              label="Regenerate"
+              icon="pi pi-refresh"
+              severity="secondary"
+              [outlined]="true"
+              [loading]="loginSuggesting()"
+              (onClick)="regenerateLogin()" />
+          </div>
         </div>
       </fieldset>
 
@@ -509,14 +597,27 @@
               tooltipPosition="top"
               (onClick)="printReceipt(student)" />
 
+            <p-button
+              icon="pi pi-whatsapp"
+              severity="success"
+              [text]="true"
+              [disabled]="!canWhatsApp(student.phone)"
+              [pTooltip]="canWhatsApp(student.phone)
+                ? 'Send the admission receipt on WhatsApp'
+                : 'No usable mobile number on this record'"
+              tooltipPosition="top"
+              (onClick)="whatsAppReceipt(student)" />
+
             @if (student.isActive) {
-              <p-button
-                icon="pi pi-ban"
-                severity="danger"
-                [text]="true"
-                pTooltip="Deactivate"
-                tooltipPosition="top"
-                (onClick)="deactivate(student)" />
+              @if (canDeactivate()) {
+                <p-button
+                  icon="pi pi-ban"
+                  severity="danger"
+                  [text]="true"
+                  pTooltip="Deactivate"
+                  tooltipPosition="top"
+                  (onClick)="deactivate(student)" />
+              }
             } @else {
               <p-button
                 icon="pi pi-check-circle"

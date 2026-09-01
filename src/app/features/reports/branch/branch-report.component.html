@@ -1,0 +1,260 @@
+<header class="brp__header">
+  <div>
+    <p class="app-section-title">Reports</p>
+    <h1>Branch performance</h1>
+    <p class="app-muted brp__lede">
+      Admissions, fee payments and expenses by branch, over month, quarter or year.
+    </p>
+  </div>
+
+  <p-button
+    label="Export CSV"
+    icon="pi pi-download"
+    severity="secondary"
+    [outlined]="true"
+    [disabled]="!data()?.rows?.length"
+    (onClick)="exportCsv()" />
+</header>
+
+<!-- ------------------------------------------------------------- filters -->
+<section class="app-card brp__filter">
+  <div class="brp__field">
+    <label for="from">From</label>
+    <p-datePicker
+      inputId="from"
+      [ngModel]="from()"
+      (ngModelChange)="from.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      dateFormat="dd/mm/yy"
+      [showIcon]="true"
+      appendTo="body"
+      styleClass="brp__wide" />
+  </div>
+
+  <div class="brp__field">
+    <label for="to">To</label>
+    <p-datePicker
+      inputId="to"
+      [ngModel]="to()"
+      (ngModelChange)="to.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      dateFormat="dd/mm/yy"
+      [showIcon]="true"
+      appendTo="body"
+      styleClass="brp__wide" />
+  </div>
+
+  <div class="brp__field">
+    <label for="branch">Branch</label>
+    <p-select
+      inputId="branch"
+      [options]="branchOptions()"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="branch()"
+      (ngModelChange)="branch.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      [showClear]="true"
+      placeholder="All branches"
+      appendTo="body"
+      styleClass="brp__wide" />
+  </div>
+
+  <div class="brp__field brp__field--group">
+    <label>Group by</label>
+    <p-selectButton
+      [options]="groupings"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="groupBy()"
+      (ngModelChange)="setGrouping($event)"
+      [ngModelOptions]="{ standalone: true }"
+      [allowEmpty]="false" />
+  </div>
+
+  <div class="brp__actions">
+    <p-button label="Apply" icon="pi pi-search" [loading]="loading()" (onClick)="load()" />
+  </div>
+</section>
+
+@if (data(); as d) {
+  @if (d.mostlyUnassigned) {
+    <!-- Said plainly. A chart that is one enormous "Unassigned" bar otherwise
+         looks like a reporting fault rather than missing source data. -->
+    <section class="app-card brp__notice">
+      <i class="pi pi-info-circle"></i>
+      <div>
+        <strong>Most records carry no branch, so they group under “Unassigned”.</strong>
+        <p>
+          A student's branch is set on their registration and an expense's on the
+          expense entry. Until those are filled in, this report can only separate
+          the few records that have one. It is not losing anything &mdash; the
+          totals below still match the admissions, income and expense reports.
+        </p>
+      </div>
+    </section>
+  }
+
+  <!-- ------------------------------------------------------ branch totals -->
+  <section class="app-card brp__section">
+    <header class="brp__section-head">
+      <h2>By branch</h2>
+      <span class="app-muted">
+        {{ d.from | date: 'd MMM y' }} &ndash; {{ d.to | date: 'd MMM y' }}
+      </span>
+    </header>
+
+    <p-table
+      [value]="d.branchTotals"
+      styleClass="p-datatable-sm"
+      [tableStyle]="{ 'min-width': '58rem' }">
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Branch</th>
+          <th class="brp__num">Admissions</th>
+          <th class="brp__num">Admission fees</th>
+          <th class="brp__num">Instalments</th>
+          <th class="brp__num">Fees collected</th>
+          <th class="brp__num">Late fines</th>
+          <th class="brp__num">Other income</th>
+          <th class="brp__num">Expenses</th>
+          <th class="brp__num">Receptionist pay</th>
+          <th class="brp__num">Net</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-row>
+        <tr [class.brp__unassigned]="row.branch === 'Unassigned'">
+          <td>
+            <strong>{{ row.branch }}</strong>
+            @if (row.branch === 'Unassigned') {
+              <div class="app-muted brp__sub">no branch recorded</div>
+            }
+          </td>
+          <td class="brp__num">{{ row.admissions }}</td>
+          <td class="brp__num">{{ money(row.admissionFees) }}</td>
+          <td class="brp__num">{{ row.payments }}</td>
+          <td class="brp__num">{{ money(row.feesCollected) }}</td>
+          <td class="brp__num">{{ money(row.lateFines) }}</td>
+          <td class="brp__num">{{ money(row.otherIncome) }}</td>
+          <td class="brp__num brp__out">{{ money(row.expenses) }}</td>
+          <td class="brp__num brp__out">{{ money(row.receptionistPay) }}</td>
+          <td class="brp__num" [class.brp__negative]="row.net < 0">
+            <strong>{{ money(row.net) }}</strong>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="footer">
+        <tr class="brp__grand">
+          <td><strong>{{ d.grandTotal.branch }}</strong></td>
+          <td class="brp__num"><strong>{{ d.grandTotal.admissions }}</strong></td>
+          <td class="brp__num"><strong>{{ money(d.grandTotal.admissionFees) }}</strong></td>
+          <td class="brp__num"><strong>{{ d.grandTotal.payments }}</strong></td>
+          <td class="brp__num"><strong>{{ money(d.grandTotal.feesCollected) }}</strong></td>
+          <td class="brp__num"><strong>{{ money(d.grandTotal.lateFines) }}</strong></td>
+          <td class="brp__num"><strong>{{ money(d.grandTotal.otherIncome) }}</strong></td>
+          <td class="brp__num brp__out"><strong>{{ money(d.grandTotal.expenses) }}</strong></td>
+          <td class="brp__num brp__out"><strong>{{ money(d.grandTotal.receptionistPay) }}</strong></td>
+          <td class="brp__num" [class.brp__negative]="d.grandTotal.net < 0">
+            <strong>{{ money(d.grandTotal.net) }}</strong>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="10" class="app-muted brp__empty">
+            Nothing recorded in this range.
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </section>
+
+  <!-- ------------------------------------------------- period breakdown -->
+  <section class="app-card brp__section">
+    <header class="brp__section-head">
+      <h2>By {{ d.groupBy | lowercase }}</h2>
+      <span class="app-muted">{{ d.rows.length }} row(s)</span>
+    </header>
+
+    <p-table
+      [value]="d.rows"
+      [paginator]="d.rows.length > 25"
+      [rows]="25"
+      [rowsPerPageOptions]="[25, 50, 100]"
+      [loading]="loading()"
+      styleClass="p-datatable-sm"
+      [tableStyle]="{ 'min-width': '62rem' }"
+      [rowGroupMode]="'subheader'"
+      groupRowsBy="branch">
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 9rem">Period</th>
+          <th class="brp__num">Admissions</th>
+          <th class="brp__num">Admission fees</th>
+          <th class="brp__num">Instalments</th>
+          <th class="brp__num">Fees collected</th>
+          <th class="brp__num">Late fines</th>
+          <th class="brp__num">Other income</th>
+          <th class="brp__num">Expenses</th>
+          <th class="brp__num">Receptionist pay</th>
+          <th class="brp__num">Net</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="groupheader" let-row>
+        <tr class="brp__group">
+          <td colspan="10">
+            <strong>{{ row.branch }}</strong>
+            @if (row.branch === 'Unassigned') {
+              <span class="app-muted brp__sub">&nbsp;&middot; no branch recorded</span>
+            }
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td>{{ row.periodLabel }}</td>
+          <td class="brp__num">{{ row.admissions }}</td>
+          <td class="brp__num">{{ money(row.admissionFees) }}</td>
+          <td class="brp__num">{{ row.payments }}</td>
+          <td class="brp__num">{{ money(row.feesCollected) }}</td>
+          <td class="brp__num">{{ money(row.lateFines) }}</td>
+          <td class="brp__num">{{ money(row.otherIncome) }}</td>
+          <td class="brp__num brp__out">{{ money(row.expenses) }}</td>
+          <td class="brp__num brp__out">{{ money(row.receptionistPay) }}</td>
+          <td class="brp__num" [class.brp__negative]="row.net < 0">{{ money(row.net) }}</td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="10" class="app-muted brp__empty">
+            Nothing recorded in this range.
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+
+    <p class="brp__note">
+      <strong>Net</strong> is admission fees + fees collected + late fines + other
+      income &minus; expenses &minus; receptionist pay. Fees and fines are shown
+      apart because the ledger stores them added together, so a column of “fees”
+      elsewhere in the legacy system quietly included the fine.
+      <br /><br />
+      <strong>Teacher payouts are not included.</strong> They are recorded against
+      a teacher rather than a branch, and a teacher may teach students at more than
+      one, so there is no truthful way to split their pay between branches. See the
+      Teacher Account report for that figure.
+    </p>
+  </section>
+} @else if (!loading()) {
+  <section class="app-card brp__section">
+    <p class="app-muted brp__empty">No report yet. Choose a range and apply.</p>
+  </section>
+}

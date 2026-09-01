@@ -22,6 +22,8 @@ import {
   FeeSaveRequest,
   StudentFeeBill
 } from '../../core/models/fee.model';
+import { canWhatsApp, feeReceiptMessage, openWhatsApp } from '../../core/messaging/whatsapp';
+import { moneyReceiptHtml, openDocumentWindow } from '../../core/printing/legacy-documents';
 import { FeeService } from '../../core/services/fee.service';
 
 /**
@@ -297,6 +299,40 @@ export class FeesComponent {
     });
   }
 
+  /* ------------------------------------------------------------ whatsapp */
+
+  /** The number the receipt would go to — from the bill already on screen. */
+  studentPhone(): string | null {
+    return this.bill()?.phone ?? null;
+  }
+
+  /** Greys out the button when the stored number cannot be a WhatsApp one. */
+  canWhatsApp(phone?: string | null): boolean {
+    return canWhatsApp(phone);
+  }
+
+  /**
+   * Opens WhatsApp with the money receipt typed out to the student.
+   *
+   * The receipt is fetched rather than built from the row on screen, so the figures
+   * the student is sent are the same ones the printed receipt shows — including the
+   * amount in words and the next due date, which only the server works out.
+   */
+  whatsAppReceipt(payment: FeePayment): void {
+    this.fees.receipt(payment.id).subscribe({
+      next: receipt => {
+        if (!openWhatsApp(this.studentPhone(), feeReceiptMessage(receipt))) {
+          this.messages.add({
+            severity: 'warn',
+            summary: 'Could not open WhatsApp',
+            detail: 'Allow popups for this site, and check the mobile number on the student record.',
+            life: 6000
+          });
+        }
+      }
+    });
+  }
+
   money(value?: number | null): string {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -315,60 +351,15 @@ export class FeesComponent {
     return `${date.getFullYear()}-${month}-${day}`;
   }
 
-  /** Money receipt window — replaces MonthlyCourseFees/PrintReport.cshtml. */
+  /** The money receipt, in the legacy layout. */
   private openReceiptWindow(receipt: FeeReceipt): void {
-    const win = window.open('', '_blank', 'width=760,height=900');
-    if (!win) {
+    if (!openDocumentWindow(moneyReceiptHtml(receipt), 760)) {
       this.messages.add({
         severity: 'warn',
         summary: 'Popup blocked',
         detail: 'Allow popups for this site to print the receipt.',
         life: 6000
       });
-      return;
     }
-
-    const date = (value?: string) =>
-      value ? new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-
-    const esc = (value?: string) =>
-      (value ?? '').replace(/[&<>"']/g, c =>
-        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);
-
-    win.document.write(`<!doctype html>
-<html><head><meta charset="utf-8"><title>Money receipt ${esc(receipt.billNo)}</title>
-<style>
-  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1f2430; margin: 32px; }
-  h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
-  .sub { color: #6b7280; font-size: 13px; margin-top: 4px; }
-  .head { border-bottom: 2px solid #6d28d9; padding-bottom: 12px; margin-bottom: 24px; }
-  table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  th, td { text-align: left; padding: 9px 4px; border-bottom: 1px solid #e4e6ef; }
-  th { width: 40%; color: #6b7280; font-weight: 600; }
-  .words { margin-top: 20px; font-size: 13px; font-style: italic; color: #384152; }
-  .due { color: #dc2626; font-weight: 600; }
-  .sign { margin-top: 64px; display: flex; justify-content: space-between; font-size: 13px; color: #6b7280; }
-  @media print { body { margin: 12mm; } }
-</style></head><body>
-  <div class="head">
-    <h1>Avijan &mdash; Money Receipt</h1>
-    <div class="sub">Bill No. ${esc(receipt.billNo)}</div>
-  </div>
-  <table>
-    <tr><th>Student name</th><td>${esc(receipt.studentName)}</td></tr>
-    <tr><th>Registration id</th><td>${esc(receipt.registrationId)}</td></tr>
-    <tr><th>Course</th><td>${esc(receipt.courseName)}</td></tr>
-    <tr><th>Fee month</th><td>${date(receipt.feeDate)}</td></tr>
-    <tr><th>Amount received</th><td>${this.money(receipt.amountPaid)}</td></tr>
-    <tr><th>Previous due</th><td>${this.money(receipt.oldDue)}</td></tr>
-    <tr><th>Balance due</th><td class="due">${this.money(receipt.newDue)}</td></tr>
-    <tr><th>Next payment due</th><td>${date(receipt.nextDueDate)}</td></tr>
-  </table>
-  <p class="words">Rupees ${esc(receipt.amountPaidInWords)} only.</p>
-  <div class="sign"><span>Student / Guardian signature</span><span>For Avijan</span></div>
-  <script>window.onload = function () { window.print(); };<\/script>
-</body></html>`);
-
-    win.document.close();
   }
 }

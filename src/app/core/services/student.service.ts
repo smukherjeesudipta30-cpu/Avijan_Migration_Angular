@@ -16,6 +16,7 @@ import {
   StudentPhoto,
   StudentQuery,
   StudentSaveRequest,
+  SuggestedLogin,
   TeacherLookup
 } from '../models/student.model';
 
@@ -71,6 +72,23 @@ export class StudentService {
 
     return this.http
       .get<ApiResponse<NextRegistration>>(`${this.base}/next-registration-no`, { params })
+      .pipe(map(r => r.data));
+  }
+
+  /**
+   * The Avijan portal sign-in that will be issued for a name, so the form can show
+   * it before saving. Generated server-side, where the uniqueness check can
+   * actually see the database.
+   */
+  suggestLogin(name: string, excludingStudentId?: number | null): Observable<SuggestedLogin> {
+    let params = new HttpParams().set('name', name);
+
+    if (excludingStudentId) {
+      params = params.set('excludingStudentId', String(excludingStudentId));
+    }
+
+    return this.http
+      .get<ApiResponse<SuggestedLogin>>(`${this.base}/suggest-login`, { params })
       .pipe(map(r => r.data));
   }
 

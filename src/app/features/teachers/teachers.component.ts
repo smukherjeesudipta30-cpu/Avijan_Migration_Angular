@@ -7,6 +7,7 @@ import { ButtonModule } from 'primeng/button';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DatePickerModule } from 'primeng/datepicker';
 import { DialogModule } from 'primeng/dialog';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
@@ -14,8 +15,16 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { TooltipModule } from 'primeng/tooltip';
 import { Observable, debounceTime, distinctUntilChanged } from 'rxjs';
 
+import { formatMoney } from '../../core/format/money';
 import { ApiResponse } from '../../core/models/api-response.model';
-import { TeacherEarning, TeacherListItem, TeacherSaveRequest } from '../../core/models/master.model';
+import {
+  TeacherAccount,
+  TeacherEarning,
+  TeacherListItem,
+  TeacherPayment,
+  TeacherSaveRequest
+} from '../../core/models/master.model';
+import { AuthService } from '../../core/services/auth.service';
 import { MasterService } from '../../core/services/master.service';
 
 /**
@@ -34,6 +43,7 @@ import { MasterService } from '../../core/services/master.service';
     ConfirmDialogModule,
     DatePickerModule,
     DialogModule,
+    InputNumberModule,
     InputTextModule,
     TableModule,
     TagModule,
@@ -49,6 +59,7 @@ export class TeachersComponent {
   private readonly masters = inject(MasterService);
   private readonly messages = inject(MessageService);
   private readonly confirm = inject(ConfirmationService);
+  private readonly auth = inject(AuthService);
 
   readonly rows = signal<TeacherListItem[]>([]);
   readonly totalCount = signal(0);
@@ -266,6 +277,114 @@ export class TeachersComponent {
     this.earningsVisible.set(true);
     this.earnings.set([]);
     this.loadEarnings();
+    this.loadAccount();
+  }
+
+  /* ------------------------------ payments made to the teacher */
+
+  /** Only an administrator may pay a teacher. */
+  readonly canPay = computed(() => this.auth.hasAnyRole(['Admin']));
+
+  readonly account = signal<TeacherAccount | null>(null);
+  readonly payments = signal<TeacherPayment[]>([]);
+  readonly paymentsLoading = signal(false);
+  readonly savingPayment = signal(false);
+
+  readonly payAmount = signal<number | null>(null);
+  readonly payDate = signal<Date | null>(new Date());
+
+  /**
+   * The account figures and the payments list, both over the same dates as the
+   * earnings list above them — so the three tiles always describe the period on
+   * screen rather than the teacher's lifetime.
+   */
+  loadAccount(): void {
+    const teacher = this.earningsFor();
+    if (!teacher) return;
+
+    const from = this.toIsoDate(this.earningsFrom());
+    const to = this.toIsoDate(this.earningsTo());
+
+    this.paymentsLoading.set(true);
+
+    this.masters.teacherAccount(teacher.id, from, to).subscribe({
+      next: data => this.account.set(data),
+      error: () => this.account.set(null)
+    });
+
+    this.masters.teacherPayments(teacher.id, from, to).subscribe({
+      next: rows => {
+        this.payments.set(rows);
+        this.paymentsLoading.set(false);
+      },
+      error: () => this.paymentsLoading.set(false)
+    });
+  }
+
+  recordPayment(): void {
+    const teacher = this.earningsFor();
+    const amount = this.payAmount();
+
+    if (!teacher || !amount || amount <= 0) {
+      this.messages.add({
+        severity: 'warn',
+        summary: 'Enter an amount',
+        detail: 'How much was handed to the teacher?',
+        life: 4000
+      });
+      return;
+    }
+
+    this.savingPayment.set(true);
+
+    this.masters
+      .recordTeacherPayment({
+        teacherId: teacher.id,
+        paidOn: this.toIsoDate(this.payDate()),
+        amount
+      })
+      .subscribe({
+        next: () => {
+          this.savingPayment.set(false);
+          this.payAmount.set(null);
+          this.payDate.set(new Date());
+
+          this.messages.add({
+            severity: 'success',
+            summary: 'Payment recorded',
+            detail: `${this.money(amount)} to ${teacher.name}.`,
+            life: 5000
+          });
+
+          this.loadAccount();
+          // The list's "last paid" and lifetime totals move with it.
+          this.load();
+        },
+        error: () => this.savingPayment.set(false)
+      });
+  }
+
+  removePayment(payment: TeacherPayment): void {
+    this.confirm.confirm({
+      header: 'Remove payment',
+      message:
+        `Remove the ${this.money(payment.amount)} payment recorded on ` +
+        `${payment.paidOn ? new Date(payment.paidOn).toLocaleDateString('en-IN') : 'an unknown date'}? ` +
+        "This raises the teacher's pending balance again.",
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Remove',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.masters.deleteTeacherPayment(payment.id).subscribe({
+          next: () => {
+            this.messages.add({ severity: 'success', summary: 'Payment removed', life: 4000 });
+            this.loadAccount();
+            this.load();
+          }
+        });
+      }
+    });
   }
 
   loadEarnings(): void {
@@ -289,16 +408,18 @@ export class TeachersComponent {
   clearEarningsRange(): void {
     this.earningsFrom.set(null);
     this.earningsTo.set(null);
+    this.applyEarningsRange();
+  }
+
+  /** Apply moves the earnings list and the account tiles together. */
+  applyEarningsRange(): void {
     this.loadEarnings();
+    this.loadAccount();
   }
 
   /* ----------------------------------------------------------- helpers */
   money(value?: number | null): string {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(value ?? 0);
+    return formatMoney(value);
   }
 
   private toIsoDate(date: Date | null): string | null {

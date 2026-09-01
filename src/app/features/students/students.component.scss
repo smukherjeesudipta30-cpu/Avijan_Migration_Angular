@@ -363,3 +363,41 @@
     flex-direction: column;
   }
 }
+
+/* ------------------------------------------------------- portal sign-in */
+.stu__legend-note {
+  margin: 0 0 1rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  max-width: 70ch;
+}
+
+.stu__login {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 1rem;
+  align-items: end;
+}
+
+.stu__login-action {
+  padding-bottom: 0.1rem;
+}
+
+/* The password is deliberately readable — the office passes it to the student. */
+#avijanLoginPassword {
+  font-family: 'Cascadia Mono', Consolas, monospace;
+  letter-spacing: 0.03em;
+}
+
+.stu__hint {
+  display: block;
+  margin-top: 0.28rem;
+  font-size: 0.74rem;
+}
+
+@media (max-width: 860px) {
+  .stu__login {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+}

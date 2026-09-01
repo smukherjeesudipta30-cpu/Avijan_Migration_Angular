@@ -1,0 +1,352 @@
+<header class="mex__header">
+  <div>
+    <p class="app-section-title">Examination portal</p>
+    <h1>My exams</h1>
+    <p class="app-muted mex__lede">
+      Theory papers are sat here and marked the moment you submit. Your practical
+      mark is entered by the institute &mdash; both count towards the examination
+      grade below.
+    </p>
+  </div>
+
+  <p-button
+    label="Refresh"
+    icon="pi pi-refresh"
+    severity="secondary"
+    [outlined]="true"
+    [loading]="loading()"
+    (onClick)="load()" />
+</header>
+
+<!-- --------------------------------------------------------- admit cards -->
+@if (admitCards().length) {
+  <section class="app-card mex__section">
+    <header class="mex__section-head">
+      <h2>Admit cards</h2>
+      <span class="app-muted">{{ admitCards().length }} card(s)</span>
+    </header>
+
+    <div class="mex__cards">
+      @for (card of admitCards(); track card.courseId + '-' + card.termNumber) {
+        <article class="mex__card mex__card--admit">
+          <header>
+            <p-tag value="Exam {{ card.termNumber }}" severity="info" />
+            <h3>{{ card.courseName || 'Your course' }}</h3>
+            <p class="app-muted">{{ card.studentName }} &middot; {{ card.registrationId }}</p>
+          </header>
+
+          <dl class="mex__meta">
+            <div class="mex__meta--wide">
+              <dt>Theory</dt>
+              <dd>
+                @if (card.theory.scheduledOn) {
+                  {{ card.theory.scheduledOn | date: 'd MMM y, h:mm a' }}
+                } @else {
+                  <span class="app-muted">Not scheduled yet</span>
+                }
+              </dd>
+            </div>
+            <div class="mex__meta--wide">
+              <dt>Practical</dt>
+              <dd>
+                @if (card.practical.scheduledOn) {
+                  {{ card.practical.scheduledOn | date: 'd MMM y, h:mm a' }}
+                } @else {
+                  <span class="app-muted">Not scheduled yet</span>
+                }
+              </dd>
+            </div>
+          </dl>
+
+          <p-button
+            label="Download admit card"
+            icon="pi pi-print"
+            (onClick)="printAdmitCard(card)" />
+        </article>
+      }
+    </div>
+
+    <p class="mex__note">
+      Bring your admit card to the centre. Your six-digit access code is not
+      printed on it &mdash; the invigilator gives you that at the desk, and the
+      theory paper opens only with it.
+    </p>
+  </section>
+} @else if (!loading()) {
+  <section class="app-card mex__section">
+    <header class="mex__section-head">
+      <h2>Admit cards</h2>
+    </header>
+    <p class="mex__empty app-muted">
+      Your admit card appears here once the institute sets your examination date
+      and time.
+    </p>
+  </section>
+}
+
+<!-- -------------------------------------------------------- ready to sit -->
+<section class="app-card mex__section">
+  <header class="mex__section-head">
+    <h2>Papers you can sit</h2>
+    <span class="app-muted">{{ openNow().length }} available</span>
+  </header>
+
+  @if (openNow().length === 0) {
+    <p class="mex__empty app-muted">
+      @if (loading()) {
+        Loading your papers&hellip;
+      } @else {
+        Nothing to sit right now. A paper appears here once the institute
+        publishes it for your course.
+      }
+    </p>
+  } @else {
+    <div class="mex__cards">
+      @for (exam of openNow(); track exam.examId) {
+        <article class="mex__card" [class.mex__card--resume]="exam.status === 'InProgress'">
+          <header>
+            <p-tag
+              [value]="statusLabel(exam.status)"
+              [severity]="statusSeverity(exam.status)" />
+            <h3>{{ exam.title }}</h3>
+            @if (exam.subject) { <p class="app-muted">{{ exam.subject }}</p> }
+          </header>
+
+          <dl class="mex__meta">
+            <div><dt>Course</dt><dd>{{ exam.courseName || '&mdash;' }}</dd></div>
+            <div><dt>Questions</dt><dd>{{ exam.questionCount }}</dd></div>
+            <div><dt>Marks</dt><dd>{{ exam.totalMarks }}</dd></div>
+            <div><dt>Time</dt><dd>{{ exam.durationMinutes }} min</dd></div>
+            @if (exam.scheduledOn) {
+              <div class="mex__meta--wide">
+                <dt>Your sitting</dt>
+                <dd>{{ exam.scheduledOn | date: 'd MMM y, h:mm a' }}</dd>
+              </div>
+            }
+          </dl>
+
+          <p class="mex__hint">
+            You will need the six-digit code the invigilator gives you.
+          </p>
+
+          <p-button
+            [label]="exam.status === 'InProgress' ? 'Resume paper' : 'Start paper'"
+            [icon]="exam.status === 'InProgress' ? 'pi pi-play' : 'pi pi-pencil'"
+            (onClick)="sit(exam)" />
+
+          @if (exam.status === 'InProgress') {
+            <p class="mex__hint">
+              Your clock is already running &mdash; resuming does not restart it.
+            </p>
+          }
+        </article>
+      }
+    </div>
+  }
+</section>
+
+<!-- ---------------------------------------------------------- not yet open -->
+@if (notOpen().length) {
+  <section class="app-card mex__section">
+    <header class="mex__section-head">
+      <h2>Coming up</h2>
+    </header>
+
+    <p-table [value]="notOpen()" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '38rem' }">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Paper</th>
+          <th style="width: 12rem">Course</th>
+          <th class="mex__num" style="width: 6rem">Marks</th>
+          <th style="width: 13rem">Your sitting</th>
+          <th style="width: 9rem">Status</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-exam>
+        <tr>
+          <td>{{ exam.title }}</td>
+          <td>{{ exam.courseName || '&mdash;' }}</td>
+          <td class="mex__num">{{ exam.totalMarks }}</td>
+          <td class="mex__sub">
+            @if (exam.scheduledOn) {
+              <strong>{{ exam.scheduledOn | date: 'd MMM y, h:mm a' }}</strong>
+            } @else {
+              <span class="app-muted">The institute sets your date</span>
+            }
+          </td>
+          <td>
+            <p-tag [value]="statusLabel(exam.status)" [severity]="statusSeverity(exam.status)" />
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </section>
+}
+
+<!-- ---------------------------------------------------------- papers sat -->
+@if (results().length) {
+  <section class="app-card mex__section">
+    <header class="mex__section-head">
+      <!-- "Recorded", not "sat": a practical mark is entered by the institute. -->
+      <h2>Papers recorded</h2>
+      <span class="app-muted">{{ results().length }} paper(s)</span>
+    </header>
+
+    <p-table [value]="results()" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '40rem' }">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Paper</th>
+          <th style="width: 11rem">Recorded</th>
+          <th class="mex__num" style="width: 8rem">Score</th>
+          <th class="mex__num" style="width: 7rem">Percent</th>
+          <th style="width: 6rem">Grade</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-r>
+        <tr>
+          <td>
+            <strong>{{ r.title }}</strong>
+            @if (r.subject) { <div class="app-muted mex__sub">{{ r.subject }}</div> }
+            @if (r.autoSubmitted) {
+              <div class="mex__sub mex__auto">Submitted automatically when time ran out</div>
+            }
+          </td>
+          <td class="mex__sub">{{ r.submittedOn | date: 'd MMM y, h:mm a' }}</td>
+          <td class="mex__num">{{ r.score }} / {{ r.totalMarks }}</td>
+          <td class="mex__num">{{ r.percentScored | number: '1.0-2' }}%</td>
+          <td><p-tag [value]="r.grade" severity="info" /></td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </section>
+}
+
+<!-- ------------------------------------------------------ course standing -->
+@if (standing(); as s) {
+  @for (course of s.courses; track course.courseId) {
+    <section class="app-card mex__section mex__standing">
+      <header class="mex__section-head">
+        <div>
+          <p class="app-section-title">Course result</p>
+          <h2>{{ course.courseName || 'Course #' + course.courseId }}</h2>
+        </div>
+
+        @if (course.isFinal) {
+          <p-tag value="Complete" severity="success" />
+        } @else {
+          <p-tag
+            [value]="course.papersCompleted + ' of ' + course.papersExpected + ' papers in'"
+            severity="warn" />
+        }
+      </header>
+
+      <div class="mex__tiles">
+        <div class="mex__tile">
+          <span>Total obtained</span>
+          <strong>{{ course.totalObtained }} / {{ course.totalFull }}</strong>
+        </div>
+        <div class="mex__tile">
+          <span>Average per paper</span>
+          <strong>{{ course.averageMarks | number: '1.0-2' }}</strong>
+        </div>
+        <div class="mex__tile">
+          <span>Percentage</span>
+          <strong>{{ course.percentScored | number: '1.0-2' }}%</strong>
+        </div>
+        <div class="mex__tile mex__tile--grade">
+          <span>Grade</span>
+          @if (course.papersCompleted > 0) {
+            <strong>{{ course.grade }}</strong>
+          } @else {
+            <!-- A grade computed over nothing would read as a real mark. -->
+            <strong class="mex__pending">&mdash;</strong>
+          }
+        </div>
+      </div>
+
+      <p-table
+        [value]="course.terms"
+        styleClass="p-datatable-sm"
+        [tableStyle]="{ 'min-width': '40rem' }">
+
+        <ng-template pTemplate="header">
+          <tr>
+            <th style="width: 8rem">Examination</th>
+            <th class="mex__num">Theory</th>
+            <th class="mex__num">Practical</th>
+            <th class="mex__num" style="width: 8rem">Total</th>
+            <th class="mex__num" style="width: 7rem">Percent</th>
+            <th style="width: 6rem">Grade</th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-term>
+          <tr>
+            <td>Exam {{ term.termNumber }}</td>
+
+            <td class="mex__num">
+              @if (term.theory.isComplete) {
+                {{ term.theory.score }} / {{ term.theory.totalMarks }}
+              } @else {
+                <span class="app-muted mex__sub">Not sat</span>
+              }
+            </td>
+
+            <td class="mex__num">
+              @if (term.practical.isComplete) {
+                {{ term.practical.score }} / {{ term.practical.totalMarks }}
+
+                @if (term.practical.fromMarksRegister) {
+                  <!-- Not from the practical paper's mark sheet, so say where it
+                       did come from rather than leave the origin a mystery. -->
+                  <div class="app-muted mex__sub">from the Marks register</div>
+                }
+              } @else {
+                <span class="app-muted mex__sub">Awaiting mark</span>
+              }
+            </td>
+
+            <td class="mex__num">{{ term.obtainedMarks }} / {{ term.fullMarks }}</td>
+            <td class="mex__num">{{ term.percentScored | number: '1.0-2' }}%</td>
+
+            <td>
+              @if (term.grade) {
+                <p-tag [value]="term.grade" severity="success" />
+              } @else {
+                <span class="app-muted mex__sub">Pending</span>
+              }
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="6" class="app-muted mex__empty">
+              No examinations recorded for this course yet.
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+
+      <p class="mex__note">
+        An examination's grade appears once both its papers are in &mdash; the
+        theory sat here and the practical entered by the institute.
+        @if (!course.isFinal) {
+          Your course grade is provisional until every paper is complete.
+        }
+        Your certificate becomes available once the course is completed and the
+        institute marks your record complete.
+      </p>
+    </section>
+  }
+
+  @if (s.courses.length === 0 && !loading()) {
+    <section class="app-card mex__section">
+      <p class="mex__empty app-muted">
+        No examination results yet. They appear here once you have sat a paper.
+      </p>
+    </section>
+  }
+}

@@ -1,0 +1,219 @@
+<p-confirmDialog />
+
+<!-- ------------------------------------------------- the invigilator's code -->
+@if (!sitting() && !result()) {
+  <section class="app-card sit__gate">
+    <i class="pi pi-lock sit__gate-icon"></i>
+    <p class="app-section-title">Examination</p>
+    <h1>Enter your access code</h1>
+
+    <p class="sit__gate-lede">
+      Your invigilator will give you a six-digit code at the desk. The paper opens
+      only with that code, and only at the date and time on your admit card.
+    </p>
+
+    <input
+      pInputText
+      class="sit__code"
+      inputmode="numeric"
+      autocomplete="off"
+      maxlength="6"
+      placeholder="000000"
+      [ngModel]="accessCode()"
+      (ngModelChange)="accessCode.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      (keyup.enter)="open()"
+      [disabled]="opening()" />
+
+    @if (startError(); as message) {
+      <p class="sit__gate-error">{{ message }}</p>
+    }
+
+    <div class="sit__gate-actions">
+      <p-button
+        label="Start paper"
+        icon="pi pi-play"
+        [loading]="opening()"
+        [disabled]="!codeValid() || opening()"
+        (onClick)="open()" />
+
+      <p-button
+        label="Back to my exams"
+        icon="pi pi-arrow-left"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="back()" />
+    </div>
+
+    <p class="sit__gate-note">
+      Do not share your code. It is yours alone, and the clock starts the moment
+      the paper opens.
+    </p>
+  </section>
+}
+
+<!-- ---------------------------------------------------------- the result -->
+@if (result(); as r) {
+  <section class="app-card sit__result">
+    <p class="app-section-title">Examination</p>
+    <h1>{{ r.title }}</h1>
+    @if (r.subject) { <p class="app-muted">{{ r.subject }}</p> }
+
+    <div class="sit__score">
+      <strong>{{ r.score }}</strong>
+      <span>of {{ r.totalMarks }}</span>
+    </div>
+
+    <div class="sit__result-tiles">
+      <div class="sit__result-tile">
+        <span>Percentage</span>
+        <strong>{{ r.percentScored | number: '1.0-2' }}%</strong>
+      </div>
+      <div class="sit__result-tile">
+        <span>Grade</span>
+        <strong>{{ r.grade }}</strong>
+      </div>
+      <div class="sit__result-tile">
+        <span>Correct</span>
+        <strong>{{ r.correctCount }} / {{ r.questionCount }}</strong>
+      </div>
+      @if (r.passed !== null && r.passed !== undefined) {
+        <div class="sit__result-tile" [class.sit__result-tile--fail]="!r.passed">
+          <span>Result</span>
+          <strong>{{ r.passed ? 'Passed' : 'Not passed' }}</strong>
+        </div>
+      }
+    </div>
+
+    @if (r.autoSubmitted) {
+      <p class="sit__note sit__note--warn">
+        Time ran out, so the paper was submitted with the answers you had given.
+      </p>
+    }
+
+    <p class="sit__note">
+      This is your theory mark. Your grade for the examination as a whole appears
+      once the institute has entered your practical mark too &mdash; both papers
+      count towards the average.
+    </p>
+
+    <p-button label="Back to my exams" icon="pi pi-arrow-left" (onClick)="back()" />
+  </section>
+}
+
+<!-- --------------------------------------------------------- the sitting -->
+@if (sitting(); as s) {
+  @if (!result()) {
+    <header class="sit__bar app-card">
+      <div class="sit__bar-title">
+        <p class="app-section-title">Examination in progress</p>
+        <h1>{{ s.title }}</h1>
+        @if (s.subject) { <p class="app-muted">{{ s.subject }}</p> }
+      </div>
+
+      <div class="sit__bar-meta">
+        <div class="sit__clock" [class.sit__clock--urgent]="clockUrgent()">
+          <i class="pi pi-clock"></i>
+          <strong>{{ clock() }}</strong>
+        </div>
+        <span class="app-muted">
+          {{ answeredCount() }} of {{ questionCount() }} answered &middot;
+          {{ s.totalMarks }} marks
+        </span>
+      </div>
+    </header>
+
+    <div class="sit__layout">
+      <!-- the paper -->
+      <div class="sit__paper">
+        @for (q of s.questions; track q.questionId) {
+          <article class="app-card sit__q" [id]="'q-' + q.questionNo">
+            <header class="sit__q-head">
+              <span class="sit__q-no">Q{{ q.questionNo }}</span>
+              <p class="sit__q-text">{{ q.questionText }}</p>
+              <span class="sit__q-marks">{{ q.marks }} mark(s)</span>
+            </header>
+
+            <div class="sit__options">
+              @for (option of [
+                { key: 'A', text: q.optionA },
+                { key: 'B', text: q.optionB },
+                { key: 'C', text: q.optionC },
+                { key: 'D', text: q.optionD }
+              ]; track option.key) {
+                @if (option.text) {
+                  <label
+                    class="sit__option"
+                    [class.sit__option--chosen]="isChosen(q.questionId, option.key)">
+                    <p-radioButton
+                      [name]="'q' + q.questionId"
+                      [value]="option.key"
+                      [ngModel]="answers()[q.questionId]"
+                      [ngModelOptions]="{ standalone: true }"
+                      (ngModelChange)="choose(q.questionId, option.key)"
+                      [inputId]="'q' + q.questionId + option.key" />
+                    <span class="sit__option-key">{{ option.key }}</span>
+                    <span class="sit__option-text">{{ option.text }}</span>
+                  </label>
+                }
+              }
+            </div>
+
+            @if (isAnswered(q.questionId)) {
+              <button type="button" class="sit__clear" (click)="clearAnswer(q.questionId)">
+                Clear this answer
+              </button>
+            }
+          </article>
+        }
+
+        <div class="app-card sit__submit">
+          <div>
+            <h2>Finished?</h2>
+            <p class="app-muted">
+              {{ answeredCount() }} of {{ questionCount() }} answered.
+              @if (!allAnswered()) {
+                Unanswered questions score nothing.
+              }
+              Once submitted the paper cannot be reopened.
+            </p>
+          </div>
+
+          <p-button
+            label="Submit paper"
+            icon="pi pi-check"
+            [loading]="submitting()"
+            [disabled]="submitting()"
+            (onClick)="submit()" />
+        </div>
+      </div>
+
+      <!-- the question map -->
+      <aside class="app-card sit__map">
+        <h2>Questions</h2>
+        <div class="sit__map-grid">
+          @for (q of s.questions; track q.questionId) {
+            <button
+              type="button"
+              class="sit__map-cell"
+              [class.sit__map-cell--done]="isAnswered(q.questionId)"
+              [title]="isAnswered(q.questionId) ? 'Answered' : 'Not answered'"
+              (click)="scrollTo(q.questionNo)">
+              {{ q.questionNo }}
+            </button>
+          }
+        </div>
+
+        <p class="sit__map-legend">
+          <span class="sit__swatch sit__swatch--done"></span> Answered
+          <span class="sit__swatch"></span> Not answered
+        </p>
+
+        <p class="sit__note">
+          Your answers travel with the paper when you submit. If the clock runs
+          out the paper submits itself with what you have answered so far.
+        </p>
+      </aside>
+    </div>
+  }
+}

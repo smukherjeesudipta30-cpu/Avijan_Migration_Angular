@@ -71,5 +71,44 @@ export interface DashboardSummary {
   recentNotices: Notice[];
   recentAdmissions: RecentStudent[];
   recentPayments: RecentPayment[];
+
+  /** Unhandled enquiries from the public front page's contact form. */
+  pendingEnquiryList?: Enquiry[];
+
+  /** Alerts for the office — unread first, then newest. Capped by the server. */
+  notifications?: AdminNotification[];
+
+  /** Every unread alert, not only those in `notifications`. */
+  unreadNotifications: number;
+
   generatedOn: string;
+}
+
+/** One alert for the office. */
+export interface AdminNotification {
+  id: number;
+  /** `StudentPasswordChange` today; the field exists so more kinds can be added. */
+  type: string;
+  title: string;
+  studentName?: string;
+  courseName?: string;
+  registrationId?: string;
+  loginId?: string;
+  /**
+   * For a password change, the student's chosen password. Held behind a reveal in
+   * the UI — a dashboard is a screen other people can see.
+   */
+  detailValue?: string;
+  createdOn: string;
+  isRead: boolean;
+}
+
+/** One unhandled enquiry from the public front page's "Send Us Message" form. */
+export interface Enquiry {
+  id: number;
+  name?: string;
+  email?: string;
+  phone?: string;
+  message?: string;
+  submittedOn: string;
 }

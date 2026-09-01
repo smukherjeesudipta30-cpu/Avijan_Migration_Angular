@@ -24,6 +24,9 @@ export class AuthService {
   readonly isAuthenticated = computed(() => this.currentUser() !== null);
   readonly role = computed<UserRole | null>(() => this.currentUser()?.role ?? null);
 
+  /** True while a migrated account still owes its first-login password reset. */
+  readonly mustChangePassword = computed(() => this.currentUser()?.mustChangePassword === true);
+
   get accessToken(): string | null {
     return localStorage.getItem(ACCESS_TOKEN_KEY);
   }
@@ -43,6 +46,18 @@ export class AuthService {
     return this.http
       .post<ApiResponse<AuthResult>>(`${this.base}/refresh`, { refreshToken: this.refreshToken ?? '' })
       .pipe(tap(response => this.storeSession(response.data)));
+  }
+
+  /**
+   * Replaces the caller's password. The API revokes every refresh token as it
+   * does so, which is why the caller signs back in afterwards rather than
+   * carrying on with a token that still says a reset is owed.
+   */
+  changePassword(currentPassword: string, newPassword: string): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.base}/change-password`, {
+      currentPassword,
+      newPassword
+    });
   }
 
   logout(): void {

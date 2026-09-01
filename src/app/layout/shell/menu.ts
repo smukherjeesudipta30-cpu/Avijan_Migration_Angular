@@ -23,15 +23,17 @@ export const MENU: MenuSection[] = [
     title: 'Overview',
     items: [
       { label: 'Dashboard', icon: 'pi pi-home', route: '/dashboard', roles: ['Admin', 'Editor'] },
-      { label: 'About Us', icon: 'pi pi-info-circle', route: '/about', roles: ['Admin', 'Editor', 'Student', 'Teacher'] }
+      { label: 'Public Site', icon: 'pi pi-globe', route: '/', roles: ['Admin', 'Editor', 'Student', 'Teacher', 'Receptionist'] }
     ]
   },
   {
     title: 'People',
     items: [
-      { label: 'Students', icon: 'pi pi-users', route: '/students', roles: ['Admin', 'Editor'] },
-      { label: 'Teachers', icon: 'pi pi-id-card', route: '/teachers', roles: ['Admin', 'Editor'] },
-      { label: 'Branches', icon: 'pi pi-building', route: '/branches', roles: ['Admin', 'Editor'] },
+      { label: 'Students', icon: 'pi pi-users', route: '/students', roles: ['Admin', 'Editor', 'Receptionist'] },
+      { label: 'Teachers', icon: 'pi pi-id-card', route: '/teachers', roles: ['Admin', 'Editor', 'Receptionist'] },
+      { label: 'Receptionists', icon: 'pi pi-user', route: '/receptionists', roles: ['Admin', 'Editor', 'Receptionist'] },
+      { label: 'Course Enquiries', icon: 'pi pi-comments', route: '/enquiries', roles: ['Admin', 'Editor', 'Receptionist'] },
+      { label: 'Branches', icon: 'pi pi-building', route: '/branches', roles: ['Admin', 'Editor', 'Receptionist'] },
       { label: 'Users', icon: 'pi pi-user-edit', route: '/users', roles: ['Admin', 'Editor'] }
     ]
   },
@@ -39,8 +41,11 @@ export const MENU: MenuSection[] = [
     title: 'Academics',
     items: [
       { label: 'Courses', icon: 'pi pi-book', route: '/courses', roles: ['Admin', 'Editor', 'Receptionist'] },
-      { label: 'Marks', icon: 'pi pi-check-square', route: '/marks', roles: ['Admin', 'Editor'] },
-      { label: 'Notices', icon: 'pi pi-megaphone', route: '/notices', roles: ['Admin', 'Editor'] }
+      { label: 'Marks', icon: 'pi pi-check-square', route: '/marks', roles: ['Admin', 'Editor', 'Receptionist'] },
+      { label: 'Notices', icon: 'pi pi-megaphone', route: '/notices', roles: ['Admin', 'Editor', 'Receptionist'] },
+      { label: 'Exam Papers', icon: 'pi pi-file-edit', route: '/exams', roles: ['Admin', 'Editor'] },
+      // The student's own portal: sit a theory paper, see the course result.
+      { label: 'My Exams', icon: 'pi pi-pencil', route: '/my-exams', roles: ['Student'] }
     ]
   },
   {
@@ -48,13 +53,19 @@ export const MENU: MenuSection[] = [
     items: [
       { label: 'Monthly Fees', icon: 'pi pi-wallet', route: '/fees', roles: ['Admin', 'Editor'] },
       { label: 'Expenses', icon: 'pi pi-minus-circle', route: '/expenses', roles: ['Admin', 'Editor'] },
+      { label: 'Other Income', icon: 'pi pi-plus-circle', route: '/other-income', roles: ['Admin', 'Editor'] },
       // The legacy Income/Index was [Authorize(Roles = "Admin")] only.
-      { label: 'Income', icon: 'pi pi-chart-line', route: '/income', roles: ['Admin'] }
+      { label: 'Income', icon: 'pi pi-chart-line', route: '/income', roles: ['Admin'] },
+      // The student's own side: pay this month against the institute's QR code.
+      { label: 'Pay My Fees', icon: 'pi pi-indian-rupee', route: '/my-fees', roles: ['Student'] }
     ]
   },
   {
     title: 'Reports',
     items: [
+      { label: 'Enquiry Follow-up', icon: 'pi pi-phone', route: '/reports/enquiries', roles: ['Admin', 'Editor', 'Receptionist'] },
+      { label: 'Branch Performance', icon: 'pi pi-building', route: '/reports/branch', roles: ['Admin', 'Editor'] },
+      { label: 'Receptionist Pay', icon: 'pi pi-user', route: '/reports/receptionists', roles: ['Admin', 'Editor'] },
       { label: 'New Admissions', icon: 'pi pi-user-plus', route: '/reports/admissions', roles: ['Admin', 'Editor'] },
       { label: 'Outstanding Dues', icon: 'pi pi-exclamation-circle', route: '/reports/dues', roles: ['Admin', 'Editor'] },
       { label: 'Expense Report', icon: 'pi pi-minus-circle', route: '/reports/expenses', roles: ['Admin', 'Editor'] },

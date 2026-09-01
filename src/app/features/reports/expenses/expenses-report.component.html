@@ -45,6 +45,22 @@
       placeholder="e.g. Electric" />
   </div>
 
+  <div class="rpt__field">
+    <label for="branch">Branch</label>
+    <p-select
+      inputId="branch"
+      [options]="branches()"
+      optionLabel="name"
+      optionValue="name"
+      [ngModel]="branch()"
+      (ngModelChange)="branch.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      [showClear]="true"
+      placeholder="All branches"
+      appendTo="body"
+      styleClass="rpt__select" />
+  </div>
+
   <div class="rpt__filter-actions">
     <p-button label="Run" icon="pi pi-search" [loading]="loading()" (onClick)="run()" />
     <p-button
@@ -99,6 +115,7 @@
         <tr>
           <th style="width: 10rem">Date</th>
           <th>Details</th>
+          <th style="width: 9rem">Branch</th>
           <th class="rpt__num" style="width: 10rem">Amount</th>
         </tr>
       </ng-template>
@@ -107,13 +124,14 @@
         <tr>
           <td>{{ row.expenseDate ? (row.expenseDate | date: 'd MMM y') : '—' }}</td>
           <td>{{ row.details || '—' }}</td>
+          <td>{{ row.branch || '—' }}</td>
           <td class="rpt__num">{{ row.amount | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</td>
         </tr>
       </ng-template>
 
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="3" class="app-muted rpt__empty">No expenses in this range.</td>
+          <td colspan="4" class="app-muted rpt__empty">No expenses in this range.</td>
         </tr>
       </ng-template>
     </p-table>

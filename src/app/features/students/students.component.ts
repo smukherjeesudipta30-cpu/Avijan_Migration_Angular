@@ -17,17 +17,21 @@ import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
 import { TooltipModule } from 'primeng/tooltip';
 
-import { ApiResponse } from '../../core/models/api-response.model';
-import { Observable } from 'rxjs';
+import { Observable, debounceTime, distinctUntilChanged } from 'rxjs';
 
+import { ApiResponse } from '../../core/models/api-response.model';
 import {
   BranchLookup,
   CourseLookup,
   StudentCreated,
   StudentListItem,
   StudentSaveRequest,
+  SuggestedLogin,
   TeacherLookup
 } from '../../core/models/student.model';
+import { admissionReceiptMessage, canWhatsApp, openWhatsApp } from '../../core/messaging/whatsapp';
+import { admissionReceiptHtml, openDocumentWindow } from '../../core/printing/legacy-documents';
+import { AuthService } from '../../core/services/auth.service';
 import { StudentService } from '../../core/services/student.service';
 
 type StatusFilter = 'active' | 'inactive' | 'all';
@@ -67,6 +71,12 @@ export class StudentsComponent implements OnDestroy {
   private readonly students = inject(StudentService);
   private readonly messages = inject(MessageService);
   private readonly confirm = inject(ConfirmationService);
+  private readonly auth = inject(AuthService);
+
+  /* Deactivating is the administrator's alone — the server enforces it too. The
+     receptionist works this screen all day, and a button that always answers
+     "you do not have permission" reads as the page being broken for them. */
+  readonly canDeactivate = computed(() => this.auth.hasAnyRole(['Admin']));
 
   /* ------------------------------------------------------------- state */
   readonly rows = signal<StudentListItem[]>([]);
@@ -134,7 +144,15 @@ export class StudentsComponent implements OnDestroy {
     phone: ['', [Validators.required, Validators.pattern(/^[0-9]{10}$/)]],
     address: ['', [Validators.required]],
     email: ['', [Validators.required, Validators.email]],
-    personalEmail: [''],
+    /* Required for a new admission - the welcome message goes here - but not
+       when editing, because 932 of the 953 migrated students have none and
+       must still be editable. applyPersonalEmailRule() switches it. */
+    personalEmail: ['', [Validators.email]],
+
+    /* Issued automatically from the name. Editable, but pre-filled. */
+    avijanLoginEmail: [''],
+    avijanLoginPassword: [''],
+
     dateOfBirth: [null as Date | null, [Validators.required]],
     dateOfJoining: [null as Date | null, [Validators.required]],
     monthlyFees: [null as number | null, [Validators.required, Validators.min(0)]],
@@ -145,13 +163,22 @@ export class StudentsComponent implements OnDestroy {
     primaryTeacherId: [null as number | null, [Validators.required]],
     secondTeacherId: [null as number | null],
     thirdTeacherId: [null as number | null],
-    branchId: [null as number | null],
+    branchId: [null as number | null, [Validators.required]],
     isActive: [true],
     isComplete: [false]
   });
 
   /** How many teacher dropdowns are shown — the legacy `changeme()` behaviour. */
   readonly teacherCount = signal(1);
+
+  /* ------------------------------------------------------- portal sign-in */
+
+  /**
+   * Set once the operator types in either sign-in box, which stops the name from
+   * overwriting what they entered.
+   */
+  readonly loginEdited = signal(false);
+  readonly loginSuggesting = signal(false);
 
   constructor() {
     this.students.courses().subscribe({
@@ -179,6 +206,19 @@ export class StudentsComponent implements OnDestroy {
         this.refreshNextRegistration();
       }
     });
+
+    // The portal sign-in is derived from the student's name, so it follows what is
+    // typed — but only while registering, and only until someone edits it by hand.
+    // Re-deriving it for an existing student would change a login already in use.
+    this.form.controls.name.valueChanges
+      .pipe(debounceTime(400), distinctUntilChanged())
+      .subscribe(name => {
+        if (this.isEditing() || this.loginEdited()) {
+          return;
+        }
+
+        this.refreshSuggestedLogin(name);
+      });
 
     // Keep the required-ness of slots 2 and 3 in step with the chosen count, and
     // clear any value that is no longer used.
@@ -343,6 +383,10 @@ export class StudentsComponent implements OnDestroy {
 
   edit(student: StudentListItem): void {
     this.editingId.set(student.id);
+    this.applyPersonalEmailRule();
+    this.applyBranchRule();
+    // An existing student keeps the login they were issued; do not re-derive it.
+    this.loginEdited.set(true);
     this.editingRegistrationId.set(student.registrationId ?? null);
     this.editingBillNo.set(student.billNo ?? null);
 
@@ -390,6 +434,8 @@ export class StudentsComponent implements OnDestroy {
       address: '',
       email: '',
       personalEmail: '',
+      avijanLoginEmail: '',
+      avijanLoginPassword: '',
       dateOfBirth: null,
       dateOfJoining: null,
       monthlyFees: null,
@@ -407,6 +453,9 @@ export class StudentsComponent implements OnDestroy {
     this.form.controls.duration.setValue(null);
     this.teacherCount.set(1);
     this.editingId.set(null);
+    this.applyPersonalEmailRule();
+    this.applyBranchRule();
+    this.loginEdited.set(false);
     this.editingRegistrationId.set(null);
     this.editingBillNo.set(null);
     this.clearEditingPhoto();
@@ -456,9 +505,48 @@ export class StudentsComponent implements OnDestroy {
     });
   }
 
+  /** Greys out the button when the stored number cannot be a WhatsApp one. */
+  canWhatsApp(phone?: string | null): boolean {
+    return canWhatsApp(phone);
+  }
+
+  /**
+   * Opens WhatsApp with the admission receipt typed out to the student.
+   *
+   * The receipt is fetched first rather than assembled from the row: the figures a
+   * student is sent must be the same ones the printed receipt shows, and only the
+   * server knows the amount in words and the next due date.
+   */
+  whatsAppReceipt(student: StudentListItem): void {
+    this.students.receipt(student.id).subscribe({
+      next: receipt => {
+        if (!openWhatsApp(student.phone, admissionReceiptMessage(receipt))) {
+          this.messages.add({
+            severity: 'warn',
+            summary: 'Could not open WhatsApp',
+            detail: 'Allow popups for this site, and check the mobile number on the record.',
+            life: 6000
+          });
+        }
+      },
+      error: () => {
+        /* interceptor toasts */
+      }
+    });
+  }
+
   printReceipt(student: StudentListItem): void {
     this.students.receipt(student.id).subscribe({
-      next: receipt => this.openReceiptWindow(receipt),
+      next: receipt => {
+        if (!openDocumentWindow(admissionReceiptHtml(receipt), 900, 950)) {
+          this.messages.add({
+            severity: 'warn',
+            summary: 'Popup blocked',
+            detail: 'Allow popups for this site to print the receipt.',
+            life: 6000
+          });
+        }
+      },
       error: () => {
         /* interceptor toasts */
       }
@@ -705,6 +793,8 @@ export class StudentsComponent implements OnDestroy {
       phone: v.phone.trim(),
       email: v.email.trim(),
       personalEmail: v.personalEmail?.trim() || null,
+      avijanLoginEmail: v.avijanLoginEmail?.trim() || null,
+      avijanLoginPassword: v.avijanLoginPassword?.trim() || null,
       dateOfBirth: this.toIsoDate(v.dateOfBirth),
       dateOfJoining: this.toIsoDate(v.dateOfJoining),
       monthlyFees: v.monthlyFees,
@@ -737,6 +827,48 @@ export class StudentsComponent implements OnDestroy {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
 
+  /**
+   * Fills the sign-in boxes with what the server would issue for this name.
+   *
+   * The legacy form built the address and password in the browser; asking the
+   * server means the uniqueness check runs against the database, so two students
+   * with the same name get distinct logins instead of a duplicate account.
+   */
+  private refreshSuggestedLogin(name: string | null | undefined): void {
+    const trimmed = (name ?? '').trim();
+
+    if (!trimmed) {
+      this.form.patchValue(
+        { avijanLoginEmail: '', avijanLoginPassword: '' },
+        { emitEvent: false });
+      return;
+    }
+
+    this.loginSuggesting.set(true);
+
+    this.students.suggestLogin(trimmed, this.editingId()).subscribe({
+      next: (login: SuggestedLogin) => {
+        this.form.patchValue(
+          { avijanLoginEmail: login.email, avijanLoginPassword: login.password },
+          { emitEvent: false });
+
+        this.loginSuggesting.set(false);
+      },
+      error: () => this.loginSuggesting.set(false)
+    });
+  }
+
+  /** Re-derives the sign-in from the name, discarding any manual edit. */
+  regenerateLogin(): void {
+    this.loginEdited.set(false);
+    this.refreshSuggestedLogin(this.form.controls.name.value);
+  }
+
+  /** Called from the two sign-in inputs, so typing in them stops auto-fill. */
+  markLoginEdited(): void {
+    this.loginEdited.set(true);
+  }
+
   private refreshNextRegistration(): void {
     this.students.nextRegistrationNo(this.form.controls.branchId.value).subscribe({
       next: next => {
@@ -750,69 +882,37 @@ export class StudentsComponent implements OnDestroy {
     });
   }
 
-  /** Opens the admission receipt in a print window (replaces PrintReport.cshtml). */
-  private openReceiptWindow(receipt: {
-    name?: string;
-    registrationId?: string;
-    billNo?: string;
-    courseName?: string;
-    admissionFees?: number;
-    admissionFeesInWords: string;
-    dateOfJoining?: string;
-    nextDueDate?: string;
-  }): void {
-    const win = window.open('', '_blank', 'width=760,height=900');
-    if (!win) {
-      this.messages.add({
-        severity: 'warn',
-        summary: 'Popup blocked',
-        detail: 'Allow popups for this site to print the receipt.',
-        life: 6000
-      });
-      return;
-    }
+  /**
+   * Personal email is mandatory for a new admission and optional when editing.
+   *
+   * The server enforces the same split (POST requires it, PUT does not). It has
+   * to be a split: 932 of the 953 migrated students carry no personal email,
+   * 219 of them still active, so a blanket rule would lock those records.
+   */
+  private applyPersonalEmailRule(): void {
+    const control = this.form.controls.personalEmail;
 
-    const money = (value?: number) =>
-      new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value ?? 0);
+    control.setValidators(
+      this.isEditing()
+        ? [Validators.email]
+        : [Validators.required, Validators.email]
+    );
 
-    const date = (value?: string) =>
-      value ? new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+    control.updateValueAndValidity({ emitEvent: false });
+  }
 
-    const esc = (value?: string) =>
-      (value ?? '').replace(/[&<>"']/g, c =>
-        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);
+  /**
+   * Branch is required for a new admission - its code goes into the registration
+   * id, and the branch reports only add up when nothing is unattributed.
+   *
+   * Editing is left alone on purpose. Students admitted before this rule are all
+   * recorded against Rajpur, and a stricter rule on edit would turn an unrelated
+   * correction, like fixing a phone number, into a branch decision.
+   */
+  private applyBranchRule(): void {
+    const control = this.form.controls.branchId;
 
-    win.document.write(`<!doctype html>
-<html><head><meta charset="utf-8"><title>Admission receipt ${esc(receipt.registrationId)}</title>
-<style>
-  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1f2430; margin: 32px; }
-  h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
-  .sub { color: #6b7280; font-size: 13px; margin-top: 4px; }
-  .head { border-bottom: 2px solid #6d28d9; padding-bottom: 12px; margin-bottom: 24px; }
-  table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  th, td { text-align: left; padding: 9px 4px; border-bottom: 1px solid #e4e6ef; }
-  th { width: 40%; color: #6b7280; font-weight: 600; }
-  .words { margin-top: 20px; font-size: 13px; font-style: italic; color: #384152; }
-  .sign { margin-top: 64px; display: flex; justify-content: space-between; font-size: 13px; color: #6b7280; }
-  @media print { body { margin: 12mm; } }
-</style></head><body>
-  <div class="head">
-    <h1>Avijan &mdash; Admission Receipt</h1>
-    <div class="sub">Bill No. ${esc(receipt.billNo)}</div>
-  </div>
-  <table>
-    <tr><th>Student name</th><td>${esc(receipt.name)}</td></tr>
-    <tr><th>Registration id</th><td>${esc(receipt.registrationId)}</td></tr>
-    <tr><th>Course</th><td>${esc(receipt.courseName)}</td></tr>
-    <tr><th>Date of joining</th><td>${date(receipt.dateOfJoining)}</td></tr>
-    <tr><th>Admission fees</th><td>${money(receipt.admissionFees)}</td></tr>
-    <tr><th>Next payment due</th><td>${date(receipt.nextDueDate)}</td></tr>
-  </table>
-  <p class="words">Rupees ${esc(receipt.admissionFeesInWords)} only.</p>
-  <div class="sign"><span>Student / Guardian signature</span><span>For Avijan</span></div>
-  <script>window.onload = function () { window.print(); };<\/script>
-</body></html>`);
-
-    win.document.close();
+    control.setValidators(this.isEditing() ? [] : [Validators.required]);
+    control.updateValueAndValidity({ emitEvent: false });
   }
 }

@@ -86,3 +86,37 @@ a {
   white-space: nowrap;
   border: 0;
 }
+
+/* ---------------------------------------------------------------- dialogs */
+
+/* Every dialog in the application declares a fixed, comfortable width for a
+   desktop — 26rem to 66rem. None of them declared a cap, so on a phone the dialog
+   was laid out wider than the screen and centred, which put it off BOTH edges:
+   measured at 420px wide starting at -23px on a 375px screen. The controls at the
+   left and right were unreachable, which is why the teacher and receptionist
+   wallets could be opened but not used.
+
+   Capping here rather than adding breakpoints to each dialog: it is one rule
+   instead of eleven, and it covers dialogs written later without anyone having to
+   remember. The declared width still wins on a desktop, because min(56rem, 95vw)
+   is 56rem on anything wide enough. */
+.p-dialog {
+  max-width: 95vw;
+
+  /* The same problem vertically. A tall form on a short screen would otherwise run
+     past the bottom with the buttons out of reach. */
+  max-height: 90vh;
+}
+
+/* With the dialog capped, its body is what has to give — so it scrolls rather than
+   pushing the footer buttons off the screen. */
+.p-dialog .p-dialog-content {
+  overflow-y: auto;
+}
+
+/* Comfortable touch targets inside dialogs, matching the shell. */
+@media (max-width: 900px) and (pointer: coarse) {
+  .p-dialog .p-button {
+    min-height: 44px;
+  }
+}

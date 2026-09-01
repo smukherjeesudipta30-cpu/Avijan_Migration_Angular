@@ -199,3 +199,241 @@
     align-items: stretch;
   }
 }
+
+/* -------------------------------------------------------------- enquiries */
+
+/* The enquiry list needs the full grid width: messages are prose, not figures. */
+.dash__panel--wide {
+  grid-column: 1 / -1;
+}
+
+.dash__enquiries {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 0.85rem;
+}
+
+.dash__enquiry {
+  border: 1px solid var(--app-border);
+  border-left: 3px solid var(--app-accent);
+  border-radius: var(--app-radius);
+  padding: 0.9rem 1rem 1rem;
+  background: var(--app-page-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dash__enquiry-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+
+  strong { font-size: 0.95rem; }
+  small  { font-size: 0.72rem; white-space: nowrap; }
+}
+
+.dash__enquiry-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+
+  a {
+    font-size: 0.8rem;
+    color: var(--app-brand);
+    text-decoration: none;
+    word-break: break-all;
+
+    &:hover { text-decoration: underline; }
+  }
+
+  i { font-size: 0.75rem; }
+}
+
+.dash__enquiry-body {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.dash__enquiry p-button {
+  align-self: flex-start;
+  margin-top: auto;
+}
+
+.dash__enquiry-more {
+  margin: 0.85rem 0 0;
+  font-size: 0.78rem;
+}
+
+/* ------------------------------------------- online payments to confirm */
+.dash__pay-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.dash__pay {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 2fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-page-bg);
+}
+
+.dash__pay-main strong { display: block; font-size: 0.92rem; }
+
+.dash__pay-reg {
+  display: inline-block;
+  margin-top: 0.2rem;
+  font-family: 'Cascadia Mono', Consolas, monospace;
+  font-size: 0.76rem;
+}
+
+.dash__pay-sub { font-size: 0.75rem; line-height: 1.4; margin-top: 0.15rem; }
+
+.dash__pay-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem 0.9rem;
+  margin: 0;
+
+  dt {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--app-text-muted);
+  }
+
+  dd { margin: 0.1rem 0 0; font-size: 0.83rem; }
+  dd code { font-family: 'Cascadia Mono', Consolas, monospace; font-size: 0.78rem; }
+}
+
+.dash__pay-facts--wide { grid-column: span 2; }
+
+.dash__pay-fine dd { color: var(--app-negative); font-weight: 600; }
+
+.dash__pay-note {
+  margin: 0.9rem 0 0;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--app-radius);
+  background: var(--app-page-bg);
+  border-left: 3px solid var(--app-negative);
+  font-size: 0.77rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 1100px) {
+  .dash__pay { grid-template-columns: 1fr; }
+  .dash__pay-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ========================================================== notifications */
+
+.dash__panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dash__notices {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 0.85rem;
+}
+
+.dash__notice {
+  border: 1px solid var(--app-border);
+  /* Unread carries the brand edge; read fades back so the two are separable at a
+     glance without the read ones disappearing entirely. */
+  border-left: 3px solid var(--app-brand);
+  border-radius: var(--app-radius);
+  padding: 0.9rem 1rem 1rem;
+  background: var(--app-page-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+
+  &--read {
+    border-left-color: var(--app-border);
+    opacity: 0.72;
+  }
+}
+
+.dash__notice-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+
+  strong { font-size: 0.95rem; }
+  small  { font-size: 0.72rem; white-space: nowrap; }
+}
+
+.dash__notice-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.3rem 0.75rem;
+  margin: 0;
+  font-size: 0.82rem;
+
+  dt {
+    color: var(--app-text-muted);
+    white-space: nowrap;
+  }
+
+  dd {
+    margin: 0;
+    min-width: 0;
+    word-break: break-word;
+  }
+}
+
+.dash__notice-secret {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+
+  code {
+    font-size: 0.82rem;
+    padding: 0.1rem 0.35rem;
+    border-radius: 5px;
+    background: var(--app-brand-soft);
+    color: var(--app-brand);
+  }
+}
+
+/* A real button, not a styled link: it toggles state rather than navigating, and
+   has to be reachable by keyboard. */
+.dash__reveal {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.75rem;
+  color: var(--app-brand);
+  cursor: pointer;
+
+  &:hover { text-decoration: underline; }
+}
+
+.dash__empty {
+  margin: 0;
+  font-size: 0.85rem;
+}

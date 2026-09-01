@@ -1,0 +1,267 @@
+<!-- ================================================================ header -->
+<header class="hm__header">
+  <div class="hm__header-inner">
+    <a class="hm__logo" href="#" (click)="$event.preventDefault(); scrollTo('hero')">
+      <img src="/images/ds-logo.svg" alt="Avijan" />
+    </a>
+
+    <nav class="hm__nav">
+      <button type="button" (click)="scrollTo('hero')">Home</button>
+      <button type="button" (click)="scrollTo('courses')">Course</button>
+      <button type="button" (click)="scrollTo('about')">About Us</button>
+      <button type="button" (click)="scrollTo('portfolio')">Portfolio</button>
+      <button type="button" (click)="scrollTo('notice')">Notice</button>
+      <button type="button" (click)="scrollTo('contact')">Contact</button>
+    </nav>
+  </div>
+</header>
+
+<!-- ================================================================== hero -->
+<section class="hm__hero" id="hero">
+  <div class="hm__hero-overlay">
+    <h1>Welcome to Avijan</h1>
+    <p>An Unit of Computer Professionals &amp; Learners</p>
+
+    @if (isSignedIn()) {
+      <a class="hm__cta" [routerLink]="landingRoute()">Go to my dashboard</a>
+    } @else {
+      <a class="hm__cta" routerLink="/login">Login</a>
+    }
+  </div>
+</section>
+
+<!-- ================================================================= about -->
+<!--
+  The legacy #About is a split section: copy on the left half, about-us.jpg
+  filling the right half (css/style.css `#About:after`, width 50%).
+-->
+<section class="hm__about" id="about">
+  <div class="hm__about-split">
+    <div class="hm__about-copy">
+      <!-- The corner ribbon and scrolling admission banner from the legacy page. -->
+      <div class="hm__ribbon">30% OFF</div>
+
+      <div class="hm__admission">
+        <span>&#128227; Admission going on, join Avijan today &#128227;</span>
+      </div>
+
+      <h2>About Us</h2>
+
+      @if (page(); as p) {
+        <p>{{ p.introduction }}</p>
+      }
+
+      <p>
+        Our procedures, systems, pedagogy, faculty and infrastructure is totally
+        geared towards achieving our vision and mission. There is a high degree of
+        student participation in running the institution in its all activities along
+        with the faculty. All efforts in Avijan are directed towards supporting our
+        vision &amp; mission and decisions are guided by their contribution they are
+        likely to make towards enhancing and strengthening our vision and mission.
+        We are going to be succeed.
+      </p>
+
+      @if (page(); as p) {
+        <div class="hm__stats">
+          @for (stat of p.stats; track stat.label) {
+            <div class="hm__stat">
+              <i [class]="stat.icon"></i>
+              <strong>{{ stat.value }}</strong>
+              <span>{{ stat.label }}</span>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- The right half of the legacy About section: a full-height photograph. -->
+    <div class="hm__about-photo" role="img" aria-label="Students at Avijan"></div>
+  </div>
+</section>
+
+<!-- =============================================================== courses -->
+<section class="hm__section" id="courses">
+  <div class="hm__container">
+    <div class="hm__heading">
+      <h2>Courses</h2>
+      <p>ISO certificate will be provided after successfully completion of each course.</p>
+    </div>
+
+    @if (page(); as p) {
+      <div class="hm__table-wrap">
+        <table class="hm__table">
+          <thead>
+            <tr>
+              <th style="width: 5rem">S.No</th>
+              <th>Course Name</th>
+              <th style="width: 12rem">Duration (In Months)</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (course of p.courses; track course.courseId; let i = $index) {
+              <tr>
+                <td>{{ i + 1 }}</td>
+                <td>{{ course.name }}</td>
+                <td>{{ course.durationMonths ?? '&mdash;' }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="3" class="hm__empty">No courses listed yet.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else if (loading()) {
+      <p class="hm__empty">Loading courses&hellip;</p>
+    }
+  </div>
+</section>
+
+<!-- ============================================================= portfolio -->
+<section class="hm__section hm__portfolio" id="portfolio">
+  <div class="hm__container">
+    <div class="hm__heading">
+      <h2>Portfolio</h2>
+      <p>Our Exciting Moments</p>
+    </div>
+  </div>
+
+  <!-- Continuously scrolling strip, as on the legacy page. Hovering pauses it. -->
+  <div class="hm__marquee-wrap">
+    <div class="hm__marquee">
+      @for (item of portfolioLoop(); track $index) {
+        <button
+          type="button"
+          class="hm__marquee-item"
+          (click)="openLightbox(item)"
+          [attr.aria-label]="'View ' + item.caption">
+          <img [src]="item.image" [alt]="item.caption" loading="lazy" />
+          <span class="hm__marquee-caption">{{ item.caption }}</span>
+        </button>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ notice -->
+<section class="hm__section hm__notice" id="notice">
+  <div class="hm__container">
+    <div class="hm__heading">
+      <h2>Notice</h2>
+    </div>
+
+    @if (page(); as p) {
+      @for (notice of (p.notices ?? []); track notice.id) {
+        <div class="hm__notice-row">
+          <span class="hm__notice-date">
+            {{ notice.noticeDate ? (notice.noticeDate | date: 'd MMM y') : '' }}
+          </span>
+          <span class="hm__notice-text">{{ notice.text }}</span>
+        </div>
+      } @empty {
+        <p class="hm__empty">No notices at the moment.</p>
+      }
+    }
+  </div>
+</section>
+
+<!-- =============================================================== contact -->
+<section class="hm__section hm__contact" id="contact">
+  <div class="hm__container">
+    <h3 class="hm__contact-title">Get In Touch</h3>
+
+    <div class="hm__contact-grid">
+      @if (page(); as p) {
+        <div class="hm__address">
+          <p class="hm__add-title">Contact Details</p>
+
+          <div class="hm__c-detail">
+            <i class="pi pi-map-marker"></i>
+            <span>{{ p.contact.addressLine1 }}<br />{{ p.contact.addressLine2 }}</span>
+          </div>
+
+          <div class="hm__c-detail">
+            <i class="pi pi-phone"></i>
+            <a [href]="'tel:' + p.contact.phone">{{ p.contact.phone }}</a>
+          </div>
+
+          <div class="hm__c-detail">
+            <i class="pi pi-envelope"></i>
+            <a [href]="'mailto:' + p.contact.email">{{ p.contact.email }}</a>
+          </div>
+
+          <!-- The legacy contact block is address, phone and email only, so this
+               renders only if the institute has actually set office hours. -->
+          @if (p.contact.officeHours) {
+            <div class="hm__c-detail">
+              <i class="pi pi-clock"></i>
+              <span>{{ p.contact.officeHours }}</span>
+            </div>
+          }
+        </div>
+      }
+
+      <div class="hm__form-wrap">
+        <p class="hm__add-title">Send Us Message</p>
+
+        <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+          <div class="hm__field">
+            <label for="name">Full Name</label>
+            <input pInputText id="name" formControlName="name" autocomplete="name" />
+            @if (form.controls.name.touched && form.controls.name.invalid) {
+              <small class="hm__error">Your name is required.</small>
+            }
+          </div>
+
+          <div class="hm__field">
+            <label for="email">Email</label>
+            <input pInputText id="email" type="email" formControlName="email" autocomplete="email" />
+            @if (form.controls.email.touched && form.controls.email.invalid) {
+              <small class="hm__error">Enter a valid email address.</small>
+            }
+          </div>
+
+          <div class="hm__field">
+            <label for="phone">Contact</label>
+            <input pInputText id="phone" formControlName="phone" autocomplete="tel" />
+            @if (form.controls.phone.touched && form.controls.phone.invalid) {
+              <small class="hm__error">Enter a valid phone number.</small>
+            }
+          </div>
+
+          <div class="hm__field">
+            <label for="message">Your Message</label>
+            <textarea pTextarea id="message" rows="4" formControlName="message"></textarea>
+            @if (form.controls.message.touched && form.controls.message.invalid) {
+              <small class="hm__error">Please write a message.</small>
+            }
+          </div>
+
+          <p-button
+            type="submit"
+            label="Submit"
+            icon="pi pi-send"
+            [loading]="sending()"
+            [disabled]="sending()" />
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="hm__footer">
+  <div class="hm__container">
+    <span>&copy; {{ 2026 }} Avijan &mdash; An Unit of Computer Professionals &amp; Learners</span>
+    <a routerLink="/login">Staff &amp; student login</a>
+  </div>
+</footer>
+
+<!-- ============================================================== lightbox -->
+@if (lightbox(); as shot) {
+  <div class="hm__lightbox" (click)="closeLightbox()">
+    <button type="button" class="hm__lightbox-close" aria-label="Close">&times;</button>
+    <figure (click)="$event.stopPropagation()">
+      <img [src]="shot.image" [alt]="shot.caption" />
+      <figcaption>{{ shot.caption }}</figcaption>
+    </figure>
+  </div>
+}

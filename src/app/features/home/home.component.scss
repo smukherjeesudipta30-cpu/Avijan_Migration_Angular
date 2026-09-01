@@ -1,0 +1,610 @@
+/**
+ * The public front page. Deliberately does NOT use the admin shell's tokens for
+ * layout: this is the marketing site, and it keeps the legacy page's dark-blue
+ * hero, white cards and full-bleed sections.
+ */
+:host {
+  display: block;
+  background: #fff;
+  color: #333;
+}
+
+.hm__container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+
+/* ================================================================= header */
+.hm__header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid #e6e8ef;
+}
+
+.hm__header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.6rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.hm__logo img {
+  height: 44px;
+  display: block;
+}
+
+.hm__nav {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+
+  button {
+    background: none;
+    border: 0;
+    padding: 0.5rem 0.75rem;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #33415c;
+    cursor: pointer;
+    border-radius: 6px;
+
+    &:hover {
+      background: #eef1f8;
+      color: #0a283c;
+    }
+  }
+}
+
+/* =================================================================== hero */
+.hm__hero {
+  /* The legacy banner photograph, copied across unchanged. */
+  background: url('/images/banner.jpg') no-repeat center center / cover;
+  background-attachment: fixed;
+  min-height: 88vh;
+  display: flex;
+}
+
+.hm__hero-overlay {
+  /* Same translucent navy wash the legacy page used over the photo. */
+  background: rgba(10, 40, 60, 0.7);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem 1.25rem;
+
+  h1 {
+    font-size: clamp(2rem, 6vw, 3rem);
+    color: #fff;
+    text-transform: uppercase;
+    margin: 0 0 1.25rem;
+    letter-spacing: 0.02em;
+  }
+
+  p {
+    font-size: clamp(1.05rem, 3vw, 1.6rem);
+    color: #fff;
+    margin: 0 0 2rem;
+  }
+}
+
+.hm__cta {
+  display: inline-block;
+  padding: 0.85rem 2.6rem;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background 0.2s ease, color 0.2s ease;
+
+  &:hover {
+    background: #fff;
+    color: #0a283c;
+  }
+}
+
+/* =============================================================== sections */
+.hm__section {
+  padding: 4rem 0;
+}
+
+.hm__heading {
+  text-align: center;
+  margin-bottom: 2.25rem;
+
+  h2 {
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    color: #333;
+    margin: 0 0 0.5rem;
+  }
+
+  p {
+    color: #777;
+    margin: 0;
+  }
+}
+
+.hm__empty {
+  text-align: center;
+  color: #777;
+  padding: 1.5rem 0;
+}
+
+/* ==================================================================== about
+   Split section, as on the legacy page: copy on the left half, photograph
+   filling the right half edge to edge.                                      */
+.hm__about {
+  background: #fff;
+}
+
+.hm__about-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: stretch;
+  min-height: 520px;
+}
+
+.hm__about-copy {
+  position: relative;
+  overflow: hidden;
+  padding: 4rem 3rem 4rem max(1.25rem, calc((100vw - 1200px) / 2));
+
+  h2 {
+    font-size: clamp(1.6rem, 4vw, 2.2rem);
+    margin: 1.5rem 0 1rem;
+  }
+
+  p {
+    line-height: 1.8;
+    color: #4a5163;
+    margin: 0 0 1rem;
+  }
+}
+
+/* The legacy `#About:after` — about-us.jpg, cover, full height of the section. */
+.hm__about-photo {
+  background: url('/images/about-us.jpg') no-repeat center center / cover;
+  min-height: 320px;
+}
+
+/* The red "30% OFF" corner ribbon from the legacy page. */
+.hm__ribbon {
+  position: absolute;
+  top: 20px;
+  right: -60px;
+  background: #d62828;
+  color: #fff;
+  padding: 5px 60px;
+  transform: rotate(45deg);
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+}
+
+/* The black scrolling admission strip. */
+.hm__admission {
+  width: 100%;
+  overflow: hidden;
+  background: #000;
+  padding: 10px 0;
+  border-radius: 6px;
+
+  span {
+    display: inline-block;
+    white-space: nowrap;
+    padding-left: 100%;
+    font-size: clamp(1rem, 3vw, 2rem);
+    color: beige;
+    font-weight: 700;
+    animation: hm-scroll-left 15s linear infinite;
+  }
+}
+
+@keyframes hm-scroll-left {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+
+.hm__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e6e8ef;
+}
+
+.hm__stat {
+  text-align: center;
+
+  i {
+    font-size: 1.3rem;
+    color: #6d28d9;
+  }
+
+  strong {
+    display: block;
+    font-size: 1.7rem;
+    margin-top: 0.35rem;
+    color: #1f2430;
+  }
+
+  span {
+    display: block;
+    font-size: 0.8rem;
+    color: #777;
+  }
+}
+
+/* ================================================================= tables */
+.hm__table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e0e3ec;
+  border-radius: 10px;
+}
+
+.hm__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+  background: #fff;
+
+  th,
+  td {
+    padding: 0.7rem 0.9rem;
+    text-align: left;
+    border-bottom: 1px solid #eceef5;
+    white-space: nowrap;
+  }
+
+  th {
+    background: #f2f4f9;
+    font-weight: 700;
+    color: #33415c;
+  }
+
+  td:nth-child(2) {
+    white-space: normal;
+  }
+
+  tbody tr:hover td {
+    background: #fafbff;
+  }
+}
+
+/* ============================================================== portfolio */
+.hm__portfolio {
+  background: #0a283c;
+
+  .hm__heading h2 { color: #fff; }
+  .hm__heading p  { color: #b9c6d4; }
+}
+
+.hm__marquee-wrap {
+  overflow: hidden;
+  width: 100%;
+  padding: 0 0 0.5rem;
+}
+
+.hm__marquee {
+  display: flex;
+  gap: 20px;
+  width: max-content;
+  animation: hm-marquee 45s linear infinite;
+
+  /* Let people actually look at a photo before it slides away. */
+  &:hover {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes hm-marquee {
+  from { transform: translateX(0); }
+  /* Half, because the list is rendered twice for a seamless loop. */
+  to   { transform: translateX(-50%); }
+}
+
+.hm__marquee-item {
+  position: relative;
+  flex: 0 0 300px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  overflow: hidden;
+  border-radius: 20px;
+  transition: transform 0.3s ease;
+
+  img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 20px;
+    display: block;
+  }
+
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+.hm__marquee-caption {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  padding: 10px;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* ==================================================================== notice
+   The legacy #Testimonial section, which carried the notice board over a fixed
+   banner-one.jpg background.                                                  */
+.hm__notice {
+  position: relative;
+  background: url('/images/banner-one.jpg') no-repeat 0 30% / cover;
+  background-attachment: fixed;
+
+  /* Darkened so the notice text stays readable over the photograph. */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(10, 40, 60, 0.78);
+  }
+
+  .hm__container {
+    position: relative;
+    z-index: 1;
+  }
+
+  .hm__heading h2 {
+    color: #fff;
+  }
+}
+
+.hm__notice-row {
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+  background: rgba(255, 255, 255, 0.94);
+  border-left: 4px solid #6d28d9;
+  border-radius: 8px;
+  padding: 0.85rem 1.1rem;
+  margin-bottom: 0.65rem;
+}
+
+.hm__notice-date {
+  flex: 0 0 auto;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #6d28d9;
+  white-space: nowrap;
+}
+
+.hm__notice-text {
+  line-height: 1.6;
+  color: #33415c;
+}
+
+.hm__notice .hm__empty {
+  color: #d7e0ea;
+}
+
+
+/* ================================================================ contact */
+.hm__contact {
+  background: #f7f8fb;
+}
+
+.hm__contact-title {
+  text-align: center;
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  margin: 0 0 2rem;
+}
+
+.hm__contact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.hm__add-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
+  color: #33415c;
+}
+
+.hm__address,
+.hm__form-wrap {
+  background: #fff;
+  border: 1px solid #e0e3ec;
+  border-radius: 10px;
+  padding: 1.5rem;
+}
+
+.hm__c-detail {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  line-height: 1.6;
+
+  i {
+    color: #6d28d9;
+    margin-top: 0.2rem;
+  }
+
+  a {
+    color: #33415c;
+    text-decoration: none;
+
+    &:hover { text-decoration: underline; }
+  }
+}
+
+.hm__field {
+  margin-bottom: 1rem;
+
+  label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #33415c;
+  }
+
+  input,
+  textarea {
+    width: 100%;
+    resize: vertical;
+  }
+}
+
+.hm__error {
+  display: block;
+  margin-top: 0.28rem;
+  font-size: 0.75rem;
+  color: #dc2626;
+}
+
+/* ================================================================= footer */
+.hm__footer {
+  background: #0a283c;
+  color: #b9c6d4;
+  padding: 1.5rem 0;
+  font-size: 0.85rem;
+
+  .hm__container {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  a {
+    color: #fff;
+    text-decoration: none;
+
+    &:hover { text-decoration: underline; }
+  }
+}
+
+/* =============================================================== lightbox */
+.hm__lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+
+  figure {
+    margin: 0;
+    max-width: min(1100px, 92vw);
+    text-align: center;
+  }
+
+  img {
+    max-width: 100%;
+    max-height: 80vh;
+    border-radius: 10px;
+    display: block;
+  }
+
+  figcaption {
+    color: #fff;
+    margin-top: 0.85rem;
+    font-weight: 600;
+  }
+}
+
+.hm__lightbox-close {
+  position: absolute;
+  top: 1rem;
+  right: 1.5rem;
+  background: none;
+  border: 0;
+  color: #fff;
+  font-size: 2.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* ============================================================ responsive */
+@media (max-width: 900px) {
+  .hm__contact-grid { grid-template-columns: 1fr; }
+
+  /* The split About stacks: copy first, then the photograph. */
+  .hm__about-split { grid-template-columns: 1fr; }
+  .hm__about-copy { padding: 3rem 1.25rem; }
+  .hm__about-photo { min-height: 260px; }
+}
+
+@media (max-width: 768px) {
+  .hm__marquee-item { flex: 0 0 240px; }
+
+  /* A fixed background on iOS shows a stretched, jittery image. */
+  .hm__hero,
+  .hm__notice { background-attachment: scroll; }
+}
+
+@media (max-width: 560px) {
+  .hm__nav { gap: 0; }
+  .hm__nav button { padding: 0.45rem 0.5rem; font-size: 0.82rem; }
+  .hm__marquee-item { flex: 0 0 200px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hm__marquee,
+  .hm__admission span {
+    animation: none;
+  }
+
+  /* Stopping the animation is not enough on its own. The strip is wider than the
+     screen and the wrapper clips it, so a frozen marquee leaves most of the
+     photographs unreachable - there is no way to scroll to them, because the
+     motion WAS the way to reach them. Handing the scrollbar to the visitor keeps
+     the whole portfolio available without moving anything on its own.
+
+     Worth knowing when testing: Windows Server turns animations off by default,
+     so a browser on the server takes this branch while an ordinary PC or phone
+     sees the scrolling strip. */
+  .hm__marquee-wrap {
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .hm__marquee {
+    /* The component stops doubling the list in this mode, so the strip is its
+       natural width rather than two copies wide. */
+    width: max-content;
+  }
+
+  .hm__marquee-item {
+    scroll-snap-align: center;
+  }
+}

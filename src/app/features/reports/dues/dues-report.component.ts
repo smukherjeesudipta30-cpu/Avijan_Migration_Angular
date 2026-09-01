@@ -11,6 +11,8 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
 
 import { DuesReport } from '../../../core/models/report.model';
 import { CourseLookup } from '../../../core/models/student.model';
+import { BranchListItem } from '../../../core/models/master.model';
+import { MasterService } from '../../../core/services/master.service';
 import { ReportService } from '../../../core/services/report.service';
 import { StudentService } from '../../../core/services/student.service';
 import { downloadCsv, reportFileName, startOfMonth, toIsoDate } from '../report-utils';
@@ -36,11 +38,16 @@ import { downloadCsv, reportFileName, startOfMonth, toIsoDate } from '../report-
 })
 export class DuesReportComponent {
   private readonly reports = inject(ReportService);
+  private readonly masters = inject(MasterService);
   private readonly students = inject(StudentService);
   private readonly messages = inject(MessageService);
 
   readonly report = signal<DuesReport | null>(null);
   readonly loading = signal(false);
+
+  /** Optional branch filter. Null is every branch. */
+  readonly branch = signal<string | null>(null);
+  readonly branches = signal<BranchListItem[]>([]);
   readonly courses = signal<CourseLookup[]>([]);
 
   readonly from = signal<Date>(startOfMonth());
@@ -54,6 +61,10 @@ export class DuesReportComponent {
   readonly pageSize = signal(25);
 
   constructor() {
+    this.masters.branches().subscribe({
+      next: rows => this.branches.set(rows.filter(b => b.isActive))
+    });
+
     this.students.courses().subscribe(list => this.courses.set(list));
   }
 
@@ -79,7 +90,7 @@ export class DuesReportComponent {
     this.loading.set(true);
 
     this.reports
-      .dues(courseId, from, to, this.page(), this.pageSize(), this.includeNeverPaid())
+      .dues(courseId, from, to, this.page(), this.pageSize(), this.includeNeverPaid(), this.branch())
       .subscribe({
         next: report => {
           this.report.set(report);
@@ -111,18 +122,25 @@ export class DuesReportComponent {
         toIsoDate(this.to())!,
         1,
         Math.max(report.studentCount, 1),
-        this.includeNeverPaid()
+        this.includeNeverPaid(),
+        this.branch()
       )
       .subscribe(full => {
         downloadCsv(
           reportFileName('dues'),
           [
             'Registration id', 'Student name', 'Phone', 'Date of joining', 'Course',
-            'Last payment', 'Outstanding due', 'Has ever paid'
+            'Last payment', 'Months due', 'Monthly fee', 'Monthly fees due',
+            'Late fine', 'Carried due', 'Outstanding due', 'Has ever paid'
           ],
+          /* The same breakdown the table shows. A spreadsheet of one total per
+             student cannot be checked or chased from; the parts are what makes it
+             workable. */
           full.rows.items.map(r => [
             r.registrationId, r.studentName, r.phone, r.dateOfJoining, r.courseName,
-            r.lastPaymentDate ?? '', r.outstandingDue, r.hasEverPaid ? 'Yes' : 'No'
+            r.lastPaymentDate ?? '', r.monthsUnpaid, r.monthlyFee,
+            r.monthsUnpaid * r.monthlyFee, r.lateFine, r.carriedDue,
+            r.outstandingDue, r.hasEverPaid ? 'Yes' : 'No'
           ])
         );
       });

@@ -7,8 +7,11 @@ import { ApiResponse } from '../models/api-response.model';
 import {
   BranchListItem,
   BranchSaveRequest,
+  TeacherAccount,
   TeacherEarning,
   TeacherListItem,
+  TeacherPayment,
+  TeacherPaymentRequest,
   TeacherSaveRequest
 } from '../models/master.model';
 import { PagedResult } from '../models/student.model';
@@ -102,5 +105,45 @@ export class MasterService {
     const params = new HttpParams().set('isActive', String(isActive));
 
     return this.http.patch<ApiResponse<boolean>>(`${this.branchBase}/${id}/status`, {}, { params });
+  }
+
+  /* ------------------------------ payments made to a teacher */
+
+  teacherAccount(
+    teacherId: number,
+    from?: string | null,
+    to?: string | null
+  ): Observable<TeacherAccount> {
+    let params = new HttpParams();
+    if (from) params = params.set("from", from);
+    if (to) params = params.set("to", to);
+
+    return this.http
+      .get<ApiResponse<TeacherAccount>>(`${this.teacherBase}/${teacherId}/account`, { params })
+      .pipe(map(r => r.data));
+  }
+
+  teacherPayments(
+    teacherId: number,
+    from?: string | null,
+    to?: string | null
+  ): Observable<TeacherPayment[]> {
+    let params = new HttpParams();
+    if (from) params = params.set('from', from);
+    if (to) params = params.set('to', to);
+
+    return this.http
+      .get<ApiResponse<TeacherPayment[]>>(`${this.teacherBase}/${teacherId}/payments`, { params })
+      .pipe(map(r => r.data));
+  }
+
+  /** Records money handed to a teacher. Administrator only. */
+  recordTeacherPayment(request: TeacherPaymentRequest): Observable<ApiResponse<number>> {
+    return this.http.post<ApiResponse<number>>(
+      `${this.teacherBase}/${request.teacherId}/payments`, request);
+  }
+
+  deleteTeacherPayment(paymentId: number): Observable<ApiResponse<boolean>> {
+    return this.http.delete<ApiResponse<boolean>>(`${this.teacherBase}/payments/${paymentId}`);
   }
 }

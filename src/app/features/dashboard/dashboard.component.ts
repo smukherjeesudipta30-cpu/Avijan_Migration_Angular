@@ -7,9 +7,14 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 
-import { DashboardSummary } from '../../core/models/dashboard.model';
+import { MessageService } from 'primeng/api';
+
+import { DashboardSummary, Enquiry } from '../../core/models/dashboard.model';
+import { OnlinePaymentNotice } from '../../core/models/fee.model';
+import { formatMoney } from '../../core/format/money';
 import { AuthService } from '../../core/services/auth.service';
 import { DashboardService } from '../../core/services/dashboard.service';
+import { FeeService } from '../../core/services/fee.service';
 
 interface StatCard {
   label: string;
@@ -33,6 +38,8 @@ interface StatCard {
 export class DashboardComponent {
   private readonly dashboard = inject(DashboardService);
   private readonly auth = inject(AuthService);
+  private readonly fees = inject(FeeService);
+  private readonly messages = inject(MessageService);
 
   readonly summary = signal<DashboardSummary | null>(null);
   readonly loading = signal(true);
@@ -188,6 +195,7 @@ export class DashboardComponent {
 
   constructor() {
     this.load();
+    this.loadOnlinePayments();
   }
 
   load(): void {
@@ -208,10 +216,185 @@ export class DashboardComponent {
   }
 
   money(value: number): string {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(value ?? 0);
+    return formatMoney(value);
+  }
+
+  /* ---------------------------------------------- online fee payments */
+
+  readonly onlinePayments = signal<OnlinePaymentNotice[]>([]);
+  readonly confirming = signal<Set<number>>(new Set());
+
+  private loadOnlinePayments(): void {
+    this.fees.unverifiedOnline(25).subscribe({
+      next: rows => this.onlinePayments.set(rows)
+    });
+  }
+
+  /**
+   * Marks a payment as checked against the institute's account. It leaves the list
+   * so the panel only ever shows what still needs looking at.
+   */
+  confirmPayment(payment: OnlinePaymentNotice): void {
+    this.confirming.update(set => new Set(set).add(payment.feeId));
+
+    this.fees.verifyOnline(payment.feeId).subscribe({
+      next: () => {
+        this.confirming.update(set => {
+          const next = new Set(set);
+          next.delete(payment.feeId);
+          return next;
+        });
+
+        this.onlinePayments.update(rows => rows.filter(r => r.feeId !== payment.feeId));
+
+        this.messages.add({
+          severity: 'success',
+          summary: 'Payment confirmed',
+          detail: `${payment.studentName ?? payment.registrationId} — ${payment.transactionId}.`,
+          life: 5000
+        });
+      },
+      error: () => this.confirming.update(set => {
+        const next = new Set(set);
+        next.delete(payment.feeId);
+        return next;
+      })
+    });
+  }
+
+  /* ----------------------------------------------------------- enquiries */
+
+  /** Ids currently being cleared, so each button can show its own spinner. */
+  readonly clearing = signal<ReadonlySet<number>>(new Set());
+
+  isClearing(id: number): boolean {
+    return this.clearing().has(id);
+  }
+
+  /**
+   * Marks an enquiry as dealt with. It is removed from the list and the badge
+   * count locally rather than by reloading the whole dashboard, so clearing a
+   * backlog of fifteen does not fire fifteen full summary requests.
+   */
+  markHandled(enquiry: Enquiry): void {
+    this.clearing.update(set => new Set(set).add(enquiry.id));
+
+    this.dashboard.markEnquiryHandled(enquiry.id).subscribe({
+      next: () => {
+        this.summary.update(current => {
+          if (!current) return current;
+
+          return {
+            ...current,
+            counts: {
+              ...current.counts,
+              pendingEnquiries: Math.max(0, current.counts.pendingEnquiries - 1)
+            },
+            pendingEnquiryList: (current.pendingEnquiryList ?? [])
+              .filter(e => e.id !== enquiry.id)
+          };
+        });
+
+        this.stopClearing(enquiry.id);
+      },
+      error: () => this.stopClearing(enquiry.id)
+    });
+  }
+
+  private stopClearing(id: number): void {
+    this.clearing.update(set => {
+      const next = new Set(set);
+      next.delete(id);
+      return next;
+    });
+  }
+
+  /* -------------------------------------------------------- notifications */
+
+  /**
+   * Which alerts have had their password revealed.
+   *
+   * Hidden by default on purpose: a dashboard is a screen other people walk past,
+   * and this one carries a student's password. Revealing is per row and resets on
+   * every reload.
+   */
+  readonly revealed = signal<ReadonlySet<number>>(new Set());
+
+  isRevealed(id: number): boolean {
+    return this.revealed().has(id);
+  }
+
+  toggleReveal(id: number): void {
+    this.revealed.update(set => {
+      const next = new Set(set);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  /** Ids currently being marked read, so each button shows its own spinner. */
+  readonly dismissing = signal<ReadonlySet<number>>(new Set());
+
+  isDismissing(id: number): boolean {
+    return this.dismissing().has(id);
+  }
+
+  /**
+   * Marks one alert read. Updated locally rather than by reloading, for the same
+   * reason the enquiry list is: clearing a backlog should not fire a full summary
+   * request per row.
+   */
+  markNotificationRead(id: number): void {
+    this.dismissing.update(set => new Set(set).add(id));
+
+    this.dashboard.markNotificationRead(id).subscribe({
+      next: () => {
+        this.summary.update(current => {
+          if (!current) return current;
+
+          const wasUnread = (current.notifications ?? [])
+            .some(n => n.id === id && !n.isRead);
+
+          return {
+            ...current,
+            notifications: (current.notifications ?? [])
+              .map(n => (n.id === id ? { ...n, isRead: true } : n)),
+            unreadNotifications: wasUnread
+              ? Math.max(0, current.unreadNotifications - 1)
+              : current.unreadNotifications
+          };
+        });
+
+        this.stopDismissing(id);
+      },
+      error: () => this.stopDismissing(id)
+    });
+  }
+
+  readonly clearingAll = signal(false);
+
+  markAllNotificationsRead(): void {
+    this.clearingAll.set(true);
+
+    this.dashboard.markAllNotificationsRead().subscribe({
+      next: () => {
+        this.summary.update(current => current && ({
+          ...current,
+          notifications: (current.notifications ?? []).map(n => ({ ...n, isRead: true })),
+          unreadNotifications: 0
+        }));
+
+        this.clearingAll.set(false);
+      },
+      error: () => this.clearingAll.set(false)
+    });
+  }
+
+  private stopDismissing(id: number): void {
+    this.dismissing.update(set => {
+      const next = new Set(set);
+      next.delete(id);
+      return next;
+    });
   }
 }

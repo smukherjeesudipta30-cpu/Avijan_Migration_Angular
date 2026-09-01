@@ -57,6 +57,10 @@ export interface StudentSaveRequest {
   isComplete: boolean;
   branchId: number | null;
   personalEmail: string | null;
+
+  /** Leave both null on create and the server generates them from the name. */
+  avijanLoginEmail: string | null;
+  avijanLoginPassword: string | null;
 }
 
 export interface StudentCreated {
@@ -80,6 +84,8 @@ export interface AdmissionReceipt {
   admissionFeesInWords: string;
   dateOfJoining?: string;
   nextDueDate?: string;
+  /** Absolute URL of the PDF, sent as a link in the WhatsApp message. */
+  pdfUrl?: string;
 }
 
 export interface CourseLookup {
@@ -128,4 +134,10 @@ export interface StudentQuery {
   registrationId?: string | null;
   name?: string | null;
   search?: string | null;
+}
+
+/** The portal sign-in that will be issued for a student name. */
+export interface SuggestedLogin {
+  email: string;
+  password: string;
 }

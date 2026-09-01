@@ -302,7 +302,16 @@ export class UsersComponent {
    */
   openPasswordDialog(user: UserListItem): void {
     this.passwordUser.set(user);
-    this.generatePassword();
+
+    // A student's portal password is stored in clear on their student record, so
+    // it can be shown as-is: the dialog becomes "here is their password, change it
+    // if you like". For staff there is only a hash, so a fresh one is generated.
+    if (user.studentPassword) {
+      this.sharePassword.set(user.studentPassword);
+    } else {
+      this.generatePassword();
+    }
+
     this.passwordVisible.set(true);
   }
 

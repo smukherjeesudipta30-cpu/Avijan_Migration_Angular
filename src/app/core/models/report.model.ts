@@ -32,7 +32,22 @@ export interface DuesRow {
   courseName?: string;
   admissionFees: number;
   lastPaymentDate?: string;
+
+  /** What they owe as at the report's end date: monthly fees due + fine + carried. */
   outstandingDue: number;
+
+  /** The balance left unpaid at the time of the last payment. Usually zero. */
+  carriedDue: number;
+
+  /** Complete fee months since the last payment — a fee month being 32 days. */
+  monthsUnpaid: number;
+
+  /** The agreed monthly fee, which is what each missed month costs. */
+  monthlyFee: number;
+
+  /** The fine as at the report's end date, from the same calculator the desk uses. */
+  lateFine: number;
+
   /** False when the student has no payment history at all. */
   hasEverPaid: boolean;
 }
@@ -56,6 +71,9 @@ export interface ExpenseRow {
   details?: string;
   expenseDate?: string;
   amount: number;
+
+  /** Where the money was spent. */
+  branch?: string;
 }
 
 export interface ExpenseReport {
@@ -215,5 +233,71 @@ export interface StudentCertificate {
 
   /** False while the student is still enrolled; the page warns rather than refuses. */
   isComplete: boolean;
+  generatedOn: string;
+
+  /** Which copy this is. 1 is the original; 2 and above print as duplicates. */
+  issueNo: number;
+
+  /** True from the second copy onwards. */
+  isDuplicate: boolean;
+
+  /** When the original was taken. Null on the original itself. */
+  originalIssuedOn?: string;
+}
+
+/* ========================================================= branch report */
+
+export type BranchGrouping = 'Month' | 'Quarter' | 'Year';
+
+/** One branch in one period. */
+export interface BranchPeriodRow {
+  branch: string;
+  periodStart: string;
+  periodLabel: string;
+
+  admissions: number;
+  admissionFees: number;
+
+  payments: number;
+  feesCollected: number;
+  lateFines: number;
+
+  expenses: number;
+
+  /** Non-fee income earned by this branch. */
+  otherIncome: number;
+
+  /** Receptionist salary paid by this branch. */
+  receptionistPay: number;
+  net: number;
+}
+
+export interface BranchTotal {
+  branch: string;
+  admissions: number;
+  admissionFees: number;
+  payments: number;
+  feesCollected: number;
+  lateFines: number;
+  expenses: number;
+  otherIncome: number;
+  receptionistPay: number;
+  net: number;
+}
+
+export interface BranchReport {
+  from: string;
+  to: string;
+  groupBy: string;
+
+  rows: BranchPeriodRow[];
+  branchTotals: BranchTotal[];
+  grandTotal: BranchTotal;
+
+  branches: string[];
+
+  /** True while most records carry no branch, so the page can say so. */
+  mostlyUnassigned: boolean;
+
   generatedOn: string;
 }

@@ -1,0 +1,372 @@
+:host {
+  display: block;
+}
+
+.ex__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+
+  h1 {
+    margin-top: 0.25rem;
+    font-size: 1.5rem;
+  }
+}
+
+.ex__lede {
+  max-width: 62ch;
+  margin: 0.4rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+/* ------------------------------------------------------------------ filter */
+.ex__filter {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.ex__filter-field {
+  flex: 1 1 220px;
+  min-width: 0;
+
+  label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--app-text-muted);
+  }
+
+  input { width: 100%; }
+}
+
+.ex__filter-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
+/* -------------------------------------------------------------------- list */
+.ex__list {
+  padding: 1.15rem 1.25rem 0.6rem;
+}
+
+.ex__list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+
+  h2 { font-size: 1.05rem; }
+  span { font-size: 0.8rem; }
+}
+
+.ex__num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ex__sub {
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+/* A theory paper whose questions do not add up to its total. */
+.ex__warn { color: var(--app-negative); font-weight: 600; }
+
+.ex__actions {
+  display: flex;
+  gap: 0.1rem;
+}
+
+.ex__empty {
+  padding: 1.75rem 0.5rem;
+  text-align: center;
+}
+
+.ex__note {
+  margin: 0.75rem 0 0;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--app-radius);
+  background: var(--app-page-bg);
+  border-left: 3px solid var(--app-accent);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.ex__note--inline { margin-top: 1rem; }
+
+/* ------------------------------------------------------------ paper dialog */
+.ex__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem 1.25rem;
+}
+
+.ex__field {
+  min-width: 0;
+
+  label {
+    display: block;
+    margin-bottom: 0.32rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  input { width: 100%; }
+}
+
+.ex__field--wide { grid-column: 1 / -1; }
+
+.ex__req { color: var(--app-negative); }
+
+.ex__hint {
+  display: block;
+  margin-top: 0.28rem;
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.ex__error {
+  display: block;
+  margin-top: 0.28rem;
+  font-size: 0.74rem;
+  color: var(--app-negative);
+}
+
+:host ::ng-deep .ex__wide,
+:host ::ng-deep .ex__wide input,
+:host ::ng-deep .p-inputnumber,
+:host ::ng-deep .p-inputnumber input {
+  width: 100%;
+}
+
+/* The mark box sits in a table cell, so it stays narrow. */
+:host ::ng-deep .ex__mark input { width: 7rem; }
+
+.ex__dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1.4rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--app-border);
+}
+
+/* -------------------------------------------------------- questions dialog */
+.ex__upload {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: 1rem 1.15rem;
+  margin-bottom: 1rem;
+  border-radius: var(--app-radius);
+  background: var(--app-page-bg);
+  flex-wrap: wrap;
+
+  h3 { margin: 0; font-size: 0.95rem; }
+  p { margin: 0.3rem 0 0; max-width: 52ch; font-size: 0.78rem; line-height: 1.5; }
+}
+
+.ex__upload-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 0 0 auto;
+}
+
+/* A styled wrapper round the native file input, which cannot be styled itself. */
+.ex__file {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--app-radius);
+  background: var(--app-brand);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  input { display: none; }
+
+  .pi-spinner { animation: ex-spin 1s linear infinite; }
+}
+
+.ex__file--busy { opacity: 0.7; cursor: progress; }
+
+@keyframes ex-spin {
+  to { transform: rotate(360deg); }
+}
+
+.ex__errors {
+  padding: 0.8rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: var(--app-radius);
+  border-left: 3px solid var(--app-negative);
+  background: color-mix(in srgb, var(--app-negative) 8%, transparent);
+  font-size: 0.8rem;
+  line-height: 1.55;
+
+  ul { margin: 0.5rem 0 0; padding-left: 1.15rem; }
+  li { margin-bottom: 0.2rem; }
+}
+
+.ex__errors--warn {
+  border-left-color: var(--app-accent);
+  background: color-mix(in srgb, var(--app-accent) 10%, transparent);
+}
+
+/* ------------------------------------------------------------------- tiles */
+.ex__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.ex__tile {
+  padding: 0.85rem 1.05rem;
+
+  span {
+    display: block;
+    font-size: 0.73rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--app-text-muted);
+  }
+
+  strong {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 1.35rem;
+    letter-spacing: -0.02em;
+  }
+}
+
+.ex__tile--warn strong { color: var(--app-negative); }
+
+.ex__tile--codes {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+
+/* ---------------------------------------------------- schedule dialog */
+.ex__batch {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.15rem;
+  padding: 1rem 1.15rem;
+  margin-bottom: 1rem;
+  border-radius: var(--app-radius);
+  background: var(--app-page-bg);
+  flex-wrap: wrap;
+}
+
+.ex__batch-field {
+  flex: 1 1 16rem;
+  min-width: 0;
+
+  label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--app-text-muted);
+  }
+}
+
+.ex__batch-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding-bottom: 0.55rem;
+  flex: 0 1 18rem;
+
+  label {
+    font-size: 0.8rem;
+    line-height: 1.35;
+    cursor: pointer;
+  }
+
+  small { display: block; font-size: 0.71rem; }
+}
+
+/* Find-a-student box above the sitting sheet. */
+.ex__find {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+
+  label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--app-text-muted);
+    white-space: nowrap;
+  }
+
+  input { flex: 1 1 22rem; min-width: 0; }
+}
+
+/* The registration id: the only field that identifies one student. */
+.ex__reg {
+  font-family: 'Cascadia Mono', Consolas, monospace;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+/* A name shared with another student on the same course. */
+.ex__dupe {
+  margin-left: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--app-accent);
+  cursor: help;
+}
+
+/* The six digits the invigilator reads out. */
+.ex__code {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 5px;
+  background: var(--app-page-bg);
+  border: 1px solid var(--app-border);
+  font-family: 'Cascadia Mono', Consolas, monospace;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+@media (max-width: 900px) {
+  .ex__grid { grid-template-columns: 1fr; }
+  .ex__filter { flex-direction: column; align-items: stretch; }
+  .ex__filter-actions { justify-content: flex-start; }
+}
+
+/* A student kept on the sheet only because they already have a sitting. */
+:host ::ng-deep .ex__left {
+  margin-left: 0.4rem;
+  font-size: 0.68rem;
+  vertical-align: middle;
+}
+
+/* Says where practical marks actually go, since there are two mark stores. */
+.ex__note--warn {
+  border-left-color: var(--app-accent);
+  background: color-mix(in srgb, var(--app-accent) 8%, transparent);
+}

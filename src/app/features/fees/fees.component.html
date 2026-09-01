@@ -244,6 +244,17 @@
                 pTooltip="Print money receipt"
                 tooltipPosition="top"
                 (onClick)="printReceipt(payment)" />
+
+              <p-button
+                icon="pi pi-whatsapp"
+                severity="success"
+                [text]="true"
+                [disabled]="!canWhatsApp(studentPhone())"
+                [pTooltip]="canWhatsApp(studentPhone())
+                  ? 'Send the money receipt on WhatsApp'
+                  : 'No usable mobile number on this student'"
+                tooltipPosition="top"
+                (onClick)="whatsAppReceipt(payment)" />
             </div>
           </td>
         </tr>

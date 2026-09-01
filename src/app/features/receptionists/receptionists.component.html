@@ -1,0 +1,341 @@
+<p-confirmDialog />
+
+<header class="rec__header">
+  <div>
+    <p class="app-section-title">Master</p>
+    <h1>Receptionists</h1>
+    <p class="app-muted rec__lede">
+      A receptionist is paid a monthly amount and belongs to a branch &mdash; both
+      are what the branch-wise receptionist report is built from.
+    </p>
+  </div>
+</header>
+
+<!-- ------------------------------------------------------------ entry form -->
+<section class="app-card rec__form" id="rec-form">
+  <header class="rec__form-head">
+    <h2>{{ isEditing() ? 'Edit receptionist' : 'New receptionist' }}</h2>
+    <p class="app-muted">
+      The user id is the email they sign in with, if they have an account.
+    </p>
+  </header>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="rec__grid">
+      <div class="rec__field">
+        <label for="name">Name <span class="rec__req">*</span></label>
+        <input pInputText id="name" formControlName="name" maxlength="100" />
+        @if (form.controls.name.touched && form.controls.name.invalid) {
+          <small class="rec__error">Name is required.</small>
+        }
+      </div>
+
+      <div class="rec__field">
+        <label for="branch">Branch <span class="rec__req">*</span></label>
+        <p-select
+          inputId="branch"
+          formControlName="branch"
+          [options]="branches()"
+          optionLabel="name"
+          optionValue="name"
+          placeholder="Choose a branch"
+          appendTo="body"
+          styleClass="rec__wide" />
+        @if (form.controls.branch.touched && form.controls.branch.invalid) {
+          <small class="rec__error">Choose the branch they work at.</small>
+        }
+      </div>
+
+      <div class="rec__field">
+        <label for="loginId">User id (email)</label>
+        <input pInputText id="loginId" formControlName="loginId" autocomplete="off" />
+        @if (form.controls.loginId.touched && form.controls.loginId.invalid) {
+          <small class="rec__error">Enter a valid email address.</small>
+        }
+      </div>
+
+      <div class="rec__field">
+        <label for="phone">Phone number</label>
+        <input pInputText id="phone" formControlName="phone" maxlength="10" inputmode="numeric" />
+        @if (form.controls.phone.touched && form.controls.phone.invalid) {
+          <small class="rec__error">Enter a valid 10-digit phone number.</small>
+        }
+      </div>
+    </div>
+
+    <footer class="rec__form-actions">
+      <p-button
+        type="submit"
+        [label]="isEditing() ? 'Update' : 'Add receptionist'"
+        [icon]="isEditing() ? 'pi pi-save' : 'pi pi-plus'"
+        [loading]="saving()"
+        [disabled]="saving()" />
+
+      <p-button
+        type="button"
+        [label]="isEditing() ? 'Cancel' : 'Reset'"
+        icon="pi pi-refresh"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="resetForm()" />
+    </footer>
+  </form>
+</section>
+
+<!-- ----------------------------------------------------------------- list -->
+<section class="app-card rec__list">
+  <header class="rec__list-head">
+    <h2>All receptionists</h2>
+
+    <div class="rec__list-tools">
+      <input
+        pInputText
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        [ngModelOptions]="{ standalone: true }"
+        (keyup.enter)="applyFilter()"
+        placeholder="Search name, user id or phone" />
+
+      <p-select
+        [options]="branches()"
+        optionLabel="name"
+        optionValue="name"
+        [ngModel]="branchFilter()"
+        (ngModelChange)="branchFilter.set($event)"
+        [ngModelOptions]="{ standalone: true }"
+        [showClear]="true"
+        placeholder="All branches"
+        appendTo="body" />
+
+      <p-button label="Search" icon="pi pi-search" size="small" (onClick)="applyFilter()" />
+      <span class="app-muted">{{ totalCount() }} receptionist(s)</span>
+    </div>
+  </header>
+
+  <p-table
+    [value]="rows()"
+    [lazy]="true"
+    [paginator]="true"
+    [rows]="pageSize()"
+    [totalRecords]="totalCount()"
+    [loading]="loading()"
+    [rowsPerPageOptions]="[25, 50, 100]"
+    (onLazyLoad)="onLazyLoad($event)"
+    styleClass="p-datatable-sm"
+    [tableStyle]="{ 'min-width': '54rem' }"
+    currentPageReportTemplate="{first}&ndash;{last} of {totalRecords}"
+    [showCurrentPageReport]="true">
+
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Name</th>
+        <th>User id</th>
+        <th>Phone</th>
+        <th style="width: 9rem">Branch</th>
+        <th class="rec__num" style="width: 7rem">Months paid</th>
+        <th class="rec__num" style="width: 9rem">Total paid</th>
+        <th style="width: 9rem">Last month</th>
+        <th style="width: 8rem">Actions</th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-person>
+      <tr [class.rec__row--inactive]="!person.isActive">
+        <td>
+          <strong>{{ person.name }}</strong>
+          @if (!person.isActive) {
+            <p-tag value="inactive" severity="secondary" styleClass="rec__tag" />
+          }
+        </td>
+        <td><code class="rec__code">{{ person.loginId || '&mdash;' }}</code></td>
+        <td>{{ person.phone || '&mdash;' }}</td>
+        <td>{{ person.branch || '&mdash;' }}</td>
+        <td class="rec__num">{{ person.paymentCount }}</td>
+        <td class="rec__num">{{ money(person.totalPaid) }}</td>
+        <td>
+          {{ person.lastPaidMonth ? (person.lastPaidMonth | date: 'MMM y') : '&mdash;' }}
+        </td>
+        <td>
+          <div class="rec__actions">
+            <p-button
+              icon="pi pi-pencil"
+              severity="secondary"
+              [text]="true"
+              pTooltip="Edit"
+              tooltipPosition="top"
+              (onClick)="edit(person)" />
+
+            <p-button
+              icon="pi pi-wallet"
+              severity="secondary"
+              [text]="true"
+              pTooltip="Monthly pay"
+              tooltipPosition="top"
+              (onClick)="openPayments(person)" />
+
+            @if (canPay()) {
+              <p-button
+                icon="pi pi-trash"
+                severity="danger"
+                [text]="true"
+                [disabled]="person.paymentCount > 0"
+                [pTooltip]="person.paymentCount > 0
+                  ? 'Payments recorded — mark inactive instead'
+                  : 'Delete'"
+                tooltipPosition="top"
+                (onClick)="remove(person)" />
+            }
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td colspan="8" class="app-muted rec__empty">
+          No receptionists yet. Add one above to start recording their monthly pay.
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</section>
+
+<!-- --------------------------------------------------------- pay dialog -->
+<p-dialog
+  [visible]="payVisible()"
+  (visibleChange)="payVisible.set($event)"
+  [modal]="true"
+  [style]="{ width: '46rem' }"
+  [header]="'Monthly pay — ' + (payFor()?.name ?? '')">
+
+  @if (payFor(); as person) {
+    <p class="app-muted rec__lede">
+      {{ person.branch }} &middot; one payment per month. Recording the same month
+      again corrects it rather than adding a second salary.
+    </p>
+
+    @if (canPay()) {
+      <div class="rec__pay">
+        <div class="rec__pay-field">
+          <label for="payMonth">Month</label>
+          <p-datePicker
+            inputId="payMonth"
+            [ngModel]="payMonth()"
+            (ngModelChange)="payMonth.set($event)"
+            [ngModelOptions]="{ standalone: true }"
+            view="month"
+            dateFormat="M yy"
+            [showIcon]="true"
+            [maxDate]="today"
+            appendTo="body" />
+        </div>
+
+        <div class="rec__pay-field">
+          <label for="payAmount">Amount</label>
+          <p-inputNumber
+            inputId="payAmount"
+            [ngModel]="payAmount()"
+            (ngModelChange)="payAmount.set($event)"
+            [ngModelOptions]="{ standalone: true }"
+            mode="currency"
+            currency="INR"
+            locale="en-IN"
+            [min]="0"
+            [maxFractionDigits]="2" />
+        </div>
+
+        <!-- Distinct from Month: that is the month the salary covers, this is the
+             day the cash actually changed hands. They differ whenever a month is
+             paid late, which is exactly when the difference matters. -->
+        <div class="rec__pay-field">
+          <label for="payDate">Paid on</label>
+          <p-datePicker
+            inputId="payDate"
+            [ngModel]="payDate()"
+            (ngModelChange)="payDate.set($event)"
+            [ngModelOptions]="{ standalone: true }"
+            dateFormat="dd/mm/yy"
+            [showIcon]="true"
+            [maxDate]="today"
+            appendTo="body" />
+        </div>
+
+        <div class="rec__pay-field">
+          <label for="payNotes">Note</label>
+          <input
+            pInputText
+            id="payNotes"
+            [ngModel]="payNotes()"
+            (ngModelChange)="payNotes.set($event)"
+            [ngModelOptions]="{ standalone: true }"
+            maxlength="200"
+            placeholder="Optional" />
+        </div>
+
+        <p-button
+          label="Record"
+          icon="pi pi-check"
+          [loading]="savingPayment()"
+          [disabled]="!payAmount() || savingPayment()"
+          (onClick)="recordPayment()" />
+      </div>
+    }
+
+    <div class="rec__paid-total">
+      <span>{{ payments().length }} month(s) paid</span>
+      <strong>{{ money(paymentsTotal()) }}</strong>
+    </div>
+
+    <p-table
+      [value]="payments()"
+      [loading]="paymentsLoading()"
+      [scrollable]="true"
+      scrollHeight="20rem"
+      styleClass="p-datatable-sm"
+      [tableStyle]="{ 'min-width': '34rem' }">
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 9rem">Month</th>
+          <th class="rec__num" style="width: 8rem">Amount</th>
+          <th style="width: 9rem">Paid on</th>
+          <th>Note</th>
+          @if (canPay()) { <th style="width: 4rem"></th> }
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-payment>
+        <tr>
+          <td><strong>{{ payment.payMonth | date: 'MMM y' }}</strong></td>
+          <td class="rec__num">{{ money(payment.amount) }}</td>
+          <td>{{ payment.paidOn ? (payment.paidOn | date: 'd MMM y') : '&mdash;' }}</td>
+          <td class="rec__sub">
+            {{ payment.notes || '&mdash;' }}
+            @if (payment.recordedBy) {
+              <div class="app-muted">by {{ payment.recordedBy }}</div>
+            }
+          </td>
+          @if (canPay()) {
+            <td>
+              <p-button
+                icon="pi pi-times"
+                severity="danger"
+                [text]="true"
+                pTooltip="Remove"
+                tooltipPosition="left"
+                (onClick)="removePayment(payment)" />
+            </td>
+          }
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td [attr.colspan]="canPay() ? 5 : 4" class="app-muted rec__empty">
+            No months paid yet.
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  }
+</p-dialog>

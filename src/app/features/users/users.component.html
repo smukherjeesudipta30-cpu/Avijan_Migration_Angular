@@ -432,9 +432,16 @@
     </div>
 
     <p class="usr__dialog-note">
-      Copy this now and give it to {{ u.name || 'the user' }}. Once saved it is stored
-      as a one-way hash, so nobody &mdash; including you &mdash; can read it back; if
-      it is lost, set a new one here. Saving also signs this user out everywhere.
+      @if (u.studentPassword) {
+        This is the portal password issued when {{ u.name || 'the student' }} was
+        registered, kept on their student record so the office can read it back.
+        Change it here and both their record and their sign-in are updated.
+      } @else {
+        Copy this now and give it to {{ u.name || 'the user' }}. Once saved it is
+        stored as a one-way hash, so nobody &mdash; including you &mdash; can read it
+        back; if it is lost, set a new one here.
+      }
+      Saving also signs this user out everywhere.
     </p>
   }
 

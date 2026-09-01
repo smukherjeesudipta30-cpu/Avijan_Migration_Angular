@@ -45,3 +45,37 @@ export interface BranchSaveRequest {
   code: string;
   isActive: boolean;
 }
+
+/* ============================================= payments made to a teacher */
+
+export interface TeacherPaymentRequest {
+  teacherId: number;
+  paidOn: string | null;
+  amount: number;
+}
+
+/** One payment handed to a teacher. */
+export interface TeacherPayment {
+  id: number;
+  paidOn?: string;
+  amount: number;
+  recordedBy?: string;
+  recordedOn: string;
+}
+
+/** A teacher's account: earned from fees, paid out, and the balance. */
+export interface TeacherAccount {
+  teacherId: number;
+  teacherName?: string;
+  totalEarned: number;
+  totalPaid: number;
+  /** Earned minus paid; negative means the teacher has been overpaid. */
+  pending: number;
+
+  /** The range these figures cover. Absent means all time. */
+  from?: string;
+  to?: string;
+
+  /** True when a date filter is applied. */
+  isFiltered: boolean;
+}
