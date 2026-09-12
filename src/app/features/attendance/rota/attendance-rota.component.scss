@@ -1,0 +1,151 @@
+.rota__header {
+  margin-bottom: 1.25rem;
+
+  h1 { margin: 0.15rem 0 0.35rem; }
+}
+
+.rota__filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.rota__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+
+  label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #4a5163;
+  }
+}
+
+/* The deadlines, on screen rather than in somebody's memory. */
+.rota__shifts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.rota__shift-chip {
+  background: #f3f6f9;
+  border: 1px solid #dbe2e8;
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.82rem;
+
+  strong { margin-right: 0.35rem; }
+
+  em {
+    font-style: normal;
+    color: #8a6100;
+    margin-left: 0.4rem;
+  }
+}
+
+.rota__person {
+  margin-bottom: 1rem;
+}
+
+.rota__person-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+
+  h2 {
+    margin: 0;
+    font-size: 1.05rem;
+  }
+}
+
+.rota__summary {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+}
+
+.rota__person-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.rota__grid-wrap {
+  overflow-x: auto;
+}
+
+.rota__grid {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 40rem;
+
+  th, td {
+    text-align: center;
+    padding: 0.4rem;
+    border-bottom: 1px solid #eef1f4;
+  }
+
+  thead th {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #6b7280;
+  }
+}
+
+.rota__shift-col {
+  text-align: left !important;
+  white-space: nowrap;
+
+  small {
+    display: block;
+    font-weight: 400;
+    font-size: 0.72rem;
+    color: #8a6100;
+  }
+}
+
+.rota__cell {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 8px;
+  border: 1px solid #d7dee5;
+  background: #fff;
+  cursor: pointer;
+  color: #fff;
+  transition: background 0.12s ease, border-color 0.12s ease;
+
+  &:hover { border-color: #1b5e8c; }
+}
+
+.rota__cell--on {
+  background: #0f7b5f;
+  border-color: #0f7b5f;
+}
+
+.rota__all-col {
+  white-space: nowrap;
+}
+
+.rota__all {
+  border: 0;
+  background: none;
+  color: #1b5e8c;
+  font-size: 0.78rem;
+  cursor: pointer;
+  padding: 0.2rem 0.3rem;
+
+  &:hover { text-decoration: underline; }
+}
+
+@media (max-width: 900px) {
+  .rota__person-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

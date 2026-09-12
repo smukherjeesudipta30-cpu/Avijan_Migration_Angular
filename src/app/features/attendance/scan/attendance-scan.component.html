@@ -1,0 +1,108 @@
+<!-- Built for a phone held at the door: one message, large, and one button. -->
+<div class="scan">
+  <div class="scan__card">
+    <img src="images/logo.png" alt="Avijan" class="scan__logo" width="299" height="96" />
+
+    @if (!hasToken) {
+      <div class="scan__state scan__state--bad">
+        <i class="pi pi-qrcode"></i>
+        <h1>Nothing to scan</h1>
+        <p>
+          Open this page by scanning the QR code on the screen at the centre. A code
+          only lasts a minute or two, so scan the one showing now.
+        </p>
+      </div>
+    } @else if (busy()) {
+      <div class="scan__state">
+        <i class="pi pi-spin pi-spinner"></i>
+        <h1>{{ stage() === 'locating' ? 'Finding your location' : 'Recording your scan' }}</h1>
+        <p>
+          {{ stage() === 'locating'
+              ? 'Allow location if your phone asks. This is how the centre knows you are here.'
+              : 'One moment.' }}
+        </p>
+      </div>
+    } @else if (challenge()) {
+      <!-- Held until the emailed code is typed. The time already stamped on it is
+           when they scanned, so waiting for the email costs them no minutes. -->
+      @if (challenge(); as pending) {
+        <div class="scan__state">
+          <i class="pi pi-envelope"></i>
+          <h1>Enter your code</h1>
+          <p>
+            A six-digit code has been sent to <strong>{{ pending.sentTo }}</strong>.
+            It confirms your
+            {{ pending.direction === 'In' ? 'arrival' : 'departure' }} at
+            {{ pending.markedOn | date: 'h:mm a' }}.
+          </p>
+
+          <input
+            pInputText
+            class="scan__code"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            maxlength="6"
+            placeholder="000000"
+            [value]="code()"
+            (input)="onCodeInput($any($event.target).value)" />
+
+          <p-button
+            label="Confirm"
+            icon="pi pi-check"
+            [loading]="confirming()"
+            [disabled]="code().length !== 6"
+            (onClick)="confirm()" />
+
+          @if (error(); as message) {
+            <p class="scan__code-error">{{ message }}</p>
+          }
+        </div>
+      }
+    } @else if (result()) {
+      <!-- Bound through a nested @if so the "as" alias sits on a primary block,
+           which is the only place Angular allows one. -->
+      @if (result(); as r) {
+      <div class="scan__state scan__state--good">
+        <i [class]="r.direction === 'In' ? 'pi pi-sign-in' : 'pi pi-sign-out'"></i>
+        <h1>{{ r.direction === 'In' ? 'Marked in' : 'Marked out' }}</h1>
+
+        <p class="scan__who">{{ r.staffName }}</p>
+
+        <dl class="scan__facts">
+          <div>
+            <dt>Time</dt>
+            <dd>{{ r.scannedOn | date: 'h:mm a' }}</dd>
+          </div>
+          <div>
+            <dt>Centre</dt>
+            <dd>{{ r.branch }}</dd>
+          </div>
+          @if (r.hoursToday !== null && r.hoursToday !== undefined) {
+            <div>
+              <dt>Hours today</dt>
+              <dd>{{ r.hoursToday | number: '1.2-2' }}</dd>
+            </div>
+          }
+        </dl>
+
+        <p class="scan__note">{{ r.message }}</p>
+
+        @if (r.direction === 'In') {
+          <p class="scan__reminder">
+            Remember to scan again when you leave. Without it the day counts as leave.
+          </p>
+        }
+      </div>
+      }
+    } @else if (error()) {
+      <div class="scan__state scan__state--bad">
+        <i class="pi pi-exclamation-triangle"></i>
+        <h1>Not recorded</h1>
+        <p>{{ error() }}</p>
+        <p-button label="Try again" icon="pi pi-refresh" (onClick)="mark()" />
+      </div>
+    }
+
+    <a routerLink="/attendance" class="scan__link">My attendance</a>
+  </div>
+</div>

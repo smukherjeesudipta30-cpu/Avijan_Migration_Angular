@@ -145,3 +145,27 @@
   padding: 1.75rem 0.5rem;
   text-align: center;
 }
+
+/* --------------------------------------------- attendance location */
+.brn__geo {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e3e8ee;
+
+  h3 {
+    margin: 0 0 0.35rem;
+    font-size: 0.95rem;
+  }
+}
+
+.brn__geo-help {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  max-width: 46rem;
+
+  code {
+    background: #f1f3f5;
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+  }
+}

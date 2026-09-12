@@ -117,6 +117,13 @@ export interface ExamScheduleRow {
 
   /** Has finished the course, and will not come in to sit anything. */
   isComplete: boolean;
+
+  /**
+   * Null on a Theory paper's own sheet. On a Practical's, when this student
+   * submitted the Theory paper of the same course and term — the Practical
+   * date cannot be set for them until then.
+   */
+  theorySubmittedOn?: string;
 }
 
 export interface ExamScheduleSaveRequest {

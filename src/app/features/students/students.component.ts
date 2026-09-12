@@ -29,6 +29,7 @@ import {
   SuggestedLogin,
   TeacherLookup
 } from '../../core/models/student.model';
+import { AdmissionDueDialogComponent } from '../../shared/admission-due/admission-due-dialog.component';
 import { admissionReceiptMessage, canWhatsApp, openWhatsApp } from '../../core/messaging/whatsapp';
 import { admissionReceiptHtml, openDocumentWindow } from '../../core/printing/legacy-documents';
 import { AuthService } from '../../core/services/auth.service';
@@ -60,7 +61,8 @@ type StatusFilter = 'active' | 'inactive' | 'all';
     TableModule,
     TagModule,
     TextareaModule,
-    TooltipModule
+    TooltipModule,
+    AdmissionDueDialogComponent
   ],
   providers: [ConfirmationService],
   templateUrl: './students.component.html',
@@ -137,6 +139,19 @@ export class StudentsComponent implements OnDestroy {
   /** Upper bound for the date-of-birth picker. */
   readonly today = new Date();
 
+  /**
+   * True once "paying now" has been typed over by hand, after which it stops
+   * following the admission fee.
+   */
+  private readonly admissionPaidEdited = signal(false);
+
+  /** What the form is about to leave owing, for the hint under the field. */
+  readonly admissionDueNow = signal(0);
+
+  /* ------------------------------------------ collecting an admission due */
+  readonly admissionDueStudentId = signal<number | null>(null);
+  admissionDueVisible = false;
+
   /* -------------------------------------------------------------- form */
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(100)]],
@@ -157,6 +172,10 @@ export class StudentsComponent implements OnDestroy {
     dateOfJoining: [null as Date | null, [Validators.required]],
     monthlyFees: [null as number | null, [Validators.required, Validators.min(0)]],
     admissionFees: [null as number | null, [Validators.required, Validators.min(0)]],
+    /* What is actually being handed over now. Tracks the fee unless the counter
+       changes it, so the ordinary paid-in-full admission needs no extra thought. */
+    admissionFeesPaid: [null as number | null, [Validators.min(0)]],
+    admissionPaymentMode: ['Cash' as 'Cash' | 'Bank', [Validators.required]],
     courseId: [null as number | null, [Validators.required]],
     duration: [{ value: null as number | null, disabled: true }],
     teacherCount: [1 as number, [Validators.required]],
@@ -205,6 +224,29 @@ export class StudentsComponent implements OnDestroy {
       if (!this.isEditing()) {
         this.refreshNextRegistration();
       }
+    });
+
+    /* "Paying now" follows the admission fee until somebody types over it. The
+       common admission is paid in full, and making the counter fill in the same
+       number twice would be the sort of friction that gets it typed wrong. Once
+       edited by hand it stops following, so a deliberate part payment is not
+       silently reset by a later correction to the fee. */
+    this.form.controls.admissionFees.valueChanges.subscribe(fee => {
+      if (!this.isEditing() && !this.admissionPaidEdited()) {
+        this.form.controls.admissionFeesPaid.setValue(fee, { emitEvent: false });
+      }
+
+      this.syncAdmissionPaid();
+    });
+
+    this.form.controls.admissionFeesPaid.valueChanges.subscribe(paid => {
+      const fee = this.form.controls.admissionFees.value ?? 0;
+
+      // Back to the full fee counts as "not a part payment" again, so the field
+      // resumes following rather than sticking at whatever was typed.
+      this.admissionPaidEdited.set(paid !== null && paid !== fee);
+
+      this.syncAdmissionPaid();
     });
 
     // The portal sign-in is derived from the student's name, so it follows what is
@@ -404,6 +446,8 @@ export class StudentsComponent implements OnDestroy {
       dateOfJoining: this.toDate(student.dateOfJoining),
       monthlyFees: student.monthlyFees ?? null,
       admissionFees: student.admissionFees ?? null,
+      admissionFeesPaid: student.admissionFeesPaid ?? student.admissionFees ?? null,
+      admissionPaymentMode: student.admissionPaymentMode ?? 'Cash',
       courseId: student.courseId ?? null,
       teacherCount: count,
       primaryTeacherId: student.primaryTeacherId ?? null,
@@ -440,6 +484,8 @@ export class StudentsComponent implements OnDestroy {
       dateOfJoining: null,
       monthlyFees: null,
       admissionFees: null,
+      admissionFeesPaid: null,
+      admissionPaymentMode: 'Cash',
       courseId: null,
       teacherCount: 1,
       primaryTeacherId: null,
@@ -533,6 +579,36 @@ export class StudentsComponent implements OnDestroy {
         /* interceptor toasts */
       }
     });
+  }
+
+  /** Opens the shared dialog for whatever is left owing on this admission fee. */
+  openAdmissionDue(student: StudentListItem): void {
+    this.admissionDueStudentId.set(student.id);
+    this.admissionDueVisible = true;
+  }
+
+  /** Same dialog, opened from the edit form rather than a row. */
+  openAdmissionDueById(studentId: number): void {
+    this.admissionDueStudentId.set(studentId);
+    this.admissionDueVisible = true;
+  }
+
+  /** The balance moved, so the row's figures and its button have to follow. */
+  onAdmissionDueCollected(): void {
+    this.load();
+
+    /* If the student being edited is the one just collected against, the received
+       figure on the form is stale too. Set without emitting: a collection is not
+       the user typing a correction, so it must not mark the field as hand-edited. */
+    const id = this.editingId();
+    if (id !== null && id === this.admissionDueStudentId()) {
+      this.students.admissionDue(id).subscribe({
+        next: d => {
+          this.form.controls.admissionFeesPaid.setValue(d.admissionFeesPaid, { emitEvent: false });
+          this.syncAdmissionPaid();
+        }
+      });
+    }
   }
 
   printReceipt(student: StudentListItem): void {
@@ -648,6 +724,8 @@ export class StudentsComponent implements OnDestroy {
       dateOfJoining: new Date(),
       monthlyFees: student.monthlyFees ?? null,
       admissionFees: student.admissionFees ?? null,
+      admissionFeesPaid: student.admissionFees ?? null,
+      admissionPaymentMode: 'Cash',
       courseId: student.courseId ?? null,
       teacherCount: count,
       primaryTeacherId: student.primaryTeacherId ?? null,
@@ -799,6 +877,12 @@ export class StudentsComponent implements OnDestroy {
       dateOfJoining: this.toIsoDate(v.dateOfJoining),
       monthlyFees: v.monthlyFees,
       admissionFees: v.admissionFees,
+      /* Registering: null when it equals the fee, so the server books an ordinary
+         paid-in-full admission. Editing: always sent -- it is the received figure
+         being corrected, and the server adjusts the admission receipt to match. */
+      admissionFeesPaid:
+        !this.isEditing() && v.admissionFeesPaid === v.admissionFees ? null : v.admissionFeesPaid,
+      admissionPaymentMode: v.admissionPaymentMode,
       courseId: v.courseId,
       teacherCount: Number(v.teacherCount),
       primaryTeacherId: v.primaryTeacherId,
@@ -867,6 +951,33 @@ export class StudentsComponent implements OnDestroy {
   /** Called from the two sign-in inputs, so typing in them stops auto-fill. */
   markLoginEdited(): void {
     this.loginEdited.set(true);
+  }
+
+  /**
+   * Keeps the "will be left owing" hint and the upper bound on "paying now" in
+   * step with the two figures. The bound is applied here rather than as a fixed
+   * validator because what counts as too much depends on the fee beside it.
+   */
+  private syncAdmissionPaid(): void {
+    const fee = this.form.controls.admissionFees.value ?? 0;
+    const paid = this.form.controls.admissionFeesPaid.value;
+    const control = this.form.controls.admissionFeesPaid;
+
+    const effective = paid ?? fee;
+    const due = fee - effective;
+    this.admissionDueNow.set(due > 0 ? due : 0);
+
+    const overpaid = paid !== null && paid > fee;
+    const already = control.hasError('max');
+
+    // Touched only when it actually changes: setErrors re-runs form status and
+    // would otherwise loop through this same subscription.
+    if (overpaid && !already) {
+      control.setErrors({ ...(control.errors ?? {}), max: true });
+    } else if (!overpaid && already) {
+      const { max, ...rest } = control.errors ?? {};
+      control.setErrors(Object.keys(rest).length > 0 ? rest : null);
+    }
   }
 
   private refreshNextRegistration(): void {

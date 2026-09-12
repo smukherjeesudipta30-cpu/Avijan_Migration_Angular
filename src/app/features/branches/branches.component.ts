@@ -63,7 +63,13 @@ export class BranchesComponent {
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(50)]],
     code: ['', [Validators.required, Validators.maxLength(10), Validators.pattern(/^[A-Za-z0-9]+$/)]],
-    isActive: [true]
+    isActive: [true],
+
+    /* Attendance fence. Optional — a branch with no coordinates simply cannot take
+       attendance, which is safer than defaulting to somewhere. */
+    latitude: [null as number | null],
+    longitude: [null as number | null],
+    geofenceMetres: [150 as number]
   });
 
   /** Live preview of what a registration id will look like for this branch. */
@@ -114,7 +120,10 @@ export class BranchesComponent {
     const payload: BranchSaveRequest = {
       name: v.name.trim(),
       code: v.code.trim(),
-      isActive: v.isActive
+      isActive: v.isActive,
+      latitude: v.latitude ?? null,
+      longitude: v.longitude ?? null,
+      geofenceMetres: v.geofenceMetres ?? 150
     };
 
     const id = this.editingId();
@@ -155,7 +164,10 @@ export class BranchesComponent {
     this.form.patchValue({
       name: branch.name ?? '',
       code: branch.code ?? '',
-      isActive: branch.isActive
+      isActive: branch.isActive,
+      latitude: branch.latitude ?? null,
+      longitude: branch.longitude ?? null,
+      geofenceMetres: branch.geofenceMetres ?? 150
     });
 
     // A code already present in issued registration ids cannot change without
@@ -171,7 +183,10 @@ export class BranchesComponent {
 
   resetForm(): void {
     this.form.enable();
-    this.form.reset({ name: '', code: '', isActive: true });
+    this.form.reset({
+      name: '', code: '', isActive: true,
+      latitude: null, longitude: null, geofenceMetres: 150
+    });
     this.editingId.set(null);
     this.codeLocked.set(false);
   }

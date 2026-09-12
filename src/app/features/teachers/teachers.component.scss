@@ -284,3 +284,59 @@
   text-transform: none;
   letter-spacing: 0;
 }
+
+/* ------------------------------------------------------- search card */
+/* Mirrors the Students master, so the two screens look for a teacher and a
+   student in the same place. */
+.tch__search-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.tch__search-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1 1 22rem;
+
+  label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #4a5163;
+  }
+
+  input {
+    width: 100%;
+  }
+}
+
+.tch__search-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tch__hint {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+  color: var(--text-color-secondary, #6b7280);
+}
+
+/* The technical-staff switch sits inline with its label, unlike the text fields. */
+.tch__field--check {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+
+  label {
+    margin: 0;
+  }
+
+  .tch__hint {
+    flex: 1 0 100%;
+  }
+}

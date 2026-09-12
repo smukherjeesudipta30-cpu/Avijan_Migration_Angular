@@ -1,0 +1,695 @@
+/*
+    The public competition portal.
+
+    Deliberately its own visual world rather than the back-office grey: this is the
+    poster on a screen, and the people reading it are parents who have never seen the
+    rest of the application. The palette is taken from the printed advertisement —
+    indigo for drawing, magenta for dance, saffron accents on a warm ground.
+*/
+
+:host {
+  display: block;
+  background: #fbf7f0;
+  min-height: 100vh;
+  color: #1c2431;
+}
+
+.cmp__state {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 5rem 1.5rem;
+  text-align: center;
+
+  h1 { font-size: 1.4rem; margin-bottom: 0.5rem; }
+  a { color: #1e3a8a; }
+}
+
+/* ------------------------------------------------------------------ poster */
+.cmp__hero {
+  background:
+    radial-gradient(circle at 12% 20%, rgba(232, 135, 30, 0.18), transparent 45%),
+    radial-gradient(circle at 88% 15%, rgba(200, 30, 99, 0.20), transparent 45%),
+    radial-gradient(circle at 70% 90%, rgba(30, 58, 138, 0.16), transparent 50%),
+    #fffdf8;
+  border-bottom: 4px solid #1e3a8a;
+  padding: 2.5rem 1.5rem 2rem;
+}
+
+.cmp__hero-inner {
+  max-width: 62rem;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.cmp__organised {
+  margin: 0 0 0.6rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #5b6880;
+}
+
+.cmp__title {
+  margin: 0;
+  font-size: clamp(2.1rem, 7vw, 3.6rem);
+  line-height: 1.05;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.5rem;
+  justify-content: center;
+  align-items: baseline;
+}
+
+.cmp__title-draw { color: #1e3a8a; }
+.cmp__title-dance { color: #c81e63; }
+.cmp__amp { color: #e8871e; font-size: 0.7em; }
+
+.cmp__title-comp {
+  flex-basis: 100%;
+  color: #1f7a54;
+  font-size: 0.62em;
+  letter-spacing: 0.02em;
+}
+
+.cmp__title-bn {
+  margin: 0.4rem 0 0;
+  font-size: clamp(1rem, 3vw, 1.35rem);
+  color: #33415c;
+}
+
+.cmp__facts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: 1.5rem 0 1rem;
+
+  div {
+    background: #fff;
+    border: 1px solid #e3dcd0;
+    border-radius: 10px;
+    padding: 0.6rem 1rem;
+    min-width: 8.5rem;
+  }
+
+  dt {
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #6b7488;
+    margin-bottom: 0.15rem;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+}
+
+.cmp__venue,
+.cmp__contact {
+  margin: 0.35rem 0 0;
+  font-size: 0.95rem;
+}
+
+.cmp__contact { color: #5b6880; }
+.cmp__bn { font-family: 'Noto Sans Bengali', system-ui, sans-serif; }
+
+/* -------------------------------------------------------------------- body */
+.cmp__body {
+  max-width: 62rem;
+  margin: 0 auto;
+  padding: 1.75rem 1.5rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.cmp__card {
+  background: #fff;
+  border: 1px solid #e3dcd0;
+  border-radius: 12px;
+  padding: 1.35rem 1.5rem;
+
+  h2 {
+    margin: 0 0 0.8rem;
+    font-size: 1.2rem;
+  }
+
+  h3 {
+    margin: 1.4rem 0 0.5rem;
+    font-size: 1rem;
+  }
+}
+
+.cmp__notice p {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.cmp__two {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1.25rem;
+}
+
+.cmp__event--draw { border-top: 4px solid #1e3a8a; }
+.cmp__event--dance { border-top: 4px solid #c81e63; }
+
+.cmp__fee {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.cmp__event--draw .cmp__fee { color: #1e3a8a; }
+.cmp__event--dance .cmp__fee { color: #c81e63; }
+
+.cmp__fee-note {
+  margin: 0.15rem 0 1rem;
+  font-size: 0.85rem;
+  color: #6b7488;
+}
+
+.cmp__divisions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  li {
+    display: grid;
+    grid-template-columns: 2.2rem 1fr;
+    gap: 0.15rem 0.6rem;
+    align-items: baseline;
+    padding: 0.45rem 0.6rem;
+    background: #fbf7f0;
+    border-radius: 8px;
+  }
+
+  strong {
+    grid-row: span 2;
+    font-size: 1.05rem;
+    text-align: center;
+  }
+
+  span { font-size: 0.88rem; }
+}
+
+.cmp__batch {
+  font-size: 0.76rem !important;
+  color: #6b7488;
+}
+
+/* ------------------------------------------------------------------- rules */
+.cmp__rules-two {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 0 1.75rem;
+}
+
+.cmp__rule {
+  margin: 0 0 0.45rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.cmp__organisers {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eee7db;
+
+  h3 { margin-top: 0; }
+
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+
+  li {
+    background: #fbf7f0;
+    border-radius: 8px;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.85rem;
+    display: flex;
+    flex-direction: column;
+
+    span { color: #6b7488; font-size: 0.78rem; }
+  }
+}
+
+.cmp__closed {
+  margin: 1.25rem 0 0;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  background: #fdf2e2;
+  border-left: 3px solid #e8871e;
+  font-size: 0.92rem;
+}
+
+/* -------------------------------------------------------------------- form */
+.cmp__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.9rem;
+}
+
+.cmp__wide { grid-column: 1 / -1; }
+
+label {
+  display: block;
+  font-size: 0.86rem;
+
+  > span {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+
+    em { color: #c81e63; font-style: normal; }
+  }
+
+  input[type='text'],
+  input[type='tel'],
+  input[type='email'],
+  input[type='date'],
+  select {
+    width: 100%;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid #d8d0c2;
+    border-radius: 8px;
+    font: inherit;
+    background: #fff;
+  }
+
+  input:focus-visible,
+  select:focus-visible {
+    outline: 2px solid #1e3a8a;
+    outline-offset: 1px;
+  }
+}
+
+.cmp__select { margin-top: 0.9rem; }
+.cmp__hint { font-size: 0.83rem; color: #6b7488; margin: 0.4rem 0 0; }
+
+.cmp__pickers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.cmp__pick {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  border: 2px solid #e3dcd0;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+
+  &.is-on {
+    border-color: #1e3a8a;
+    background: #f2f6ff;
+  }
+}
+
+.cmp__uploads {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.8rem;
+  margin-top: 0.6rem;
+}
+
+.cmp__upload {
+  border: 2px dashed #d8d0c2;
+  border-radius: 10px;
+  padding: 0.8rem 0.9rem;
+  cursor: pointer;
+
+  &.is-set {
+    border-style: solid;
+    border-color: #1f7a54;
+    background: #f2fbf6;
+  }
+
+  input[type='file'] { display: none; }
+
+  small {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.78rem;
+    color: #6b7488;
+    word-break: break-all;
+  }
+}
+
+.cmp__amount {
+  margin: 0.5rem 0 0.9rem;
+  font-size: 1rem;
+
+  strong {
+    font-size: 1.5rem;
+    color: #1f7a54;
+  }
+}
+
+.cmp__pay {
+  margin-top: 0.9rem;
+  padding: 1rem 1.1rem;
+  background: #fbf7f0;
+  border-radius: 10px;
+
+  p { margin: 0 0 0.6rem; font-size: 0.9rem; }
+}
+
+.cmp__error {
+  margin: 1rem 0 0;
+  padding: 0.7rem 0.9rem;
+  border-radius: 8px;
+  background: #fdecec;
+  border-left: 3px solid #c81e63;
+  color: #8e1140;
+  font-size: 0.9rem;
+}
+
+.cmp__go,
+.cmp__ghost {
+  margin-top: 1.2rem;
+  padding: 0.7rem 1.5rem;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 2px solid #1e3a8a;
+}
+
+.cmp__go {
+  background: #1e3a8a;
+  color: #fff;
+
+  &:disabled { opacity: 0.6; cursor: default; }
+}
+
+.cmp__ghost {
+  background: transparent;
+  color: #1e3a8a;
+}
+
+/* ---------------------------------------------------------- quick start */
+.cmp__qs-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.cmp__qs-tab {
+  flex: 1 1 12rem;
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  border: 2px solid #d8dee9;
+  background: #fff;
+  color: #3c4257;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+
+  &--active {
+    border-color: #1e3a8a;
+    background: #1e3a8a;
+    color: #fff;
+  }
+}
+
+.cmp__qs-hint {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  color: #5b6478;
+}
+
+.cmp__qs-ok {
+  color: #1f7a54;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.cmp__draft-banner {
+  margin: 0 0 1.2rem;
+  padding: 0.9rem 1rem;
+  border-radius: 10px;
+  background: #eef4ff;
+  border-left: 3px solid #1e3a8a;
+
+  p { margin: 0 0 0.5rem; font-size: 0.92rem; }
+}
+
+.cmp__link-btn {
+  border: 0;
+  background: none;
+  padding: 0;
+  margin-right: 1rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1e3a8a;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:disabled { opacity: 0.6; cursor: default; }
+}
+
+/* -------------------------------------------------------------------- done */
+.cmp__done { border-top: 4px solid #1f7a54; }
+
+.cmp__done-name {
+  margin: 0 0 1rem;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.cmp__tickets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1rem;
+}
+
+.cmp__ticket {
+  border: 2px solid #1e3a8a;
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  &--dance { border-color: #c81e63; }
+}
+
+.cmp__ticket-kind {
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #6b7488;
+}
+
+.cmp__ticket-no {
+  font-size: 1.25rem;
+  letter-spacing: 0.01em;
+}
+
+.cmp__ticket-group { font-size: 0.85rem; color: #5b6880; }
+
+/* The chest number is the thing that gets pinned on, so it is the biggest
+   figure on the page and survives being printed in black and white. */
+.cmp__ticket-batch {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed #d8d0c2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  em {
+    font-style: normal;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #6b7488;
+  }
+
+  strong {
+    font-size: 3.4rem;
+    line-height: 1.05;
+    font-weight: 800;
+    color: #c81e63;
+  }
+}
+
+.cmp__done-msg { margin: 1rem 0 0.25rem; font-size: 0.95rem; }
+.cmp__done-amount { margin: 0; font-size: 0.9rem; color: #5b6880; }
+
+.cmp__done-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.cmp__back {
+  text-align: center;
+  font-size: 0.88rem;
+
+  a { color: #1e3a8a; }
+}
+
+/* ------------------------------------------------------------------- print */
+@media print {
+  /* Printing this page means printing the chest number. Everything that is not
+     the registration itself is left off the paper. */
+  .cmp__hero,
+  .cmp__notice,
+  .cmp__two,
+  .cmp__rules,
+  .cmp__form,
+  .cmp__back,
+  .cmp__done-actions {
+    display: none !important;
+  }
+
+  :host { background: #fff; }
+
+  .cmp__card {
+    border: 0;
+    padding: 0;
+  }
+
+  .cmp__ticket {
+    break-inside: avoid;
+    border-width: 3px;
+  }
+
+  .cmp__ticket-batch strong { font-size: 4.5rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { scroll-behavior: auto !important; }
+}
+
+/* --------------------------------------------------------------- the QR */
+.cmp__qr {
+  margin: 0.9rem 0 0.6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+
+  img {
+    width: 220px;
+    height: 220px;
+    display: block;
+    background: #fff;
+    border: 1px solid #e3dcd0;
+    border-radius: 12px;
+    padding: 0.6rem;
+  }
+
+  figcaption {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    strong {
+      font-size: 1.35rem;
+      color: #1f7a54;
+    }
+
+    span {
+      font-size: 0.8rem;
+      color: #6b7488;
+    }
+  }
+}
+
+.cmp__upi-link {
+  display: inline-block;
+  margin: 0 0 0.6rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1e3a8a;
+}
+
+.cmp__upi {
+  margin: 0 0 0.8rem;
+  font-size: 0.9rem;
+
+  code {
+    background: #fff;
+    border: 1px solid #e3dcd0;
+    border-radius: 6px;
+    padding: 0.1rem 0.4rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* ------------------------------------------------------------ the posters */
+
+/* The printed artwork, shown at a readable size. Side by side where there is room
+   and stacked on a phone; tapping one opens the full-size image, because the small
+   print on a poster is exactly what a parent wants to zoom into. */
+.cmp__posters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1.25rem;
+}
+
+.cmp__poster {
+  display: block;
+  border: 1px solid #e3dcd0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  line-height: 0;
+
+  img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  &:focus-visible {
+    outline: 3px solid #1e3a8a;
+    outline-offset: 2px;
+  }
+}
+
+/* Which competition a block of rules belongs to. */
+.cmp__rules-for {
+  margin: 1.5rem 0 0.6rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 2px solid #eee7db;
+  font-size: 1.02rem;
+
+  &:first-of-type { margin-top: 0.5rem; }
+
+  &--draw { color: #1e3a8a; border-bottom-color: #1e3a8a; }
+  &--dance { color: #c81e63; border-bottom-color: #c81e63; }
+}
+
+/* --------------------------------------------- chest number download */
+.cmp__lookup-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.9rem;
+  margin-top: 0.8rem;
+}

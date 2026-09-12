@@ -16,6 +16,8 @@ import {
 import { ReportService } from '../../../core/services/report.service';
 import { StudentService } from '../../../core/services/student.service';
 import { downloadCsv, reportFileName } from '../report-utils';
+import { FeaturesService } from '../../../core/services/features.service';
+import { OrgChartComponent } from '../../org/org-chart.component';
 
 /**
  * A student's own statement: profile, fee ledger and marks.
@@ -36,12 +38,16 @@ import { downloadCsv, reportFileName } from '../report-utils';
     CommonModule,
     ButtonModule,
     TableModule,
-    TagModule
+    TagModule,
+    OrgChartComponent
   ],
   templateUrl: './student-statement.component.html',
   styleUrl: './student-statement.component.scss'
 })
 export class StudentStatementComponent implements OnDestroy {
+  /** The hierarchy is only shown once it has been switched on server-side. */
+  protected readonly features = inject(FeaturesService);
+
   private readonly reports = inject(ReportService);
   private readonly students = inject(StudentService);
   private readonly messages = inject(MessageService);

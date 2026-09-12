@@ -3,6 +3,20 @@ export interface TeacherListItem {
   name?: string;
   loginId?: string;
   phone?: string;
+  /** Real mailbox for attendance codes; blank means they cannot mark attendance. */
+  personalEmail?: string;
+
+  /** The position, free text. A person with none does not appear on the chart. */
+  designation?: string | null;
+
+  /** Required unless isTechnical. */
+  qualification?: string | null;
+
+  /** Required unless isTechnical. */
+  computerTraining?: string | null;
+
+  /** Technical staff are excused qualification and computer training. */
+  isTechnical: boolean;
   activeStudents: number;
   totalStudents: number;
   totalEarnings: number;
@@ -17,6 +31,11 @@ export interface TeacherSaveRequest {
   name: string;
   loginId: string;
   phone: string | null;
+  personalEmail?: string | null;
+  designation?: string | null;
+  qualification?: string | null;
+  computerTraining?: string | null;
+  isTechnical: boolean;
 }
 
 export interface TeacherEarning {
@@ -38,12 +57,23 @@ export interface BranchListItem {
   studentCount: number;
   /** Registration ids already issued under this code; once above zero the code is frozen. */
   issuedRegistrations: number;
+
+  /* Where the centre is, for staff attendance. Null means no fence is set and
+     attendance cannot be taken at this branch. */
+  latitude?: number;
+  longitude?: number;
+  geofenceMetres: number;
 }
 
 export interface BranchSaveRequest {
   name: string;
   code: string;
   isActive: boolean;
+
+  /** Taken at the centre's door. Both together, or neither. */
+  latitude?: number | null;
+  longitude?: number | null;
+  geofenceMetres: number;
 }
 
 /* ============================================= payments made to a teacher */

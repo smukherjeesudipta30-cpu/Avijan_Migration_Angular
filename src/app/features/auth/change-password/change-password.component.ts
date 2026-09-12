@@ -109,6 +109,11 @@ export class ChangePasswordComponent {
     this.auth.logout();
   }
 
+  /** Only offered for a voluntary visit — a forced reset has nowhere else to go. */
+  cancel(): void {
+    void this.router.navigateByUrl(this.auth.user()?.landingRoute ?? '/');
+  }
+
   private describe(error: unknown): string {
     if (!(error instanceof HttpErrorResponse)) {
       return 'The password could not be changed. Please try again.';

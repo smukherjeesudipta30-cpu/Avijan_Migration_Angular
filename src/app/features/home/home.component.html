@@ -30,7 +30,79 @@
   </div>
 </section>
 
+<!-- ========================================================= owner's desk -->
+<!-- Straight under the banner and before About Us: the first thing a visitor meets
+     after the hero is a person, not a paragraph. Rendered only when a photograph is
+     configured, so the panel can be taken down from appsettings.json without
+     touching this template. -->
+@if (page()?.ownerDesk; as desk) {
+  <section class="hm__section hm__owner" id="owner">
+    <div class="hm__container">
+      <div class="hm__owner-split">
+        <figure class="hm__owner-photo">
+          <!-- Eager, and with its dimensions declared. The panel sits directly under
+               the banner now, so it is on screen almost immediately; lazy loading
+               bought nothing there and left the frame collapsed to zero height until
+               the browser got round to it. width/height reserve the space so the
+               copy beside it does not jump when the photograph arrives. -->
+          <img
+            [src]="desk.photo"
+            [alt]="desk.name || desk.designation"
+            width="640"
+            height="800"
+            decoding="async" />
+        </figure>
+
+        <div class="hm__owner-copy">
+          <p class="hm__owner-eyebrow">From the Owner&rsquo;s Desk</p>
+
+          @for (para of desk.message; track $index) {
+            <p>{{ para }}</p>
+          }
+
+          <div class="hm__owner-sign">
+            @if (desk.name) {
+              <strong>{{ desk.name }}</strong>
+            }
+            <span>{{ desk.designation }}</span>
+            @if (desk.since) {
+              <small>{{ desk.since }}</small>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+}
+
 <!-- ================================================================= about -->
+<!-- ==================================================== competition banner ==
+  Shown only while registration is actually open, so a finished event cannot go on
+  advertising itself. The portal itself decides that; here we only ask.
+-->
+@if (features.competition() && competition(); as c) {
+  @if (c.isOpen) {
+    <section class="hm__section hm__competition">
+      <div class="hm__container hm__competition-inner">
+        <div>
+          <p class="hm__competition-eyebrow">Now open for registration</p>
+          <h2 class="hm__competition-title">
+            Drawing &amp; Dance Competition {{ c.year }}
+          </h2>
+          <p class="hm__competition-bn">বসে আঁকো ও নৃত্য প্রতিযোগিতা</p>
+          <p class="hm__competition-facts">
+            @if (c.eventDate) { {{ c.eventDate | date: 'd MMMM y' }} · }
+            Drawing &#8377;{{ c.drawingFee }} · Dance &#8377;{{ c.danceFee }}
+            @if (c.venue) { <br />{{ c.venue }} }
+          </p>
+        </div>
+
+        <a class="hm__competition-go" routerLink="/competition">Register now</a>
+      </div>
+    </section>
+  }
+}
+
 <!--
   The legacy #About is a split section: copy on the left half, about-us.jpg
   filling the right half (css/style.css `#About:after`, width 50%).
@@ -88,28 +160,57 @@
     </div>
 
     @if (page(); as p) {
-      <div class="hm__table-wrap">
-        <table class="hm__table">
-          <thead>
-            <tr>
-              <th style="width: 5rem">S.No</th>
-              <th>Course Name</th>
-              <th style="width: 12rem">Duration (In Months)</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (course of p.courses; track course.courseId; let i = $index) {
-              <tr>
-                <td>{{ i + 1 }}</td>
-                <td>{{ course.name }}</td>
-                <td>{{ course.durationMonths ?? '&mdash;' }}</td>
-              </tr>
-            } @empty {
-              <tr><td colspan="3" class="hm__empty">No courses listed yet.</td></tr>
+      @if (p.courses.length) {
+        @if (popularCourses().length) {
+          <div class="hm__popular">
+            <h3 class="hm__popular-title">Most joined right now</h3>
+
+            <div class="hm__popular-list">
+              @for (course of popularCourses(); track course.courseId) {
+                <div class="hm__popular-row">
+                  <span class="hm__popular-name">{{ course.name }}</span>
+                  <div class="hm__popular-bar">
+                    <span [style.width.%]="enrolmentPercent(course.enrolledCount)"></span>
+                  </div>
+                  <span class="hm__popular-count">
+                    {{ course.enrolledCount }} student{{ course.enrolledCount === 1 ? '' : 's' }}
+                  </span>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        @for (group of courseGroups(); track group.group) {
+          <h3 class="hm__group-title">{{ group.group }}</h3>
+
+          <div class="hm__course-grid">
+            @for (course of group.courses; track course.courseId; let i = $index) {
+              <article class="hm__course-card">
+                <div class="hm__course-icon" [style.background]="courseColor(i)">
+                  {{ courseBadge(course.name) }}
+                </div>
+
+                <h3 class="hm__course-name">{{ course.name }}</h3>
+
+                @if (course.durationMonths) {
+                  <div class="hm__course-duration">
+                    <div class="hm__course-bar">
+                      <span [style.width.%]="durationPercent(course.durationMonths)"
+                            [style.background]="courseColor(i)"></span>
+                    </div>
+                    <span class="hm__course-months">
+                      {{ course.durationMonths }} month{{ course.durationMonths === 1 ? '' : 's' }}
+                    </span>
+                  </div>
+                }
+              </article>
             }
-          </tbody>
-        </table>
-      </div>
+          </div>
+        }
+      } @else {
+        <p class="hm__empty">No courses listed yet.</p>
+      }
     } @else if (loading()) {
       <p class="hm__empty">Loading courses&hellip;</p>
     }

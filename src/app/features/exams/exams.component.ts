@@ -85,6 +85,14 @@ export class ExamsComponent {
   /** Only an administrator may delete a paper. */
   readonly canDelete = computed(() => this.auth.hasAnyRole(['Admin']));
 
+  /**
+   * A Receptionist reaches this page for one reason only: to put a Practical
+   * date on a student once their Theory is done. Creating or editing a paper,
+   * touching its question bank, publishing it or entering practical marks stays
+   * with Admin/Editor, same as before Receptionist could open this page at all.
+   */
+  readonly canManagePapers = computed(() => this.auth.hasAnyRole(['Admin', 'Editor']));
+
   readonly paperTypes: { label: string; value: PaperType }[] = [
     { label: 'Theory (sat online)', value: 'Theory' },
     { label: 'Practical (marks entered here)', value: 'Practical' }
@@ -703,6 +711,15 @@ export class ExamsComponent {
   /** A theory paper only balances when its questions add up to the paper total. */
   marksBalance(paper: ExamPaper): boolean {
     return paper.paperType === 'Practical' || paper.uploadedMarks === paper.totalMarks;
+  }
+
+  /**
+   * A Practical date is not this row's to set until the student has submitted
+   * Theory for the same course and term — enforced again on the server, this is
+   * what stops the office from filling in a date the save would only reject.
+   */
+  practicalBlocked(paper: ExamPaper, row: ExamScheduleRow): boolean {
+    return paper.paperType === 'Practical' && !row.theorySubmittedOn;
   }
 
   private saveBlob(blob: Blob, filename: string): void {

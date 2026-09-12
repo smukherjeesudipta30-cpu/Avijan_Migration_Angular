@@ -1,0 +1,254 @@
+.cad {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.cad__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+
+  h1 { margin: 0 0 0.3rem; font-size: 1.3rem; }
+  p { margin: 0; max-width: 60ch; font-size: 0.88rem; }
+}
+
+.cad__years {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.cad__year {
+  border: 1px solid var(--surface-border, #d8dee9);
+  background: transparent;
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+
+  &.is-on {
+    background: var(--app-brand, #2f6fed);
+    border-color: var(--app-brand, #2f6fed);
+    color: #fff;
+  }
+
+  &--new { border-style: dashed; }
+}
+
+.cad__open {
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: #1f7a54;
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.05rem 0.4rem;
+}
+
+.cad__ok,
+.cad__bad {
+  margin: 0;
+  padding: 0.55rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.88rem;
+}
+
+.cad__ok { background: #e7f6ec; color: #14653b; }
+.cad__bad { background: #fdecec; color: #a11919; }
+
+.cad__card {
+  background: var(--surface-card, #fff);
+  border: 1px solid var(--surface-border, #e0e3ec);
+  border-radius: 10px;
+  padding: 1.15rem 1.3rem;
+
+  h2 { margin: 0 0 0.8rem; font-size: 1.05rem; }
+  h3 { margin: 1.4rem 0 0.5rem; font-size: 0.95rem; }
+}
+
+.cad__hint { font-size: 0.83rem; margin: 0 0 0.6rem; }
+
+.cad__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.85rem;
+}
+
+.cad__two {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1rem;
+}
+
+.cad__wide { grid-column: 1 / -1; }
+
+label,
+.cad__field {
+  display: block;
+  font-size: 0.85rem;
+
+  > span {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+  }
+
+  input,
+  textarea {
+    width: 100%;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid var(--surface-border, #d8dee9);
+    border-radius: 6px;
+    font: inherit;
+  }
+
+  textarea {
+    resize: vertical;
+    line-height: 1.5;
+  }
+
+  small {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 0.76rem;
+    color: var(--text-color-secondary, #6b7280);
+  }
+}
+
+.cad__actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
+
+  button {
+    border: 1px solid var(--app-brand, #2f6fed);
+    background: var(--app-brand, #2f6fed);
+    color: #fff;
+    border-radius: 6px;
+    padding: 0.45rem 1.1rem;
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:disabled { opacity: 0.6; cursor: default; }
+  }
+}
+
+.cad__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+
+  li {
+    display: grid;
+    grid-template-columns: 2.2rem 1fr auto;
+    gap: 0.6rem;
+    align-items: baseline;
+    padding: 0.4rem 0.6rem;
+    background: var(--app-page-bg, #f7f9fd);
+    border-radius: 6px;
+    font-size: 0.85rem;
+  }
+}
+
+.cad__organisers {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--surface-border, #e0e3ec);
+    border-radius: 6px;
+    font-size: 0.88rem;
+  }
+}
+
+.cad__row-actions {
+  display: flex;
+  gap: 0.35rem;
+
+  button {
+    border: 1px solid var(--surface-border, #d8dee9);
+    background: transparent;
+    border-radius: 6px;
+    padding: 0.25rem 0.7rem;
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+}
+
+.cad__danger { color: #a11919; border-color: #e3b7b7 !important; }
+.cad__organiser-form { margin-top: 0.5rem; }
+
+/* ---------------------------------------------------------- advertisements */
+.cad__advert {
+  border: 1px solid var(--surface-border, #e0e3ec);
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+
+  h3 { margin: 0 0 0.6rem; font-size: 0.95rem; }
+}
+
+.cad__advert-preview {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+  margin-bottom: 0.7rem;
+  background: var(--app-page-bg, #f7f9fd);
+}
+
+/* The empty slot is the drop target itself, so there is one thing to click. */
+.cad__advert-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  min-height: 9rem;
+  border: 2px dashed var(--surface-border, #d8dee9);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: center;
+
+  span { font-weight: 600; font-size: 0.88rem; }
+  small { color: var(--text-color-secondary, #6b7280); font-size: 0.78rem; }
+  input[type='file'] { display: none; }
+
+  &:hover { border-color: var(--app-brand, #2f6fed); }
+}
+
+.cad__upload {
+  display: inline-block;
+  border: 1px solid var(--surface-border, #d8dee9);
+  border-radius: 6px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  margin: 0;
+
+  input[type='file'] { display: none; }
+}

@@ -1,0 +1,108 @@
+.cmr__search {
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--surface-border, #d8dee9);
+  border-radius: 6px;
+  font: inherit;
+}
+
+.cmr__sub {
+  display: block;
+  font-size: 0.73rem;
+  line-height: 1.35;
+}
+
+/* The chest number is what the dancer wears, so it reads as a number on the page
+   rather than as another column of small print. */
+.cmr__chest {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.cmr__docs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+
+  button {
+    border: 1px solid var(--surface-border, #d8dee9);
+    background: transparent;
+    border-radius: 999px;
+    padding: 0.15rem 0.55rem;
+    font: inherit;
+    font-size: 0.72rem;
+    color: var(--app-brand, #2f6fed);
+    cursor: pointer;
+
+    &:hover { background: var(--app-page-bg, #f4f6fb); }
+  }
+}
+
+.cmr__actions-col { width: 11rem; }
+
+.cmr__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.cmr__confirm,
+.cmr__reject {
+  border-radius: 6px;
+  padding: 0.28rem 0.7rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled { opacity: 0.55; cursor: default; }
+}
+
+.cmr__confirm {
+  border: 1px solid #1f7a54;
+  background: #1f7a54;
+  color: #fff;
+}
+
+.cmr__reject {
+  border: 1px solid #e3b7b7;
+  background: transparent;
+  color: #a11919;
+}
+
+/* Printing this is printing the day's list, so the filters and the buttons stay
+   off the paper. */
+@media print {
+  .rpt__filter,
+  .rpt__result-head-right,
+  .cmr__docs,
+  .cmr__actions-col,
+  .cmr__actions {
+    display: none !important;
+  }
+}
+
+.cmr__cancel {
+  border: 1px solid #b45309;
+  background: transparent;
+  color: #b45309;
+  border-radius: 6px;
+  padding: 0.28rem 0.7rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.25rem;
+
+  &:disabled { opacity: 0.55; cursor: default; }
+}
+
+/* Why a registration was cancelled, kept beside the status so the desk can answer
+   the question without opening anything. */
+.cmr__reason {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: #b45309;
+}

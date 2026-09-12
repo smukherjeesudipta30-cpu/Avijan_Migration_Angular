@@ -2,8 +2,9 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
@@ -25,6 +26,7 @@ import {
 import { canWhatsApp, feeReceiptMessage, openWhatsApp } from '../../core/messaging/whatsapp';
 import { moneyReceiptHtml, openDocumentWindow } from '../../core/printing/legacy-documents';
 import { FeeService } from '../../core/services/fee.service';
+import { AdmissionDueDialogComponent } from '../../shared/admission-due/admission-due-dialog.component';
 
 /**
  * Monthly course fees — the migration of `Views/MonthlyCourseFees/Index.cshtml` and
@@ -42,14 +44,17 @@ import { FeeService } from '../../core/services/fee.service';
     FormsModule,
     ReactiveFormsModule,
     ButtonModule,
+    ConfirmDialogModule,
     DatePickerModule,
     InputNumberModule,
     InputTextModule,
     MessageModule,
     TableModule,
     TagModule,
-    TooltipModule
+    TooltipModule,
+    AdmissionDueDialogComponent
   ],
+  providers: [ConfirmationService],
   templateUrl: './fees.component.html',
   styleUrl: './fees.component.scss'
 })
@@ -57,6 +62,7 @@ export class FeesComponent {
   private readonly fb = inject(FormBuilder);
   private readonly fees = inject(FeeService);
   private readonly messages = inject(MessageService);
+  private readonly confirm = inject(ConfirmationService);
 
   readonly registrationId = signal('');
   readonly bill = signal<StudentFeeBill | null>(null);
@@ -82,7 +88,8 @@ export class FeesComponent {
     feeDate: [new Date() as Date | null, [Validators.required]],
     installmentAmount: [null as number | null, [Validators.required, Validators.min(0)]],
     teacherPercentage: [null as number | null, [Validators.required, Validators.min(0), Validators.max(100)]],
-    amountPaid: [null as number | null, [Validators.required, Validators.min(0)]]
+    amountPaid: [null as number | null, [Validators.required, Validators.min(0)]],
+    paymentMode: ['Cash' as 'Cash' | 'Bank', [Validators.required]]
   });
 
   constructor() {
@@ -91,6 +98,20 @@ export class FeesComponent {
   }
 
   /* -------------------------------------------------------------- lookup */
+  /* ------------------------------------------ collecting an admission due */
+  readonly admissionDueStudentId = signal<number | null>(null);
+  admissionDueVisible = false;
+
+  openAdmissionDue(studentId: number): void {
+    this.admissionDueStudentId.set(studentId);
+    this.admissionDueVisible = true;
+  }
+
+  /** The balance moved, so the bill on screen has to be read again. */
+  onAdmissionDueCollected(): void {
+    this.loadStudent();
+  }
+
   loadStudent(): void {
     const reg = this.registrationId().trim();
     if (!reg) return;
@@ -195,9 +216,61 @@ export class FeesComponent {
       return;
     }
 
-    this.saving.set(true);
-
     const v = this.form.getRawValue();
+    const id = this.editingPaymentId();
+
+    /* Adding a payment for a month that already has one is how the same month ends
+       up with two bills — e.g. a receptionist meaning to fix Cash to Bank, but
+       typing the correction into "Record payment" instead of clicking the pencil on
+       the existing row. That leaves both the original and the correction on the
+       ledger, doubling the amount. Confirmed here rather than blocked outright,
+       because a genuine second installment in one month is real (a part payment
+       followed by the rest) — only the accidental case needs a pause. */
+    if (id === null) {
+      const duplicate = this.paymentInSameMonth(v.feeDate);
+
+      if (duplicate) {
+        this.confirm.confirm({
+          header: 'Payment already recorded for this month',
+          message:
+            `${duplicate.billNo ?? 'A payment'} already covers ` +
+            `${v.feeDate ? this.monthLabel(v.feeDate) : 'this month'} ` +
+            `(${this.money(duplicate.installment)}, ${duplicate.paymentMode ?? 'mode not recorded'}). ` +
+            'To correct that payment — including changing cash to bank — click the ' +
+            'pencil on its row instead of Record here. Only continue if this is a ' +
+            'genuine second payment for the same month.',
+          acceptLabel: 'Record as a second payment',
+          rejectLabel: 'Cancel',
+          accept: () => this.persist(student, calc, v),
+          reject: () => {}
+        });
+        return;
+      }
+    }
+
+    this.persist(student, calc, v);
+  }
+
+  private paymentInSameMonth(feeDate: Date | null): FeePayment | null {
+    if (!feeDate) return null;
+
+    return this.payments().find(p => {
+      if (!p.feeDate) return false;
+      const d = new Date(p.feeDate);
+      return d.getFullYear() === feeDate.getFullYear() && d.getMonth() === feeDate.getMonth();
+    }) ?? null;
+  }
+
+  private monthLabel(date: Date): string {
+    return date.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+  }
+
+  private persist(
+    student: StudentFeeBill,
+    calc: FeeCalculation,
+    v: ReturnType<typeof this.form.getRawValue>
+  ): void {
+    this.saving.set(true);
 
     const payload: FeeSaveRequest = {
       registrationId: student.registrationId,
@@ -209,7 +282,8 @@ export class FeesComponent {
       totalForMonth: calc.totalForMonth,
       amountPaid: v.amountPaid!,
       oldDue: calc.oldDue,
-      newDue: calc.newDue
+      newDue: calc.newDue,
+      paymentMode: v.paymentMode
     };
 
     const id = this.editingPaymentId();
@@ -266,7 +340,8 @@ export class FeesComponent {
       feeDate: payment.feeDate ? new Date(payment.feeDate) : new Date(),
       installmentAmount: installment,
       teacherPercentage: payment.percentage ?? null,
-      amountPaid: payment.amountPaid ?? null
+      amountPaid: payment.amountPaid ?? null,
+      paymentMode: payment.paymentMode ?? 'Cash'
     });
 
     document.getElementById('fee-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -277,7 +352,8 @@ export class FeesComponent {
       feeDate: new Date(),
       installmentAmount: this.bill()?.monthlyFees ?? null,
       teacherPercentage: null,
-      amountPaid: null
+      amountPaid: null,
+      paymentMode: 'Cash'
     });
 
     this.editingPaymentId.set(null);

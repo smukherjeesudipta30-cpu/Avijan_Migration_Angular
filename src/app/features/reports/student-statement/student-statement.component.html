@@ -6,6 +6,16 @@
   </p>
 </header>
 
+<!-- The student's own line of the hierarchy, at the top of the page they land on
+     when they sign in: the owner, then the teacher they are assigned to. Read from
+     their student record, so it is right from the day of admission and follows a
+     change of teacher on its own. -->
+@if (features.org()) {
+  <section class="stm__org">
+    <app-org-chart heading="My Teacher Details" scope="mine" />
+  </section>
+}
+
 @if (statement(); as s) {
   <section class="app-card stm__profile">
     <div class="stm__photo">

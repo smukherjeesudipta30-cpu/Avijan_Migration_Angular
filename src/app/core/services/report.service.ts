@@ -10,6 +10,9 @@ import {
   BranchGrouping,
   BranchReport,
   DuesReport,
+  FeeCollectionsReport,
+  PendingPaymentsReport,
+  PayrollSettings,
   ExpenseReport,
   StudentCertificate,
   StudentStatement,
@@ -69,6 +72,35 @@ export class ReportService {
       .pipe(map(r => r.data));
   }
 
+  /** Branch-wise arrears, in two sections. Not paged — it covers active students only. */
+  pendingPayments(
+    from: string,
+    to: string,
+    branch?: string | null,
+    courseId = 0
+  ): Observable<PendingPaymentsReport> {
+    return this.http
+      .get<ApiResponse<PendingPaymentsReport>>(`${this.base}/pending-payments`, {
+        params: this.params({ from, to, branch, courseId })
+      })
+      .pipe(map(r => r.data));
+  }
+
+  /** Every fee payment in a range, cash versus bank, who collected it, branch-wise. */
+  feeCollections(
+    from: string,
+    to: string,
+    branch?: string | null,
+    paymentMode?: string | null,
+    kind?: string | null
+  ): Observable<FeeCollectionsReport> {
+    return this.http
+      .get<ApiResponse<FeeCollectionsReport>>(`${this.base}/fee-collections`, {
+        params: this.params({ from, to, branch, paymentMode, kind })
+      })
+      .pipe(map(r => r.data));
+  }
+
   expenses(
     from: string,
     to: string,
@@ -90,6 +122,19 @@ export class ReportService {
         params: this.params({ teacherId, from, to })
       })
       .pipe(map(r => r.data));
+  }
+
+  /** Whether the missed-scan-out deduction is currently switched on — the admin's own call. */
+  payrollSettings(): Observable<PayrollSettings> {
+    return this.http
+      .get<ApiResponse<PayrollSettings>>(`${this.base}/payroll-settings`)
+      .pipe(map(r => r.data));
+  }
+
+  /** Admin only. */
+  updatePayrollSettings(missedScanOutDeductionEnabled: boolean): Observable<ApiResponse<PayrollSettings>> {
+    return this.http.put<ApiResponse<PayrollSettings>>(
+      `${this.base}/payroll-settings`, { missedScanOutDeductionEnabled });
   }
 
   studentsByTeacher(

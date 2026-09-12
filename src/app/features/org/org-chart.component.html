@@ -1,0 +1,73 @@
+<section class="org-chart">
+  @if (heading()) {
+    <header class="org-chart__head">
+      <h2>{{ heading() }}</h2>
+
+      @if (!branch() && branches().length > 1) {
+        <div class="org-chart__branches">
+          <button type="button"
+                  class="org-chart__branch"
+                  [class.is-on]="chosenBranch() === null"
+                  (click)="chooseBranch(null)">All branches</button>
+
+          @for (name of branches(); track name) {
+            <button type="button"
+                    class="org-chart__branch"
+                    [class.is-on]="chosenBranch() === name"
+                    (click)="chooseBranch(name)">{{ name }}</button>
+          }
+        </div>
+      }
+    </header>
+  }
+
+  @if (loading()) {
+    <p class="org-chart__note">Loading the team…</p>
+  } @else if (failed()) {
+    <p class="org-chart__note">The team chart could not be loaded just now.</p>
+  } @else if (levels().length === 0) {
+    <p class="org-chart__note">No one has been placed on the chart yet.</p>
+  } @else {
+    @for (level of levels(); track level.depth) {
+      <div class="org-chart__level">
+        @for (node of level.nodes; track node.id) {
+          <article class="org-card" [class.org-card--auto]="node.isAutomatic">
+            <div class="org-card__photo">
+              @if (photoUrl(node); as src) {
+                <img [src]="src" [alt]="node.personName" />
+              } @else {
+                <span class="org-card__initials">{{ initials(node.personName) }}</span>
+              }
+            </div>
+
+            <div class="org-card__body">
+              <h3 class="org-card__name">{{ node.personName }}</h3>
+
+              @if (node.designation) {
+                <p class="org-card__role">{{ node.designation }}</p>
+              }
+
+              @if (node.qualification) {
+                <p class="org-card__qual">{{ node.qualification }}</p>
+              }
+
+              @if (node.computerTraining) {
+                <p class="org-card__qual">{{ node.computerTraining }}</p>
+              }
+
+              <p class="org-card__meta">
+                @for (name of node.branches; track name) {
+                  <span class="org-card__branch">{{ name }}</span>
+                }
+
+                @if (parentNames(node)) {
+                  <span class="org-card__reports">Reports to {{ parentNames(node) }}</span>
+                }
+              </p>
+            </div>
+          </article>
+        }
+      </div>
+    }
+  }
+</section>

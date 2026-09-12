@@ -7,7 +7,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 
-import { TeacherEarningsReport } from '../../../core/models/report.model';
+import { PayrollSettings, TeacherEarningsReport } from '../../../core/models/report.model';
 import { TeacherLookup } from '../../../core/models/student.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { ReportService } from '../../../core/services/report.service';
@@ -52,9 +52,19 @@ export class TeacherEarningsReportComponent {
    * record, so the picker is hidden and the report loads straight away. The
    * server enforces the same rule regardless of what this component sends.
    */
-  readonly isStaff = computed(() => this.auth.hasAnyRole(['Admin', 'Editor']));
+  readonly isStaff = computed(() => this.auth.hasAnyRole(['Admin', 'Editor', 'Receptionist']));
+
+  /** Only Admin may switch the deduction on or off — the owner's own rule. */
+  readonly isAdmin = computed(() => this.auth.hasAnyRole(['Admin']));
+
+  readonly payrollSettings = signal<PayrollSettings | null>(null);
+  readonly savingPayrollSettings = signal(false);
 
   constructor() {
+    this.reports.payrollSettings().subscribe({
+      next: settings => this.payrollSettings.set(settings)
+    });
+
     if (this.isStaff()) {
       this.students.teachers().subscribe(list => this.teachers.set(list));
     } else {
@@ -98,14 +108,57 @@ export class TeacherEarningsReportComponent {
     });
   }
 
+  toggleDeductionRule(enabled: boolean): void {
+    if (!this.isAdmin()) return;
+
+    this.savingPayrollSettings.set(true);
+
+    this.reports.updatePayrollSettings(enabled).subscribe({
+      next: response => {
+        this.savingPayrollSettings.set(false);
+
+        if (response.success === false) {
+          this.messages.add({
+            severity: 'error',
+            summary: 'Could not save',
+            detail: response.message ?? 'That setting could not be changed.',
+            life: 6000
+          });
+          return;
+        }
+
+        this.payrollSettings.set(response.data);
+        this.messages.add({
+          severity: 'success',
+          summary: enabled ? 'Deduction switched on' : 'Deduction switched off',
+          detail: 'Applies to every teacher report from now on.',
+          life: 5000
+        });
+
+        // The figures on screen depend on the setting, so re-run with it.
+        if (this.teacherId()) this.run();
+      },
+      error: () => {
+        this.savingPayrollSettings.set(false);
+        this.messages.add({
+          severity: 'error',
+          summary: 'Could not save',
+          detail: 'That setting could not be changed.',
+          life: 6000
+        });
+      }
+    });
+  }
+
   exportCsv(): void {
     const r = this.report();
     if (!r) return;
 
-    // Both halves of the account go into one file, tagged by kind, so the
+    // All three halves of the account go into one file, tagged by kind, so the
     // exported total reconciles with what is on screen.
     const rows: unknown[][] = [
       ...r.earnings.map(e => ['Earned', e.paidOn, e.studentName, e.registrationId, e.courseName, e.salary]),
+      ...r.deductions.map(d => ['Deduction', `${d.monthLabel} — ${d.reason}`, '', '', '', -d.deductionAmount]),
       ...r.payments.map(p => ['Paid out', p.paidOn, '', '', '', -p.amount])
     ];
 

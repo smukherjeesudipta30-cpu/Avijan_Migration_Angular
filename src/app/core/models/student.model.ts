@@ -18,6 +18,11 @@ export interface StudentListItem {
   thirdTeacherId?: number;
   thirdTeacherName?: string;
   admissionFees?: number;
+  admissionPaymentMode?: 'Cash' | 'Bank';
+  /** How much of the admission fee has actually come in. */
+  admissionFeesPaid?: number;
+  /** Still owed on the admission fee, floored at zero. */
+  admissionDue?: number;
   monthlyFees?: number;
   dateOfJoining?: string;
   dateOfBirth?: string;
@@ -48,6 +53,9 @@ export interface StudentSaveRequest {
   dateOfJoining: string | null;
   monthlyFees: number | null;
   admissionFees: number | null;
+  /** What is actually being handed over now. Null means the whole fee. */
+  admissionFeesPaid: number | null;
+  admissionPaymentMode: 'Cash' | 'Bank';
   courseId: number | null;
   teacherCount: number | null;
   primaryTeacherId: number | null;
@@ -140,4 +148,37 @@ export interface StudentQuery {
 export interface SuggestedLogin {
   email: string;
   password: string;
+}
+
+/* ============================================ admission fee, part payment */
+
+/** One receipt taken against a student's admission fee. */
+export interface AdmissionFeeReceipt {
+  id: number;
+  amount: number;
+  paymentMode?: 'Cash' | 'Bank';
+  paidOn: string;
+  /** True for the money taken at admission itself, false for a later instalment. */
+  isAtAdmission: boolean;
+  note?: string;
+  createdBy?: string;
+}
+
+/** Where a student stands on their admission fee. */
+export interface AdmissionDue {
+  studentId: number;
+  registrationId?: string;
+  studentName?: string;
+  admissionFees: number;
+  admissionFeesPaid: number;
+  admissionDue: number;
+  receipts: AdmissionFeeReceipt[];
+}
+
+/** An instalment being taken against an outstanding admission fee. */
+export interface AdmissionDueCollectRequest {
+  amount: number;
+  paymentMode: 'Cash' | 'Bank';
+  paidOn: string | null;
+  note: string | null;
 }

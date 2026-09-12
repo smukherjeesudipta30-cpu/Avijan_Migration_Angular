@@ -8,6 +8,9 @@ export interface AboutCourse {
   courseId: number;
   name: string;
   durationMonths?: number;
+
+  /** Active students currently on this course — real enrolment, not an estimate. */
+  enrolledCount: number;
 }
 
 export interface ContactDetails {
@@ -50,6 +53,19 @@ export interface AboutPage {
      older than these fields simply omits them. */
   notices?: AboutNotice[];
   routine?: RoutineRow[];
+
+  /** Absent when no owner photograph is configured; the section is then not shown. */
+  ownerDesk?: OwnerDesk;
+}
+
+/** "From the Owner's Desk" — edited in appsettings.json, not in this code. */
+export interface OwnerDesk {
+  name: string;
+  designation: string;
+  /** Path under the site root, e.g. images/owner.jpg */
+  photo: string;
+  message: string[];
+  since: string;
 }
 
 export interface ContactRequest {

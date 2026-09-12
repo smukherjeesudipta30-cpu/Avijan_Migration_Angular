@@ -342,18 +342,39 @@
          dashboard used to show only a count; the messages were unreadable. -->
     <article class="app-card dash__panel dash__panel--wide">
       <header class="dash__panel-head">
-        <h2>New enquiries</h2>
-        @if (data.counts.pendingEnquiries > 0) {
-          <p-tag
-            severity="warn"
-            [value]="data.counts.pendingEnquiries + ' waiting'"
-            icon="pi pi-envelope" />
-        }
+        <h2>Enquiries</h2>
+
+        <div class="dash__enquiry-tabs">
+          <!-- Read and All exist so a message can be found again after it has been
+               marked read: nothing is ever deleted, only flagged. -->
+          <button type="button"
+                  class="dash__enquiry-tab"
+                  [class.is-on]="enquiryFilter() === 'New'"
+                  (click)="showEnquiries('New')">
+            New ({{ data.counts.pendingEnquiries }})
+          </button>
+
+          <button type="button"
+                  class="dash__enquiry-tab"
+                  [class.is-on]="enquiryFilter() === 'Read'"
+                  (click)="showEnquiries('Read')">
+            Read
+          </button>
+
+          <button type="button"
+                  class="dash__enquiry-tab"
+                  [class.is-on]="enquiryFilter() === 'All'"
+                  (click)="showEnquiries('All')">
+            All
+          </button>
+        </div>
       </header>
 
-      @if (data.pendingEnquiryList?.length) {
+      @if (archiveLoading()) {
+        <p class="app-muted">Loading&hellip;</p>
+      } @else if (shownEnquiries().length) {
         <ul class="dash__enquiries">
-          @for (enquiry of data.pendingEnquiryList; track enquiry.id) {
+          @for (enquiry of shownEnquiries(); track enquiry.id) {
             <li class="dash__enquiry">
               <div class="dash__enquiry-head">
                 <strong>{{ enquiry.name || 'Someone' }}</strong>
@@ -381,28 +402,53 @@
                 </p>
               }
 
-              <p-button
-                label="Mark handled"
-                icon="pi pi-check"
-                size="small"
-                severity="secondary"
-                [outlined]="true"
-                [loading]="isClearing(enquiry.id)"
-                (onClick)="markHandled(enquiry)" />
+              <!-- Read is a flag, not a deletion: the message stays and can be put
+                   back on the new list at any time. -->
+              @if (enquiry.isHandled) {
+                <p-button
+                  label="Mark unread"
+                  icon="pi pi-undo"
+                  size="small"
+                  severity="secondary"
+                  [text]="true"
+                  [loading]="isClearing(enquiry.id)"
+                  (onClick)="markUnread(enquiry)" />
+              } @else {
+                <p-button
+                  label="Mark read"
+                  icon="pi pi-check"
+                  size="small"
+                  severity="secondary"
+                  [outlined]="true"
+                  [loading]="isClearing(enquiry.id)"
+                  (onClick)="markHandled(enquiry)" />
+              }
             </li>
           }
         </ul>
 
-        @if (data.counts.pendingEnquiries > (data.pendingEnquiryList ?? []).length) {
+        @if (enquiryFilter() === 'New'
+             && data.counts.pendingEnquiries > shownEnquiries().length) {
           <p class="app-muted dash__enquiry-more">
-            Showing the {{ (data.pendingEnquiryList ?? []).length }} most recent of
+            Showing the {{ shownEnquiries().length }} most recent of
             {{ data.counts.pendingEnquiries }}.
           </p>
         }
+      } @else if (enquiryFilter() === 'New') {
+        <p class="app-muted">
+          Nothing waiting — every enquiry has been read. Use <strong>Read</strong> above
+          to look back at them.
+        </p>
       } @else {
-        <p class="app-muted">Nothing waiting — every enquiry has been handled.</p>
+        <p class="app-muted">No enquiries here yet.</p>
       }
     </article>
   </section>
   }
+}
+
+@if (features.org()) {
+  <section class="dashboard-org">
+    <app-org-chart heading="Institute Hierarchy" />
+  </section>
 }

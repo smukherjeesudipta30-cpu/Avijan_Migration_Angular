@@ -125,14 +125,20 @@ export class ExamService {
       `${this.admin}/schedule/batch`, request);
   }
 
+  /* The registration id goes in the query string, not the path: it contains
+     slashes ("AVI/Raj/4998/26"), which no amount of encoding makes safe as a path
+     segment. HttpParams encodes it properly. */
+
   regenerateCode(examId: number, registrationId: string): Observable<ApiResponse<ExamScheduleRow>> {
     return this.http.post<ApiResponse<ExamScheduleRow>>(
-      `${this.admin}/${examId}/schedule/${encodeURIComponent(registrationId)}/regenerate-code`, {});
+      `${this.admin}/${examId}/schedule/regenerate-code`, {},
+      { params: new HttpParams().set('registrationId', registrationId) });
   }
 
   removeSchedule(examId: number, registrationId: string): Observable<ApiResponse<boolean>> {
     return this.http.delete<ApiResponse<boolean>>(
-      `${this.admin}/${examId}/schedule/${encodeURIComponent(registrationId)}`);
+      `${this.admin}/${examId}/schedule`,
+      { params: new HttpParams().set('registrationId', registrationId) });
   }
 
   /* -------------------------------------------------------- student */
@@ -154,6 +160,17 @@ export class ExamService {
     return this.http
       .get<ApiResponse<AdmitCard[]>>(`${this.mine}/admit-cards`)
       .pipe(map(r => r.data));
+  }
+
+  /**
+   * Saves the answers chosen so far. The server marks this copy if the paper is
+   * submitted after time is up, so it is what protects a student whose browser or
+   * connection dies mid-paper.
+   */
+  saveProgress(attemptId: number, answers: Record<number, string>):
+    Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(
+      `${this.mine}/progress`, { attemptId, answers });
   }
 
   submit(request: SubmitExamRequest): Observable<ApiResponse<ExamResult>> {

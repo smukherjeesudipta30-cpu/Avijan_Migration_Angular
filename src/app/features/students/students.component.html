@@ -278,6 +278,64 @@
           }
         </div>
 
+        <!-- Registering: what is being handed over now. Editing: what was recorded
+             as received, editable so a wrong figure typed at admission can be put
+             right (250 entered when 750 was taken). Correcting a past figure is a
+             different act from taking new money today -- that stays on Collect. -->
+        <div class="stu__field">
+          <label for="admissionFeesPaid">{{ isEditing() ? 'Admission fee received' : 'Paying now' }}</label>
+            <p-inputNumber
+              inputId="admissionFeesPaid"
+              formControlName="admissionFeesPaid"
+              mode="currency"
+              currency="INR"
+              locale="en-IN"
+              [min]="0"
+              [maxFractionDigits]="2" />
+
+            @if (form.controls.admissionFeesPaid.touched && form.controls.admissionFeesPaid.hasError('max')) {
+              <small class="stu__error">Cannot be more than the admission fee.</small>
+            } @else if (admissionDueNow() > 0) {
+              <small class="stu__hint stu__hint--due">
+                {{ admissionDueNow() | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}
+                @if (isEditing()) { still owing. } @else { will be left as an admission due, collectable later. }
+              </small>
+            } @else if (isEditing()) {
+              <small class="stu__hint">Paid in full. Change this only to correct a figure recorded wrongly.</small>
+            } @else {
+              <small class="stu__hint">Paid in full. Change this only if part of the fee is being left owing.</small>
+            }
+
+            <!-- Taking NEW money against a balance is a receipt, not a correction,
+                 so it goes through Collect rather than by editing the number above.
+                 Always reachable while editing: with nothing owing it is the
+                 receipt history -- every instalment, its date, and Cash or Bank. -->
+            @if (isEditing() && editingId(); as id) {
+              <p-button
+                [label]="admissionDueNow() > 0 ? 'Collect the balance' : 'View receipts'"
+                [icon]="admissionDueNow() > 0 ? 'pi pi-indian-rupee' : 'pi pi-list'"
+                size="small"
+                [severity]="admissionDueNow() > 0 ? 'warn' : 'secondary'"
+                [text]="true"
+                styleClass="stu__collect"
+                (onClick)="openAdmissionDueById(id)" />
+            }
+          </div>
+
+        <div class="stu__field">
+          <label>Admission payment mode <span class="stu__req">*</span></label>
+          <div class="stu__mode">
+            <label class="stu__mode-option">
+              <input type="radio" formControlName="admissionPaymentMode" value="Cash" />
+              Cash
+            </label>
+            <label class="stu__mode-option">
+              <input type="radio" formControlName="admissionPaymentMode" value="Bank" />
+              Bank
+            </label>
+          </div>
+        </div>
+
         <div class="stu__field">
           <label for="monthlyFees">Monthly fees <span class="stu__req">*</span></label>
           <p-inputNumber
@@ -589,6 +647,16 @@
               tooltipPosition="top"
               (onClick)="edit(student)" />
 
+            @if ((student.admissionDue ?? 0) > 0) {
+              <p-button
+                icon="pi pi-indian-rupee"
+                severity="warn"
+                [text]="true"
+                [pTooltip]="'Admission fee still owing — collect'"
+                tooltipPosition="top"
+                (onClick)="openAdmissionDue(student)" />
+            }
+
             <p-button
               icon="pi pi-print"
               severity="secondary"
@@ -709,3 +777,10 @@
     </ng-template>
   </p-table>
 </p-dialog>
+
+<!-- Collecting what is left owing on an admission fee. Shared with the fees
+     counter, which does the same job from the other side of the desk. -->
+<app-admission-due-dialog
+  [studentId]="admissionDueStudentId()"
+  [(visible)]="admissionDueVisible"
+  (collected)="onAdmissionDueCollected()" />

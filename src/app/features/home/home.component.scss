@@ -251,39 +251,146 @@
 }
 
 /* ================================================================= tables */
-.hm__table-wrap {
-  overflow-x: auto;
-  border: 1px solid #e0e3ec;
-  border-radius: 10px;
+.hm__group-title {
+  margin: 2.2rem 0 1rem;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #1c2a3a;
+  padding-bottom: .5rem;
+  border-bottom: 2px solid #eceef5;
+
+  &:first-of-type {
+    margin-top: 0;
+  }
 }
 
-.hm__table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.92rem;
+.hm__popular {
+  background: #f7f9fd;
+  border: 1px solid #e0e3ec;
+  border-radius: 12px;
+  padding: 1.3rem 1.4rem;
+  margin-bottom: 1.6rem;
+}
+
+.hm__popular-title {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1c2a3a;
+}
+
+.hm__popular-list {
+  display: flex;
+  flex-direction: column;
+  gap: .7rem;
+}
+
+.hm__popular-row {
+  display: grid;
+  grid-template-columns: minmax(9rem, 15rem) 1fr auto;
+  align-items: center;
+  gap: .8rem;
+}
+
+.hm__popular-name {
+  font-size: .85rem;
+  font-weight: 600;
+  color: #33415c;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hm__popular-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: #e5e9f2;
+  overflow: hidden;
+
+  span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #2f6fed, #1f9bd6);
+    transition: width .3s ease;
+  }
+}
+
+.hm__popular-count {
+  font-size: .78rem;
+  font-weight: 600;
+  color: #5b6b84;
+  white-space: nowrap;
+}
+
+.hm__course-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 1.1rem;
+}
+
+.hm__course-card {
   background: #fff;
+  border: 1px solid #e0e3ec;
+  border-radius: 12px;
+  padding: 1.3rem 1.2rem;
+  transition: transform .15s ease, box-shadow .15s ease;
 
-  th,
-  td {
-    padding: 0.7rem 0.9rem;
-    text-align: left;
-    border-bottom: 1px solid #eceef5;
-    white-space: nowrap;
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgba(20, 30, 60, 0.08);
   }
+}
 
-  th {
-    background: #f2f4f9;
-    font-weight: 700;
-    color: #33415c;
-  }
+.hm__course-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: .02em;
+  margin-bottom: .9rem;
+}
 
-  td:nth-child(2) {
-    white-space: normal;
-  }
+.hm__course-name {
+  margin: 0 0 .9rem;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #1c2a3a;
+  line-height: 1.3;
+}
 
-  tbody tr:hover td {
-    background: #fafbff;
+.hm__course-duration {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+}
+
+.hm__course-bar {
+  flex: 1 1 auto;
+  height: 6px;
+  border-radius: 999px;
+  background: #eceef5;
+  overflow: hidden;
+
+  span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    transition: width .3s ease;
   }
+}
+
+.hm__course-months {
+  flex: 0 0 auto;
+  font-size: .8rem;
+  font-weight: 600;
+  color: #5b6b84;
+  white-space: nowrap;
 }
 
 /* ============================================================== portfolio */
@@ -575,6 +682,13 @@
   .hm__nav { gap: 0; }
   .hm__nav button { padding: 0.45rem 0.5rem; font-size: 0.82rem; }
   .hm__marquee-item { flex: 0 0 200px; }
+
+  .hm__popular-row {
+    grid-template-columns: 1fr;
+    gap: .3rem;
+  }
+
+  .hm__popular-count { justify-self: end; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -606,5 +720,164 @@
 
   .hm__marquee-item {
     scroll-snap-align: center;
+  }
+}
+
+/* ========================================================== owner's desk */
+/* A quiet, light band between About and Courses: portrait on the left, the
+   message on the right, signed. Reads as a letter rather than a marketing panel,
+   which is the point of putting a face to the institute. */
+.hm__owner {
+  background: #f5f7fa;
+  border-top: 1px solid #e3e8ee;
+  border-bottom: 1px solid #e3e8ee;
+}
+
+.hm__owner-split {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 2.75rem;
+  align-items: start;
+}
+
+.hm__owner-photo {
+  margin: 0;
+
+  img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 14px;
+    box-shadow: 0 14px 34px rgba(10, 40, 60, 0.18);
+  }
+}
+
+.hm__owner-copy {
+  p {
+    margin: 0 0 1rem;
+    line-height: 1.75;
+    color: #4a5163;
+    font-size: 1.02rem;
+  }
+
+  /* The opening line carries the voice, so it is set a shade larger. */
+  p:first-of-type {
+    font-size: 1.12rem;
+    color: #33415c;
+  }
+}
+
+.hm__owner-eyebrow {
+  margin: 0 0 1.1rem !important;
+  font-size: 0.78rem !important;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #6d28d9 !important;
+}
+
+.hm__owner-sign {
+  margin-top: 1.6rem;
+  padding-top: 1.1rem;
+  border-top: 2px solid #d7e0ea;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+
+  strong {
+    font-size: 1.1rem;
+    color: #0a283c;
+  }
+
+  span {
+    color: #33415c;
+    font-weight: 600;
+  }
+
+  small {
+    color: #6b7280;
+    font-style: italic;
+  }
+}
+
+@media (max-width: 860px) {
+  .hm__owner-split {
+    grid-template-columns: 1fr;
+    gap: 1.75rem;
+    justify-items: center;
+    text-align: left;
+  }
+
+  .hm__owner-photo {
+    max-width: 240px;
+  }
+}
+
+/* ------------------------------------------------- competition banner */
+
+/* The yearly Drawing & Dance competition, shown on the front page only while
+   registration is open. Loud on purpose — it is an advertisement — but kept to one
+   band so it does not fight the admission ribbon above it. */
+.hm__competition {
+  background:
+    radial-gradient(circle at 10% 30%, rgba(232, 135, 30, 0.16), transparent 45%),
+    radial-gradient(circle at 90% 20%, rgba(200, 30, 99, 0.18), transparent 45%),
+    #16233f;
+  color: #fff;
+  padding: 2rem 0;
+}
+
+.hm__competition-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+.hm__competition-eyebrow {
+  margin: 0 0 0.3rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #f2a44e;
+}
+
+.hm__competition-title {
+  margin: 0;
+  font-size: clamp(1.4rem, 3.5vw, 2rem);
+  line-height: 1.15;
+  color: #fff;
+}
+
+.hm__competition-bn {
+  margin: 0.2rem 0 0.5rem;
+  font-size: 1rem;
+  color: #dfe4ef;
+}
+
+.hm__competition-facts {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #b9c6d4;
+}
+
+.hm__competition-go {
+  flex: 0 0 auto;
+  background: #c81e63;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 0.8rem 1.75rem;
+  border-radius: 999px;
+  white-space: nowrap;
+
+  &:hover { background: #a91750; }
+
+  &:focus-visible {
+    outline: 3px solid #f2a44e;
+    outline-offset: 2px;
   }
 }

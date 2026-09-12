@@ -11,7 +11,9 @@
     </p>
   </div>
 
-  <p-button label="New paper" icon="pi pi-plus" (onClick)="newPaper()" />
+  @if (canManagePapers()) {
+    <p-button label="New paper" icon="pi pi-plus" (onClick)="newPaper()" />
+  }
 </header>
 
 <!-- ---------------------------------------------------------------- filter -->
@@ -146,57 +148,66 @@
 
         <td>
           <div class="ex__actions">
-            @if (row.paperType === 'Theory') {
-              <p-button
-                icon="pi pi-list"
-                severity="secondary"
-                [text]="true"
-                pTooltip="Questions"
-                tooltipPosition="top"
-                (onClick)="openQuestions(row)" />
-            } @else {
-              <p-button
-                icon="pi pi-pencil"
-                severity="warn"
-                [text]="true"
-                pTooltip="Enter practical marks"
-                tooltipPosition="top"
-                (onClick)="openPractical(row)" />
+            @if (canManagePapers()) {
+              @if (row.paperType === 'Theory') {
+                <p-button
+                  icon="pi pi-list"
+                  severity="secondary"
+                  [text]="true"
+                  pTooltip="Questions"
+                  tooltipPosition="top"
+                  (onClick)="openQuestions(row)" />
+              } @else {
+                <p-button
+                  icon="pi pi-pencil"
+                  severity="warn"
+                  [text]="true"
+                  pTooltip="Enter practical marks"
+                  tooltipPosition="top"
+                  (onClick)="openPractical(row)" />
+              }
             }
 
-            <p-button
-              icon="pi pi-calendar-clock"
-              severity="info"
-              [text]="true"
-              pTooltip="Sittings and access codes"
-              tooltipPosition="top"
-              (onClick)="openSchedule(row)" />
-
-            <p-button
-              [icon]="row.isPublished ? 'pi pi-eye-slash' : 'pi pi-send'"
-              [severity]="row.isPublished ? 'secondary' : 'success'"
-              [text]="true"
-              [pTooltip]="row.isPublished ? 'Withdraw' : 'Publish'"
-              tooltipPosition="top"
-              (onClick)="togglePublished(row)" />
-
-            <p-button
-              icon="pi pi-cog"
-              severity="secondary"
-              [text]="true"
-              pTooltip="Edit paper"
-              tooltipPosition="top"
-              (onClick)="editPaper(row)" />
-
-            @if (canDelete()) {
+            @if (canManagePapers() || row.paperType !== 'Theory') {
+              <!-- Receptionist's one job here: the Practical date, once Theory is
+                   done. A Theory sitting also issues the access code, which stays
+                   with Admin/Editor. -->
               <p-button
-                icon="pi pi-trash"
-                severity="danger"
+                icon="pi pi-calendar-clock"
+                severity="info"
                 [text]="true"
-                [disabled]="row.attemptCount > 0"
-                [pTooltip]="row.attemptCount > 0 ? 'Students have sat this paper' : 'Delete'"
+                pTooltip="Sittings and access codes"
                 tooltipPosition="top"
-                (onClick)="deletePaper(row)" />
+                (onClick)="openSchedule(row)" />
+            }
+
+            @if (canManagePapers()) {
+              <p-button
+                [icon]="row.isPublished ? 'pi pi-eye-slash' : 'pi pi-send'"
+                [severity]="row.isPublished ? 'secondary' : 'success'"
+                [text]="true"
+                [pTooltip]="row.isPublished ? 'Withdraw' : 'Publish'"
+                tooltipPosition="top"
+                (onClick)="togglePublished(row)" />
+
+              <p-button
+                icon="pi pi-cog"
+                severity="secondary"
+                [text]="true"
+                pTooltip="Edit paper"
+                tooltipPosition="top"
+                (onClick)="editPaper(row)" />
+
+              @if (canDelete()) {
+                <p-button
+                  icon="pi pi-trash"
+                  severity="danger"
+                  [text]="true"
+                  [disabled]="row.attemptCount > 0"
+                  [pTooltip]="row.attemptCount > 0 ? 'Students have sat this paper' : 'Delete'"
+                  tooltipPosition="top"
+                  (onClick)="deletePaper(row)" />
+              }
             }
           </div>
         </td>
@@ -529,6 +540,7 @@
     </div>
 
     <!-- schedule the whole batch at once -->
+    @if (canManagePapers()) {
     <div class="ex__batch">
       <div class="ex__batch-field">
         <label for="batchDate">Batch date and time</label>
@@ -565,6 +577,7 @@
         [loading]="batchSaving()"
         (onClick)="scheduleBatch()" />
     </div>
+    }
 
     <div class="ex__tiles">
       <div class="app-card ex__tile">
@@ -656,9 +669,15 @@
               [showTime]="true"
               hourFormat="12"
               [showIcon]="true"
-              [disabled]="row.hasAttempted"
+              [disabled]="row.hasAttempted || practicalBlocked(paper, row)"
               appendTo="body"
               styleClass="ex__wide" />
+
+            @if (practicalBlocked(paper, row)) {
+              <div class="app-muted ex__sub ex__warn">
+                <i class="pi pi-exclamation-triangle"></i> Theory not sat yet
+              </div>
+            }
           </td>
 
           @if (paper.paperType === 'Theory') {
@@ -695,7 +714,7 @@
                 [text]="true"
                 pTooltip="Save this sitting"
                 tooltipPosition="top"
-                [disabled]="row.hasAttempted"
+                [disabled]="row.hasAttempted || practicalBlocked(paper, row)"
                 [loading]="savingRow() === row.registrationId"
                 (onClick)="saveRow(row)" />
 

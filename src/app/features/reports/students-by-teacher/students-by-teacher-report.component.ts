@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -11,6 +11,7 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
 
 import { StudentsByTeacherReport } from '../../../core/models/report.model';
 import { TeacherLookup } from '../../../core/models/student.model';
+import { AuthService } from '../../../core/services/auth.service';
 import { ReportService } from '../../../core/services/report.service';
 import { StudentService } from '../../../core/services/student.service';
 import { downloadCsv, reportFileName } from '../report-utils';
@@ -18,6 +19,11 @@ import { downloadCsv, reportFileName } from '../report-utils';
 /**
  * Every student assigned to one teacher, in any of their three teacher slots.
  * Replaces `Views/StudentTecacherReport/Index.cshtml`.
+ *
+ * Office staff pick any teacher, same as the teacher-earnings report right next to
+ * this one. A signed-in teacher is pinned to their own id instead — the picker is
+ * hidden and the list loads straight away, as "My students" on their own dashboard.
+ * The server enforces the same rule regardless of what this component sends.
  */
 @Component({
   selector: 'app-students-by-teacher-report',
@@ -37,6 +43,7 @@ import { downloadCsv, reportFileName } from '../report-utils';
 export class StudentsByTeacherReportComponent {
   private readonly reports = inject(ReportService);
   private readonly students = inject(StudentService);
+  private readonly auth = inject(AuthService);
   private readonly messages = inject(MessageService);
 
   readonly report = signal<StudentsByTeacherReport | null>(null);
@@ -50,8 +57,19 @@ export class StudentsByTeacherReportComponent {
   readonly page = signal(1);
   readonly pageSize = signal(25);
 
+  readonly isStaff = computed(() => this.auth.hasAnyRole(['Admin', 'Editor', 'Receptionist']));
+
   constructor() {
-    this.students.teachers().subscribe(list => this.teachers.set(list));
+    if (this.isStaff()) {
+      this.students.teachers().subscribe(list => this.teachers.set(list));
+    } else {
+      this.reports.myTeacherId().subscribe({
+        next: id => {
+          this.teacherId.set(id);
+          this.run();
+        }
+      });
+    }
   }
 
   run(resetPage = true): void {

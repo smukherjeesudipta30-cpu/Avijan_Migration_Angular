@@ -5,6 +5,12 @@ export interface ReceptionistListItem {
   name: string;
   loginId?: string;
   phone?: string;
+  /** Real mailbox for attendance codes. */
+  personalEmail?: string;
+  designation?: string | null;
+  qualification?: string | null;
+  computerTraining?: string | null;
+  isTechnical: boolean;
   branch?: string;
   isActive: boolean;
 
@@ -18,6 +24,11 @@ export interface ReceptionistSaveRequest {
   name: string;
   loginId: string | null;
   phone: string | null;
+  personalEmail?: string | null;
+  designation?: string | null;
+  qualification?: string | null;
+  computerTraining?: string | null;
+  isTechnical: boolean;
   /** Required — the master exists for branch-wise reporting. */
   branch: string | null;
   isActive: boolean;

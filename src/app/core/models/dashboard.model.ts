@@ -111,4 +111,17 @@ export interface Enquiry {
   phone?: string;
   message?: string;
   submittedOn: string;
+
+  /** True once somebody has marked it read; read ones leave the dashboard panel. */
+  isHandled: boolean;
+}
+
+/** Which enquiries to list. Matches the server's EnquiryFilter. */
+export type EnquiryFilter = 'New' | 'Read' | 'All';
+
+export interface EnquiryList {
+  items: Enquiry[];
+  totalCount: number;
+  newCount: number;
+  readCount: number;
 }

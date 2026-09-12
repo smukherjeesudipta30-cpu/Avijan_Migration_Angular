@@ -60,6 +60,24 @@ export class AuthService {
     });
   }
 
+  /**
+   * Step one of account recovery. Always resolves the same way regardless of
+   * whether the address matched anything — that is the server's call to make,
+   * not this method's, so the response is passed straight through.
+   */
+  forgotPassword(email: string): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.base}/forgot-password`, { email });
+  }
+
+  /** Step two: the emailed code, spent to set a new password without the old one. */
+  resetPassword(email: string, code: string, newPassword: string): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.base}/reset-password`, {
+      email,
+      code,
+      newPassword
+    });
+  }
+
   logout(): void {
     // Revoke server-side, but clear locally regardless of the outcome — the user
     // asked to sign out and must not be left in a half-signed-in state.

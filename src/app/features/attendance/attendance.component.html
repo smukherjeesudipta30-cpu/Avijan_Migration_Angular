@@ -1,0 +1,195 @@
+<header class="att__header">
+  <p class="app-section-title">Attendance</p>
+  <h1>@if (marksOwnAttendance()) { Scan to mark your attendance } @else { Attendance code }</h1>
+  @if (marksOwnAttendance()) {
+    <p class="app-muted">
+      Scan the code with your phone camera when you arrive, and again when you leave.
+      Your phone must be at the centre — the code alone is not enough.
+    </p>
+  } @else {
+    <p class="app-muted">
+      Put this code on a screen at the centre. Staff scan it with their phone when
+      they arrive and again when they leave.
+    </p>
+  }
+</header>
+
+<!-- One column for an administrator: they have no attendance of their own, so the
+     code is the whole page rather than half of it. -->
+<div class="att__split" [class.att__split--single]="!marksOwnAttendance()">
+  <!-- ------------------------------------------------------- the QR code -->
+  <section class="app-card att__qr">
+    <h2>Today&rsquo;s code</h2>
+
+    @if (qrError()) {
+      <p class="att__error">{{ qrError() }}</p>
+    } @else if (qrImage()) {
+      <img [src]="qrImage()" alt="Attendance QR code" class="att__qr-image" />
+
+      <p class="att__qr-meta">
+        {{ qr()?.branchName }} &middot;
+        <span [class.att__qr-expiring]="secondsLeft() <= 15">
+          refreshes in {{ secondsLeft() }}s
+        </span>
+      </p>
+
+      <p class="att__qr-note">
+        This code changes every minute or so, so a photograph of it will not work.
+      </p>
+    } @else {
+      <p class="app-muted">Preparing the code&hellip;</p>
+    }
+  </section>
+
+  <!-- The person's own day. Not rendered for an administrator: they have no
+       staff record, so there is nothing here for them and the endpoint behind it
+       refuses them. -->
+  @if (marksOwnAttendance()) {
+  <section class="app-card att__me">
+    <div class="att__me-head">
+      <h2>My day</h2>
+      <p-button
+        icon="pi pi-refresh"
+        [text]="true"
+        [rounded]="true"
+        pTooltip="Refresh"
+        [loading]="loadingMe()"
+        (onClick)="loadMe()" />
+    </div>
+
+    @if (me(); as mine) {
+      <p class="att__me-name">{{ mine.staffName }} <span class="app-muted">&middot; {{ mine.staffType }}</span></p>
+
+      <!-- On a phone there is no second screen to point a camera at, so the code
+           beside this is useless to them. This does the same thing directly. -->
+      <div class="att__mark">
+        @if (challenge(); as pending) {
+          <!-- Held, not recorded: the mark only counts once the emailed code is
+               entered. The time already stamped on it is when the button was
+               pressed, so waiting for the email costs nobody any minutes. -->
+          <p class="att__code-head">
+            <i class="pi pi-envelope" aria-hidden="true"></i>
+            Code sent to <strong>{{ pending.sentTo }}</strong>
+          </p>
+
+          <p class="app-muted att__code-sub">
+            Confirming your {{ pending.direction === 'In' ? 'arrival' : 'departure' }} at
+            {{ pending.markedOn | date: 'h:mm a' }}. The code expires
+            {{ pending.expiresOn | date: 'h:mm a' }}.
+          </p>
+
+          <input
+            pInputText
+            class="att__code-input"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            maxlength="6"
+            placeholder="000000"
+            [value]="code()"
+            (input)="onCodeInput($any($event.target).value)" />
+
+          <div class="att__code-actions">
+            <p-button
+              label="Confirm"
+              icon="pi pi-check"
+              [loading]="confirming()"
+              [disabled]="code().length !== 6"
+              (onClick)="confirm()" />
+
+            <p-button
+              label="Send again"
+              icon="pi pi-refresh"
+              severity="secondary"
+              [text]="true"
+              [loading]="resending()"
+              (onClick)="resend()" />
+
+            <p-button
+              label="Cancel"
+              severity="secondary"
+              [text]="true"
+              (onClick)="cancelPending()" />
+          </div>
+        } @else {
+          <p-button
+            [label]="mine.isCurrentlyIn ? 'Mark my departure' : 'Mark my arrival'"
+            [icon]="mine.isCurrentlyIn ? 'pi pi-sign-out' : 'pi pi-sign-in'"
+            [loading]="marking()"
+            [severity]="mine.isCurrentlyIn ? 'secondary' : 'success'"
+            size="large"
+            (onClick)="markHere()" />
+
+          <small class="app-muted">
+            Uses this phone&rsquo;s location, then emails you a six-digit code to confirm.
+          </small>
+        }
+
+        @if (markResult(); as message) {
+          <p class="att__mark-ok">{{ message }}</p>
+        }
+
+        @if (markError(); as message) {
+          <p class="att__mark-bad">{{ message }}</p>
+        }
+      </div>
+
+      <div class="att__status">
+        @if (mine.isCurrentlyIn) {
+          <p-tag severity="success" value="Currently in" />
+        } @else if (mine.scans.length > 0) {
+          <p-tag severity="info" value="Scanned out" />
+        } @else {
+          <p-tag severity="warn" value="Not scanned today" />
+        }
+      </div>
+
+      <dl class="att__facts">
+        <div>
+          <dt>First in</dt>
+          <dd>{{ mine.firstIn ? (mine.firstIn | date: 'h:mm a') : '—' }}</dd>
+        </div>
+        <div>
+          <dt>Last out</dt>
+          <dd>{{ mine.lastOut ? (mine.lastOut | date: 'h:mm a') : '—' }}</dd>
+        </div>
+        <div>
+          <dt>Hours today</dt>
+          <dd>{{ hoursLabel() }}</dd>
+        </div>
+      </dl>
+
+      @if (deadlineLabel(); as warning) {
+        <p class="att__deadline" [class.att__deadline--late]="mine.countedAsLeave">
+          <i class="pi pi-clock" aria-hidden="true"></i> {{ warning }}
+        </p>
+      }
+
+      @if (mine.scans.length > 0) {
+        <h3>Today&rsquo;s scans</h3>
+        <ul class="att__scans">
+          @for (scan of mine.scans; track scan.scannedOn) {
+            <li>
+              <span class="att__scan-dir" [class.att__scan-out]="scan.direction === 'Out'">
+                {{ scan.direction === 'In' ? 'In' : 'Out' }}
+              </span>
+              <span>{{ scan.scannedOn | date: 'h:mm:ss a' }}</span>
+              @if (scan.distanceMetres !== null && scan.distanceMetres !== undefined) {
+                <small class="app-muted">{{ scan.distanceMetres | number: '1.0-0' }} m from the centre</small>
+              }
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="app-muted">
+          Nothing scanned yet today. Scan the code when you arrive.
+        </p>
+      }
+    } @else if (!loadingMe()) {
+      <p class="app-muted">
+        Your sign-in is not linked to a teacher or receptionist record, so attendance
+        cannot be recorded. Please ask the office to check it.
+      </p>
+    }
+  </section>
+  }
+</div>

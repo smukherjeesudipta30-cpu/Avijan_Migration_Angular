@@ -22,9 +22,11 @@ export const authGuard: CanActivateFn = (_route, state) => {
 };
 
 /**
- * Guards /change-password itself. Signing in is required, but a user who does not
- * owe a reset should not be stranded on a screen meant for one - they are sent to
- * their own landing page instead.
+ * Guards /change-password itself. Signing in is required — beyond that, the
+ * screen is open to anyone, forced reset or not. It started as forced-reset-only
+ * because that was the only way in; it stays open now because every role (Admin
+ * included) is entitled to change their own password whenever they want, not
+ * only when the system makes them.
  */
 export const passwordResetGuard: CanActivateFn = (_route, state) => {
   const auth = inject(AuthService);
@@ -34,9 +36,7 @@ export const passwordResetGuard: CanActivateFn = (_route, state) => {
     return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
   }
 
-  return auth.mustChangePassword()
-    ? true
-    : router.parseUrl(auth.user()?.landingRoute ?? '/');
+  return true;
 };
 
 /**

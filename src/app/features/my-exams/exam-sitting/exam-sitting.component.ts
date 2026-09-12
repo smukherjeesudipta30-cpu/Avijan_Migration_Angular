@@ -90,6 +90,13 @@ export class ExamSittingComponent implements OnDestroy {
   private timer: ReturnType<typeof setInterval> | null = null;
   private autoSubmitted = false;
 
+  /* Answers are saved to the server a moment after each change. The server marks
+     that copy if the paper comes in after time is up, so this is what stands
+     between a dropped connection and a lost paper. Debounced because a student
+     changing their mind three times in a second should be one save, not three. */
+  private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private static readonly SaveDelayMs = 1500;
+
   /** Guards the tab close while a paper is open. */
   private readonly beforeUnload = (event: BeforeUnloadEvent) => {
     if (this.sitting() && !this.result()) event.preventDefault();
@@ -107,6 +114,9 @@ export class ExamSittingComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.stopTimer();
+
+    if (this.saveTimer !== null) clearTimeout(this.saveTimer);
+
     window.removeEventListener('beforeunload', this.beforeUnload);
   }
 
@@ -178,6 +188,7 @@ export class ExamSittingComponent implements OnDestroy {
   /* ------------------------------------------------------------ answers */
   choose(questionId: number, option: string): void {
     this.answers.update(current => ({ ...current, [questionId]: option }));
+    this.queueSave();
   }
 
   clearAnswer(questionId: number): void {
@@ -186,6 +197,28 @@ export class ExamSittingComponent implements OnDestroy {
       delete next[questionId];
       return next;
     });
+
+    this.queueSave();
+  }
+
+  /**
+   * Saves shortly after the student stops changing their mind. A failed save is
+   * deliberately silent: it is a safety net, not the submission, and a toast every
+   * time the college wifi hiccups would only alarm someone sitting an exam.
+   */
+  private queueSave(): void {
+    const sitting = this.sitting();
+    if (!sitting || this.result()) return;
+
+    if (this.saveTimer !== null) clearTimeout(this.saveTimer);
+
+    this.saveTimer = setTimeout(() => {
+      this.saveTimer = null;
+
+      this.exams.saveProgress(sitting.attemptId, this.answers()).subscribe({
+        error: () => { /* the next change tries again */ }
+      });
+    }, ExamSittingComponent.SaveDelayMs);
   }
 
   isChosen(questionId: number, option: string): boolean {

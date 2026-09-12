@@ -211,36 +211,50 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 0.85rem;
-}
-
-.dash__enquiry {
-  border: 1px solid var(--app-border);
-  border-left: 3px solid var(--app-accent);
-  border-radius: var(--app-radius);
-  padding: 0.9rem 1rem 1rem;
-  background: var(--app-page-bg);
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
+/* One enquiry per row rather than a wall of cards: they are read top to bottom
+   and worked through in order, and a three-across grid made a short list look
+   like a long one. Name, contact and message sit on one line, with the action at
+   the end where the eye finishes. */
+.dash__enquiry {
+  border: 1px solid var(--app-border);
+  border-left: 3px solid var(--app-accent);
+  border-radius: var(--app-radius);
+  padding: 0.7rem 0.9rem;
+  background: var(--app-page-bg);
+  display: grid;
+  grid-template-columns: minmax(9rem, 12rem) minmax(10rem, 16rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.4rem 1rem;
+}
+
 .dash__enquiry-head {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
 
-  strong { font-size: 0.95rem; }
-  small  { font-size: 0.72rem; white-space: nowrap; }
+  strong { font-size: 0.9rem; }
+  small  { font-size: 0.72rem; }
+}
+
+@media (max-width: 900px) {
+  /* Back to a stacked block when there is no room for four columns. */
+  .dash__enquiry {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
 }
 
 .dash__enquiry-contact {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem 1rem;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
 
   a {
     font-size: 0.8rem;
@@ -256,15 +270,19 @@
 
 .dash__enquiry-body {
   margin: 0;
-  font-size: 0.86rem;
-  line-height: 1.55;
+  font-size: 0.84rem;
+  line-height: 1.45;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .dash__enquiry p-button {
-  align-self: flex-start;
-  margin-top: auto;
+  justify-self: end;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .dash__enquiry p-button { justify-self: start; }
 }
 
 .dash__enquiry-more {
@@ -436,4 +454,30 @@
 .dash__empty {
   margin: 0;
   font-size: 0.85rem;
+}
+
+/* New / Read / All. The panel shows unread by default so it stays a list of work;
+   these are how a message is found again once it has been marked read. */
+.dash__enquiry-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.dash__enquiry-tab {
+  border: 1px solid var(--app-border);
+  background: transparent;
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--app-text-muted);
+  cursor: pointer;
+
+  &.is-on {
+    background: var(--app-brand);
+    border-color: var(--app-brand);
+    color: #fff;
+  }
 }

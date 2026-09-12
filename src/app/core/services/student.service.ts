@@ -5,6 +5,8 @@ import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
 import {
+  AdmissionDue,
+  AdmissionDueCollectRequest,
   AdmissionReceipt,
   BranchLookup,
   CourseLookup,
@@ -157,5 +159,25 @@ export class StudentService {
     const params = new HttpParams().set('registrationId', registrationId);
 
     return this.http.delete<ApiResponse<boolean>>(`${this.base}/photo`, { params });
+  }
+
+  /* ------------------------------- admission fee, part payment */
+
+  /** What a student still owes on their admission fee, with its receipts. */
+  admissionDue(studentId: number): Observable<AdmissionDue> {
+    return this.http
+      .get<ApiResponse<AdmissionDue>>(`${this.base}/${studentId}/admission-due`)
+      .pipe(map(r => r.data));
+  }
+
+  /** Takes an instalment against an outstanding admission fee. */
+  collectAdmissionDue(
+    studentId: number,
+    request: AdmissionDueCollectRequest
+  ): Observable<ApiResponse<AdmissionDue>> {
+    return this.http.post<ApiResponse<AdmissionDue>>(
+      `${this.base}/${studentId}/admission-due/collect`,
+      request
+    );
   }
 }

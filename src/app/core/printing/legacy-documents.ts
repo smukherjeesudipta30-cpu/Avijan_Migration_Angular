@@ -510,6 +510,13 @@ export function certificateHtml(c: StudentCertificate): string {
  * Two copies to a sheet with a cut line between them, as the legacy PDF made.
  * The access code is deliberately absent: it is read out at the desk, never
  * printed on something the student takes home.
+ *
+ * The legacy card also carried a "Signature of Examiner" column and a
+ * Student / Authority signature line at the foot, for the office to fill in
+ * and stamp by hand once printed. This card needs neither: it is generated
+ * straight from the schedule the office set (the Practical row updates itself
+ * the moment that date is entered, with nothing to reprint), so it says as
+ * much instead of leaving blanks nobody is meant to sign.
  */
 export function admitCardHtml(card: AdmitCard): string {
   const e = escapeHtml;
@@ -519,7 +526,6 @@ export function admitCardHtml(card: AdmitCard): string {
         <td>${label}</td>
         <td>${shortDate(scheduledOn) || '&nbsp;'}</td>
         <td>${shortTime(scheduledOn) || '&nbsp;'}</td>
-        <td>&nbsp;</td>
       </tr>`;
 
   const body = `
@@ -554,7 +560,6 @@ export function admitCardHtml(card: AdmitCard): string {
               <th>Examination</th>
               <th>Date</th>
               <th>Time</th>
-              <th>Signature of Examiner</th>
             </tr>
           </thead>
           <tbody>
@@ -563,11 +568,8 @@ export function admitCardHtml(card: AdmitCard): string {
           </tbody>
         </table>
 
-        <div class="signatures">
-          <p>
-            <span>Signature of Student</span>
-            <span>Signature &amp; Stamp of Avijan Authority</span>
-          </p>
+        <div class="system-generated">
+          &#10003; This is a system-generated admit card. No signature is required.
         </div>
       </div>
     </div>`;
@@ -652,8 +654,17 @@ export function admitCardHtml(card: AdmitCard): string {
   th { background: #003366; color: #fff; font-size: 14px; letter-spacing: 1px; }
   td { height: 22px; }
 
-  .signatures { margin-top: 72px; font-size: 16px; }
-  .signatures p { display: flex; justify-content: space-between; gap: 24px; margin: 0; }
+  .system-generated {
+    margin-top: 48px;
+    padding: 12px 16px;
+    border: 1px dashed #003366;
+    border-radius: 6px;
+    background: #f0f4f8;
+    color: #003366;
+    font-size: 14px;
+    font-style: italic;
+    text-align: center;
+  }
 
   .cut {
     width: 950px;

@@ -64,6 +64,134 @@ export interface DuesReport {
   generatedOn: string;
 }
 
+/* ------------------------------------------------------- pending payments */
+
+export interface PendingPaymentRow {
+  studentId: number;
+  registrationId?: string;
+  studentName?: string;
+  phone?: string;
+  branch?: string;
+  courseName?: string;
+
+  /** Every teacher assigned to the student, in any of their three slots. */
+  teachers: string[];
+
+  dateOfJoining?: string;
+
+  /** Absent for a student who has never paid a monthly fee. */
+  lastPaymentDate?: string;
+
+  monthlyFee: number;
+  monthsUnpaid: number;
+  carriedDue: number;
+  lateFine: number;
+
+  /** Carried balance + unpaid months + fine. */
+  outstandingDue: number;
+
+  /**
+   * Still owed on the admission fee. Shown beside the monthly arrears but
+   * deliberately not added into `outstandingDue` — the two are settled apart.
+   */
+  admissionDue?: number;
+}
+
+/** A student carrying an unpaid balance on their admission fee. */
+export interface AdmissionDueRow {
+  studentId: number;
+  registrationId?: string;
+  studentName?: string;
+  phone?: string;
+  branch?: string;
+  courseName?: string;
+  dateOfJoining?: string;
+  admissionFees: number;
+  admissionFeesPaid: number;
+  admissionDue: number;
+  /** When the last money against this admission fee came in. */
+  lastPaidOn?: string;
+}
+
+export interface PendingBranchTotal {
+  branch: string;
+  neverPaidCount: number;
+  regularCount: number;
+  totalOutstanding: number;
+  /** Unpaid admission fees for the branch, kept apart from the monthly arrears. */
+  totalAdmissionDue?: number;
+}
+
+export interface PendingPaymentsReport {
+  from: string;
+  to: string;
+  branch?: string;
+  courseId: number;
+  courseName?: string;
+
+  /** No monthly payment since admission — the admission fee does not count. */
+  neverPaid: PendingPaymentRow[];
+
+  /** Paid before, and has since fallen behind. */
+  regular: PendingPaymentRow[];
+
+  branchTotals: PendingBranchTotal[];
+  totalOutstanding: number;
+  generatedOn: string;
+
+  /**
+   * Students still owing part of their admission fee. Not bounded by the report's
+   * date range: an admission balance is outstanding today or it is not, and a
+   * student up to date on monthly fees can still owe it.
+   */
+  admissionDues?: AdmissionDueRow[];
+
+  totalAdmissionDue?: number;
+}
+
+/* ------------------------------------------------------ fee collections */
+
+export interface FeeCollectionRow {
+  paidOn?: string;
+  kind: string;
+  registrationId?: string;
+  studentName?: string;
+  branch?: string;
+  amount: number;
+  paymentMode?: 'Cash' | 'Bank';
+  collectedBy?: string;
+  billNo?: string;
+}
+
+export interface FeeCollectionTotal {
+  branch: string;
+  collectedBy: string;
+  paymentMode: string;
+  paymentCount: number;
+  amount: number;
+}
+
+export interface FeeCollectionsReport {
+  from: string;
+  to: string;
+  branch?: string;
+  paymentMode?: string;
+
+  rows: FeeCollectionRow[];
+  totals: FeeCollectionTotal[];
+
+  cashTotal: number;
+  bankTotal: number;
+  grandTotal: number;
+  generatedOn: string;
+
+  /** The same money split by what it was for. Always for the whole range, whatever the kind filter. */
+  monthlyTotal?: number;
+  admissionTotal?: number;
+  monthlyCount?: number;
+  admissionCount?: number;
+}
+
 /* --------------------------------------------------------------- expenses */
 
 export interface ExpenseRow {
@@ -107,13 +235,38 @@ export interface TeacherEarningsReport {
   teacherPhone?: string;
   from: string;
   to: string;
+  /** Before any deduction. */
   totalEarned: number;
+  /** Taken off for missed scan-outs — see `deductions` for which months and why. */
+  totalDeduction: number;
+  /** Earned minus the deduction. This, not totalEarned, is what is actually owed. */
+  netEarned: number;
   totalPaid: number;
-  /** Earned minus paid; negative means the teacher has been overpaid. */
+  /** Net earned minus paid; negative means the teacher has been overpaid. */
   pending: number;
   earnings: TeacherEarningRow[];
   payments: TeacherPaymentRow[];
+  deductions: TeacherDeduction[];
   generatedOn: string;
+}
+
+/** The admin's own switch for the missed-scan-out deduction. */
+export interface PayrollSettings {
+  missedScanOutDeductionEnabled: boolean;
+  modifiedBy?: string;
+  modifiedOn?: string;
+}
+
+/** One calendar month's missed-scan-out penalty, with the reason spelled out. */
+export interface TeacherDeduction {
+  year: number;
+  month: number;
+  monthLabel: string;
+  missedScanOutDays: number;
+  deductionPercent: number;
+  monthEarnings: number;
+  deductionAmount: number;
+  reason: string;
 }
 
 /* ----------------------------------------------------- students by teacher */

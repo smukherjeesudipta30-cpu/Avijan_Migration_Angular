@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { MenuModule } from 'primeng/menu';
 import { MenuItem } from 'primeng/api';
@@ -8,6 +8,7 @@ import { ProgressBarModule } from 'primeng/progressbar';
 import { TooltipModule } from 'primeng/tooltip';
 
 import { AuthService } from '../../core/services/auth.service';
+import { FeaturesService } from '../../core/services/features.service';
 import { LoadingService } from '../../core/services/loading.service';
 import { MENU, MenuSection } from './menu';
 
@@ -28,7 +29,9 @@ import { MENU, MenuSection } from './menu';
 })
 export class ShellComponent {
   private readonly auth = inject(AuthService);
+  private readonly features = inject(FeaturesService);
   private readonly loading = inject(LoadingService);
+  private readonly router = inject(Router);
 
   readonly user = this.auth.user;
   readonly isLoading = this.loading.isLoading;
@@ -61,7 +64,11 @@ export class ShellComponent {
     return MENU
       .map(section => ({
         ...section,
-        items: section.items.filter(item => item.roles.some(role => held.includes(role)))
+        items: section.items.filter(item =>
+          item.roles.some(role => held.includes(role))
+          // An entry tied to an optional feature stays hidden until it is switched
+          // on server-side, so a half-finished feature never appears in the menu.
+          && (!item.feature || this.features[item.feature]()))
       }))
       .filter(section => section.items.length > 0);
   });
@@ -81,6 +88,12 @@ export class ShellComponent {
 
   readonly accountMenu: MenuItem[] = [
     { label: 'Signed in', disabled: true },
+    { separator: true },
+    {
+      label: 'Change Password',
+      icon: 'pi pi-key',
+      command: () => void this.router.navigateByUrl('/change-password')
+    },
     { separator: true },
     { label: 'Sign out', icon: 'pi pi-sign-out', command: () => this.auth.logout() }
   ];

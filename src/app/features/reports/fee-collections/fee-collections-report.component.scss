@@ -1,0 +1,39 @@
+.fcr__totals {
+  margin-bottom: 1rem;
+  padding: 1rem 1.15rem;
+
+  h2 {
+    margin: 0;
+    font-size: 1rem;
+  }
+}
+
+.fcr__totals-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  margin-top: 0.6rem;
+
+  th,
+  td {
+    padding: 0.45rem 0.6rem;
+    border-bottom: 1px solid var(--surface-border, #e0e3ec);
+    text-align: left;
+  }
+
+  th {
+    font-weight: 600;
+    color: var(--text-color-secondary, #5b6b84);
+  }
+}
+
+/* Marks From and To as required, matching the asterisk convention on the masters. */
+.rpt__req {
+  color: var(--app-negative, #a11919);
+}
+
+/* The admission tile carries the accent the admission rows carry in the list, so
+   the two read as the same thing at a glance. */
+.fcr__tile--admission strong {
+  color: var(--app-warn, #b45309);
+}

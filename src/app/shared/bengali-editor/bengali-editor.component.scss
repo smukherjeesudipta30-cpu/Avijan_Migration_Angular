@@ -1,0 +1,154 @@
+.bn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+
+  textarea {
+    width: 100%;
+    font: inherit;
+    /* A size up: Bengali carries its vowel signs above and below the line, and at the
+       size the English boxes use they collide and cannot be proof-read. */
+    font-size: 1.02rem;
+    line-height: 1.75;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid var(--surface-border, #d8dee9);
+    border-radius: 6px;
+    resize: vertical;
+  }
+}
+
+.bn__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+}
+
+.bn__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--surface-border, #d8dee9);
+  background: transparent;
+  border-radius: 999px;
+  padding: 0.15rem 0.65rem;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  &--on {
+    border-color: #1d6f42;
+    background: #eaf6ee;
+    color: #14512f;
+  }
+}
+
+.bn__state {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.75;
+}
+
+.bn__how {
+  flex: 1 1 16rem;
+  color: var(--text-color-secondary, #6b7280);
+
+  code {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 3px;
+    padding: 0 0.2rem;
+  }
+}
+
+.bn__link {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: #1f6feb;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.bn__preview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-color-secondary, #6b7280);
+}
+
+.bn__preview-label {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.68rem;
+}
+
+.bn__preview-text {
+  font-size: 1.05rem;
+  color: var(--text-color, #111827);
+}
+
+.bn__preview-hint { font-size: 0.72rem; opacity: 0.8; }
+
+.bn__palette {
+  border: 1px solid var(--surface-border, #d8dee9);
+  border-radius: 6px;
+  padding: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  background: var(--surface-ground, #f8fafc);
+
+  h4 {
+    margin: 0 0 0.3rem;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-color-secondary, #6b7280);
+  }
+}
+
+.bn__keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.bn__key {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 2.4rem;
+  border: 1px solid var(--surface-border, #d8dee9);
+  background: #fff;
+  border-radius: 5px;
+  padding: 0.2rem 0.3rem;
+  font: inherit;
+  cursor: pointer;
+
+  &:hover { border-color: #1f6feb; }
+}
+
+.bn__glyph { font-size: 1.05rem; line-height: 1.3; }
+
+.bn__roman {
+  font-size: 0.62rem;
+  color: var(--text-color-secondary, #6b7280);
+}
+
+.bn__note {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-color-secondary, #6b7280);
+
+  code {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 3px;
+    padding: 0 0.2rem;
+  }
+}

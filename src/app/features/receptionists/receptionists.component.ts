@@ -11,6 +11,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
+import { RouterLink } from '@angular/router';
 import { TooltipModule } from 'primeng/tooltip';
 import { Observable } from 'rxjs';
 
@@ -49,6 +50,7 @@ import { ReceptionistService } from '../../core/services/receptionist.service';
     SelectModule,
     TableModule,
     TagModule,
+    RouterLink,
     TooltipModule
   ],
   providers: [ConfirmationService],
@@ -88,11 +90,21 @@ export class ReceptionistsComponent {
     name: ['', [Validators.required, Validators.maxLength(100)]],
     loginId: ['', [Validators.email]],
     phone: ['', [Validators.pattern(/^[0-9]{10}$/)]],
+    personalEmail: ['', [Validators.email, Validators.maxLength(150)]],
+    designation: ['', [Validators.maxLength(150)]],
     // Required: a receptionist with no branch would never appear in the report
     // the master exists to feed.
     branch: [null as string | null, [Validators.required]],
     isActive: [true]
   });
+
+  /* Qualification, computer training and IsTechnical are set from Staff Hierarchy
+     (org-manage.component), not from this form, but are still columns on the same
+     Receptionist row -- carried through unedited on save rather than dropped, so
+     editing a receptionist's branch here does not wipe them out. */
+  private currentQualification: string | null = null;
+  private currentComputerTraining: string | null = null;
+  private currentIsTechnical = false;
 
   constructor() {
     this.load();
@@ -159,6 +171,11 @@ export class ReceptionistsComponent {
       name: v.name.trim(),
       loginId: v.loginId?.trim() || null,
       phone: v.phone?.trim() || null,
+      personalEmail: v.personalEmail?.trim() || null,
+      designation: v.designation?.trim() || null,
+      qualification: this.currentQualification,
+      computerTraining: this.currentComputerTraining,
+      isTechnical: this.currentIsTechnical,
       branch: v.branch,
       isActive: v.isActive
     };
@@ -192,15 +209,27 @@ export class ReceptionistsComponent {
       name: person.name,
       loginId: person.loginId ?? '',
       phone: person.phone ?? '',
+      personalEmail: person.personalEmail ?? '',
+      designation: person.designation ?? '',
       branch: person.branch ?? null,
       isActive: person.isActive
     });
+
+    this.currentQualification = person.qualification ?? null;
+    this.currentComputerTraining = person.computerTraining ?? null;
+    this.currentIsTechnical = person.isTechnical ?? false;
 
     document.getElementById('rec-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   resetForm(): void {
-    this.form.reset({ name: '', loginId: '', phone: '', branch: null, isActive: true });
+    this.form.reset({
+      name: '', loginId: '', phone: '', personalEmail: '', branch: null, isActive: true,
+      designation: ''
+    });
+    this.currentQualification = null;
+    this.currentComputerTraining = null;
+    this.currentIsTechnical = false;
     this.editingId.set(null);
   }
 

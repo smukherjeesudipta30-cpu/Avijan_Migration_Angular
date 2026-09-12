@@ -131,6 +131,20 @@
   color: var(--app-negative);
 }
 
+.stu__mode {
+  display: flex;
+  gap: 1rem;
+  padding: 0.4rem 0;
+}
+
+.stu__mode-option {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
 .stu__error {
   display: block;
   margin-top: 0.28rem;
@@ -400,4 +414,10 @@
     grid-template-columns: 1fr;
     align-items: stretch;
   }
+}
+
+/* The "will be left owing" hint under "Paying now" — a warning, not a note. */
+.stu__hint--due {
+  color: var(--app-negative);
+  font-weight: 600;
 }

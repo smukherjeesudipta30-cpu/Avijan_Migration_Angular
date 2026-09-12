@@ -61,6 +61,29 @@
           <small class="rec__error">Enter a valid 10-digit phone number.</small>
         }
       </div>
+
+      <!-- Where the attendance confirmation code is sent. Without it the
+           receptionist cannot mark attendance. -->
+      <div class="rec__field">
+        <label for="personalEmail">Personal email</label>
+        <input pInputText id="personalEmail" formControlName="personalEmail" type="email"
+               placeholder="for attendance codes" />
+        @if (form.controls.personalEmail.touched && form.controls.personalEmail.invalid) {
+          <small class="rec__error">Enter a valid email address.</small>
+        }
+      </div>
+
+      <!-- Position is what puts a receptionist on the staff hierarchy chart. -->
+      <div class="rec__field">
+        <label for="designation">Position</label>
+        <input pInputText id="designation" formControlName="designation"
+               placeholder="Receptionist, Front Desk…" />
+      </div>
+
+      <p class="app-muted rec__field--wide">
+        Qualification, computer training and technical-staff status are set from
+        <a routerLink="/team/manage">Staff Hierarchy</a> once this receptionist appears there.
+      </p>
     </div>
 
     <footer class="rec__form-actions">

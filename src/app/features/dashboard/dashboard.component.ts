@@ -9,12 +9,19 @@ import { TagModule } from 'primeng/tag';
 
 import { MessageService } from 'primeng/api';
 
-import { DashboardSummary, Enquiry } from '../../core/models/dashboard.model';
+import {
+  DashboardSummary,
+  Enquiry,
+  EnquiryFilter,
+  EnquiryList
+} from '../../core/models/dashboard.model';
 import { OnlinePaymentNotice } from '../../core/models/fee.model';
 import { formatMoney } from '../../core/format/money';
 import { AuthService } from '../../core/services/auth.service';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { FeeService } from '../../core/services/fee.service';
+import { FeaturesService } from '../../core/services/features.service';
+import { OrgChartComponent } from '../org/org-chart.component';
 
 interface StatCard {
   label: string;
@@ -31,11 +38,14 @@ interface StatCard {
  */
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule, CardModule, ChartModule, TableModule, TagModule, ButtonModule, SkeletonModule],
+  imports: [CommonModule, CardModule, ChartModule, TableModule, TagModule, ButtonModule, SkeletonModule, OrgChartComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
 })
 export class DashboardComponent {
+  /** The team chart, shown only once the hierarchy has been switched on server-side. */
+  protected readonly features = inject(FeaturesService);
+
   private readonly dashboard = inject(DashboardService);
   private readonly auth = inject(AuthService);
   private readonly fees = inject(FeeService);
@@ -276,10 +286,60 @@ export class DashboardComponent {
    * count locally rather than by reloading the whole dashboard, so clearing a
    * backlog of fifteen does not fire fifteen full summary requests.
    */
+  /* ------------------------------------------------------ enquiry archive */
+
+  /**
+   * Which enquiries the panel is showing.
+   *
+   * <p>"New" is the working list. The other two exist because marking a message read
+   * used to put it permanently out of reach — the flag was stored but nothing ever
+   * read it back, so there was no way to look up somebody who had got in touch
+   * months ago.</p>
+   */
+  readonly enquiryFilter = signal<EnquiryFilter>('New');
+
+  /** Filled only once the reader asks for Read or All; New comes with the summary. */
+  readonly archivedEnquiries = signal<EnquiryList | null>(null);
+  readonly archiveLoading = signal(false);
+
+  /** What the list shows now: the dashboard's own New list, or a fetched page. */
+  readonly shownEnquiries = computed<Enquiry[]>(() => {
+    if (this.enquiryFilter() === 'New') {
+      return this.summary()?.pendingEnquiryList ?? [];
+    }
+
+    return this.archivedEnquiries()?.items ?? [];
+  });
+
+  showEnquiries(filter: EnquiryFilter): void {
+    this.enquiryFilter.set(filter);
+
+    if (filter === 'New') return;
+
+    this.archiveLoading.set(true);
+
+    this.dashboard.enquiries(filter, 1, 100).subscribe({
+      next: list => {
+        this.archivedEnquiries.set(list);
+        this.archiveLoading.set(false);
+      },
+      error: () => this.archiveLoading.set(false)
+    });
+  }
+
   markHandled(enquiry: Enquiry): void {
+    this.setHandled(enquiry, true);
+  }
+
+  /** Puts a message back on the new list — the undo for a mistaken "Mark read". */
+  markUnread(enquiry: Enquiry): void {
+    this.setHandled(enquiry, false);
+  }
+
+  private setHandled(enquiry: Enquiry, handled: boolean): void {
     this.clearing.update(set => new Set(set).add(enquiry.id));
 
-    this.dashboard.markEnquiryHandled(enquiry.id).subscribe({
+    this.dashboard.markEnquiryHandled(enquiry.id, handled).subscribe({
       next: () => {
         this.summary.update(current => {
           if (!current) return current;
@@ -288,12 +348,18 @@ export class DashboardComponent {
             ...current,
             counts: {
               ...current.counts,
-              pendingEnquiries: Math.max(0, current.counts.pendingEnquiries - 1)
+              pendingEnquiries: Math.max(
+                0, current.counts.pendingEnquiries + (handled ? -1 : 1))
             },
-            pendingEnquiryList: (current.pendingEnquiryList ?? [])
-              .filter(e => e.id !== enquiry.id)
+            pendingEnquiryList: handled
+              ? (current.pendingEnquiryList ?? []).filter(e => e.id !== enquiry.id)
+              : [{ ...enquiry, isHandled: false }, ...(current.pendingEnquiryList ?? [])]
           };
         });
+
+        // A row on the Read or All list has just changed state, so re-ask rather
+        // than patching it in two places.
+        if (this.enquiryFilter() !== 'New') this.showEnquiries(this.enquiryFilter());
 
         this.stopClearing(enquiry.id);
       },

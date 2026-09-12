@@ -166,6 +166,34 @@
     </div>
   </header>
 
+  <!-- Role-wise grid: how many accounts hold each role, and a tile to filter by
+       it. "All roles" shows everyone, same as before this existed. -->
+  <div class="usr__role-grid" role="tablist" aria-label="Filter by role">
+    <button
+      type="button"
+      role="tab"
+      class="usr__role-tile"
+      [class.usr__role-tile--active]="roleFilter() === null"
+      [attr.aria-selected]="roleFilter() === null"
+      (click)="chooseRole(null)">
+      <span class="usr__role-tile-count">{{ totalUsers() }}</span>
+      <span class="usr__role-tile-label">All roles</span>
+    </button>
+
+    @for (rc of roleCounts(); track rc.role) {
+      <button
+        type="button"
+        role="tab"
+        class="usr__role-tile"
+        [class.usr__role-tile--active]="roleFilter() === rc.role"
+        [attr.aria-selected]="roleFilter() === rc.role"
+        (click)="chooseRole(rc.role)">
+        <span class="usr__role-tile-count">{{ rc.count }}</span>
+        <span class="usr__role-tile-label">{{ rc.role }}</span>
+      </button>
+    }
+  </div>
+
   <p-table
     [value]="rows()"
     [lazy]="true"

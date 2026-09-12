@@ -50,3 +50,9 @@ export interface UserQuery {
   role?: string | null;
   search?: string | null;
 }
+
+/** How many accounts hold one role, for the role-wise grid above the table. */
+export interface RoleCount {
+  role: string;
+  count: number;
+}

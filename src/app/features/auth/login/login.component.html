@@ -61,6 +61,8 @@
           @if (password.touched && password.hasError('required')) {
             <small class="login__hint login__hint--error">Password is required.</small>
           }
+
+          <a routerLink="/forgot-password" class="login__forgot">Forgot password?</a>
         </div>
 
         <p-button

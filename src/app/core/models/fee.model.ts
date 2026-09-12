@@ -21,6 +21,15 @@ export interface StudentFeeBill {
 
   /** The student's mobile number, for sending the receipt on WhatsApp. */
   phone?: string;
+
+  /** Where the receipt will be emailed. Blank means it cannot be sent. */
+  personalEmail?: string;
+
+  /**
+   * Still owed on the admission fee — separate from `outstandingDue`, which is
+   * monthly fees only. Lets the counter settle it in the same visit.
+   */
+  admissionDue?: number;
 }
 
 export interface FeePayment {
@@ -37,6 +46,7 @@ export interface FeePayment {
   oldDue?: number;
   newDue?: number;
   lateFine?: number;
+  paymentMode?: 'Cash' | 'Bank';
 }
 
 export interface FeeCalculationRequest {
@@ -54,6 +64,10 @@ export interface FeeCalculation {
   oldDue: number;
   newDue: number;
   referenceDate?: string;
+
+  /** Days since the student's previous payment. Shown at the counter; not what the fine uses. */
+  daysSinceLastPayment?: number;
+  lastPaymentDate?: string;
   /** Plain-English breakdown of how the fine was reached. */
   explanation: string;
 }
@@ -69,6 +83,8 @@ export interface FeeSaveRequest {
   amountPaid: number;
   oldDue: number;
   newDue: number;
+  /** 'Cash' or 'Bank' — how the money was actually received at the counter. */
+  paymentMode: 'Cash' | 'Bank';
 }
 
 export interface FeeRecorded {

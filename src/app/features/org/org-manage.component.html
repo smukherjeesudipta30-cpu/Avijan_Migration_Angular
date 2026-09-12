@@ -1,0 +1,183 @@
+<div class="org-manage">
+  <header class="org-manage__head">
+    <h1>Staff hierarchy</h1>
+    <p>
+      Teachers and receptionists join the chart on their own, once their Position has
+      been typed in on their own profile screen
+      @if (defaultParentName()) {
+        — they appear under <strong>{{ defaultParentName() }}</strong>
+      }.
+      Nobody who hasn't been given a Position shows up yet, so the chart stays clean
+      while old records are still being filled in
+      @if (automaticCount()) {
+        — {{ automaticCount() }} people are on the chart that way today.
+      }
+      To give one of them a photograph, more than one branch, or a different position
+      on the chart itself, add a box for them here instead.
+    </p>
+  </header>
+
+  @if (message()) { <p class="org-manage__ok">{{ message() }}</p> }
+  @if (error()) { <p class="org-manage__bad">{{ error() }}</p> }
+
+  <div class="org-manage__grid">
+    <section class="card">
+      <h2>{{ editingId() === null ? 'Add a box' : 'Edit box' }}</h2>
+
+      <label>
+        <span>Name</span>
+        <input type="text" [(ngModel)]="form.personName" name="personName" maxlength="150" />
+      </label>
+
+      <label>
+        <span>Link to staff record</span>
+        <select [(ngModel)]="linkChoiceKey" name="linkChoice">
+          <option value="">— Not linked (a function or role, not a person) —</option>
+          @for (choice of linkChoices(); track choice.staffType + ':' + choice.staffId) {
+            <option [value]="choice.staffType + ':' + choice.staffId">
+              {{ choice.personName }} ({{ choice.staffType }})
+            </option>
+          }
+        </select>
+        <small>
+          If this box is the same person as a teacher or receptionist, link them here —
+          otherwise they show on the chart twice, once as this box and once on their
+          own. Linking keeps the photo and details already on this box.
+        </small>
+      </label>
+
+      <label>
+        <span>Position</span>
+        <input type="text" [(ngModel)]="form.designation" name="designation"
+               maxlength="150" placeholder="Owner, Head Receptionist &amp; HR…" />
+      </label>
+
+      <label>
+        <span>Qualification @if (!form.isTechnical) { <em class="req">*</em> }</span>
+        <input type="text" [(ngModel)]="form.qualification" name="qualification" maxlength="200" />
+      </label>
+
+      <label>
+        <span>Computer training @if (!form.isTechnical) { <em class="req">*</em> }</span>
+        <input type="text" [(ngModel)]="form.computerTraining" name="computerTraining" maxlength="200" />
+      </label>
+
+      <label class="tick">
+        <input type="checkbox" [(ngModel)]="form.isTechnical" name="isTechnical" />
+        <span>Technical staff — no qualification or computer training needed</span>
+      </label>
+
+      <label>
+        <span>Email</span>
+        <input type="email" [(ngModel)]="form.email" name="email" maxlength="150" />
+        <small>Kept for the office. It is never shown to students.</small>
+      </label>
+
+      <fieldset>
+        <legend>Branch</legend>
+        <small>Tick as many as apply. Leave all unticked for someone who belongs to the whole centre.</small>
+
+        @for (b of allBranches(); track b.id) {
+          <label class="tick">
+            <input type="checkbox"
+                   [checked]="isBranch(b.name)"
+                   (change)="toggleBranch(b.name, $any($event.target).checked)" />
+            <span>{{ b.name }}</span>
+          </label>
+        }
+      </fieldset>
+
+      <label>
+        <span>Order</span>
+        <input type="number" [(ngModel)]="form.sortOrder" name="sortOrder" />
+        <small>Left to right among the boxes on the same row.</small>
+      </label>
+
+      <label class="tick">
+        <input type="checkbox" [(ngModel)]="form.isActive" name="isActive" />
+        <span>Active</span>
+      </label>
+
+      <label class="tick">
+        <input type="checkbox" [(ngModel)]="form.isDefaultStaffParent" name="isDefaultStaffParent" />
+        <span>Teachers and receptionists hang under this box</span>
+      </label>
+
+      @if (parentChoices().length) {
+        <fieldset>
+          <legend>Reports to — this sets their level</legend>
+          <small>
+            Tick who they sit under. <strong>Untick everything</strong> to move them to
+            the very top. Tick more than one when a person answers to two people.
+          </small>
+
+          @for (choice of parentChoices(); track choice.id) {
+            <label class="tick">
+              <input type="checkbox"
+                     [checked]="isParent(choice.id)"
+                     (change)="toggleParent(choice.id, $any($event.target).checked)" />
+              <span>{{ choice.personName }}</span>
+            </label>
+          }
+        </fieldset>
+      }
+
+      <div class="org-manage__actions">
+        <button type="button" (click)="save()" [disabled]="saving()">
+          {{ editingId() === null ? 'Add' : 'Save' }}
+        </button>
+
+        @if (editingId() !== null) {
+          <button type="button" class="ghost" (click)="startAdd()">Cancel</button>
+        }
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Boxes on the chart</h2>
+
+      @if (!manual().length) {
+        <p class="muted">Nothing has been added yet.</p>
+      }
+
+      <ul class="org-manage__list">
+        @for (node of manual(); track node.id) {
+          <li>
+            <div>
+              <strong>{{ node.personName }}</strong>
+              @if (node.designation) { <span class="muted"> — {{ node.designation }}</span> }
+              @if (!node.isActive) { <span class="muted"> (inactive)</span> }
+
+              <div class="muted org-manage__row-sub">
+                @if (parentNames(node)) {
+                  Under {{ parentNames(node) }}
+                } @else {
+                  Top of the chart
+                }
+                @if (node.isDefaultStaffParent) {
+                  · teachers and receptionists hang here
+                }
+              </div>
+            </div>
+
+            <div class="org-manage__row-actions">
+              <button type="button" (click)="startEdit(node)">Edit</button>
+
+              <label class="upload">
+                {{ node.hasPhoto ? 'Change photo' : 'Add photo' }}
+                <input type="file" accept="image/*" (change)="uploadPhoto(node, $event)" />
+              </label>
+
+              <button type="button" class="danger" (click)="remove(node)">Remove</button>
+            </div>
+          </li>
+        }
+      </ul>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>How it will look</h2>
+    <app-org-chart heading="" />
+  </section>
+</div>

@@ -11,7 +11,7 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
-import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { RouterLink } from '@angular/router';
 import { TooltipModule } from 'primeng/tooltip';
 import { Observable, debounceTime, distinctUntilChanged } from 'rxjs';
 
@@ -47,7 +47,7 @@ import { MasterService } from '../../core/services/master.service';
     InputTextModule,
     TableModule,
     TagModule,
-    ToggleSwitchModule,
+    RouterLink,
     TooltipModule
   ],
   providers: [ConfirmationService],
@@ -94,9 +94,25 @@ export class TeachersComponent {
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(50)]],
-    loginId: ['', [Validators.required, Validators.maxLength(20), Validators.pattern(/^[A-Za-z0-9._-]+$/)]],
-    phone: ['', [Validators.pattern(/^[0-9]{10}$/)]]
+    // Matches the server's own rule (TeacherSaveRequestValidator): most live logins
+    // are the teacher's email address, so '@' has to be allowed, and the limit is
+    // 50 to match the database column — a stale 20-character cap here used to
+    // reject real logins such as "priyankahaldertea@avijan.in" (27 characters) on
+    // every save, including one where only the personal email was being added.
+    loginId: ['', [Validators.required, Validators.maxLength(50), Validators.pattern(/^[A-Za-z0-9@._-]+$/)]],
+    phone: ['', [Validators.pattern(/^[0-9]{10}$/)]],
+    personalEmail: ['', [Validators.email, Validators.maxLength(150)]],
+    designation: ['', [Validators.maxLength(150)]]
   });
+
+  /* Qualification, computer training and IsTechnical are set from Staff Hierarchy
+     (org-manage.component), not from this form. They are still columns on the same
+     Teacher row, so editing a teacher's phone number here must not wipe out values
+     Staff Hierarchy already put there -- carried through unedited rather than dropped
+     from the save request. */
+  private currentQualification: string | null = null;
+  private currentComputerTraining: string | null = null;
+  private currentIsTechnical = false;
 
   constructor() {
     this.load();
@@ -144,6 +160,17 @@ export class TeachersComponent {
   runSearch(): void {
     this.page.set(1);
     this.load();
+
+    // The search sits above the form, so the results are below the fold on a
+    // laptop. Bringing the list into view is the difference between "it searched"
+    // and "nothing happened".
+    document.getElementById('teacher-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  clearSearch(): void {
+    this.search.set('');
+    this.page.set(1);
+    this.load();
   }
 
   togglePlaceholders(value: boolean): void {
@@ -181,7 +208,12 @@ export class TeachersComponent {
     const payload: TeacherSaveRequest = {
       name: v.name.trim(),
       loginId: v.loginId.trim(),
-      phone: v.phone?.trim() || null
+      phone: v.phone?.trim() || null,
+      personalEmail: v.personalEmail?.trim() || null,
+      designation: v.designation?.trim() || null,
+      qualification: this.currentQualification,
+      computerTraining: this.currentComputerTraining,
+      isTechnical: this.currentIsTechnical
     };
 
     const id = this.editingId();
@@ -227,14 +259,25 @@ export class TeachersComponent {
     this.form.patchValue({
       name: teacher.isPlaceholder ? '' : teacher.name ?? '',
       loginId: teacher.isPlaceholder ? '' : teacher.loginId ?? '',
-      phone: teacher.phone ?? ''
+      phone: teacher.phone ?? '',
+      personalEmail: teacher.personalEmail ?? '',
+      designation: teacher.designation ?? ''
     });
+
+    this.currentQualification = teacher.qualification ?? null;
+    this.currentComputerTraining = teacher.computerTraining ?? null;
+    this.currentIsTechnical = teacher.isTechnical ?? false;
 
     document.getElementById('teacher-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   resetForm(): void {
-    this.form.reset({ name: '', loginId: '', phone: '' });
+    this.form.reset({
+      name: '', loginId: '', phone: '', personalEmail: '', designation: ''
+    });
+    this.currentQualification = null;
+    this.currentComputerTraining = null;
+    this.currentIsTechnical = false;
     this.editingId.set(null);
     this.editingIsPlaceholder.set(false);
     this.loginTaken.set(false);

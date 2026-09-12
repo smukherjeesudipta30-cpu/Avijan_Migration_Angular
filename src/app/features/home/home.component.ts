@@ -9,10 +9,13 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TableModule } from 'primeng/table';
 import { TextareaModule } from 'primeng/textarea';
 
-import { AboutPage, ContactRequest } from '../../core/models/about.model';
+import { AboutCourse, AboutPage, ContactRequest } from '../../core/models/about.model';
 import { ApiResponse } from '../../core/models/api-response.model';
 import { AboutService } from '../../core/services/about.service';
 import { AuthService } from '../../core/services/auth.service';
+import { CompetitionPublic } from '../../core/models/competition.model';
+import { CompetitionService } from '../../core/services/competition.service';
+import { FeaturesService } from '../../core/services/features.service';
 
 /** One picture in the Portfolio strip, with the caption the legacy page used. */
 interface PortfolioItem {
@@ -45,6 +48,13 @@ interface PortfolioItem {
 export class HomeComponent implements OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly about = inject(AboutService);
+  private readonly competitions = inject(CompetitionService);
+
+  /** The competition banner is shown only once the portal is switched on. */
+  protected readonly features = inject(FeaturesService);
+
+  /** The current competition, for the banner. Null when none is set up. */
+  readonly competition = signal<CompetitionPublic | null>(null);
   private readonly auth = inject(AuthService);
   private readonly messages = inject(MessageService);
 
@@ -94,6 +104,124 @@ export class HomeComponent implements OnDestroy {
   readonly portfolioLoop = computed(() =>
     this.reducedMotion() ? [...this.portfolio] : [...this.portfolio, ...this.portfolio]);
 
+  /**
+   * A small fixed palette for the course cards, cycled by position.
+   *
+   * <p>Not tied to the course itself — a course has no colour of its own in the
+   * database, and picking one from its name would shift every time a course is
+   * renamed. Cycling by position is stable and still gives every card on the page
+   * a different colour.</p>
+   */
+  private static readonly coursePalette: readonly string[] = [
+    '#2f6fed', '#e0574a', '#1fa97c', '#e0a51f', '#7c5ce0', '#d64d9c', '#1f9bd6', '#e0862f'
+  ];
+
+  protected courseColor(index: number): string {
+    return HomeComponent.coursePalette[index % HomeComponent.coursePalette.length];
+  }
+
+  /** Up to two letters for the icon tile, the way an app icon abbreviates a name. */
+  protected courseInitials(name: string): string {
+    return name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(word => word[0]!.toUpperCase())
+      .join('');
+  }
+
+  /**
+   * Which heading a course sits under, and the single letter its icon tile shows.
+   *
+   * <p>Read off the course name rather than a stored category, because that is all
+   * that exists — the 48 rows are a flat list with no grouping field, and the
+   * pattern in every name ("DIPLOMA IN …", "CERTIFICATE IN …") already says which
+   * kind of course it is. The letters follow what was asked for directly: D for
+   * Diploma, C for Certification; the remaining groups (Specialisation, Foundation,
+   * Junior &amp; Kids) get the same one-letter treatment for consistency, and
+   * anything that fits none of the patterns — BCA, HSCA/HSCS, ABACUS, Nutrition —
+   * falls back to its own initials rather than being forced into a group it isn't
+   * really part of.</p>
+   */
+  private static classify(name: string): { group: string; badge: string } {
+    const upper = name.toUpperCase();
+
+    if (upper.startsWith('DIPLOMA')) return { group: 'Diploma Courses', badge: 'D' };
+    if (upper.startsWith('CERTIFICATE')) return { group: 'Certificate Courses', badge: 'C' };
+    if (upper.startsWith('SPECIALIZATION') || upper.startsWith('SPECIALISATION')) {
+      return { group: 'Specialisation Courses', badge: 'S' };
+    }
+    if (upper.startsWith('BEGINNERS IN INFORMATION TECHNOLOGY')) {
+      return { group: 'Foundation Courses', badge: 'F' };
+    }
+    if (upper.startsWith('COMPUTER KNOWLEDGE FOR KIDS') || upper.startsWith('JUNIOR')) {
+      return { group: 'Junior & Kids Courses', badge: 'K' };
+    }
+    if (upper.startsWith('BACHELOR OF') || upper.startsWith('HIGHER SECONDARY')) {
+      return { group: 'Degree & Higher Secondary', badge: '' };
+    }
+
+    return { group: 'Other Courses', badge: '' };
+  }
+
+  /** Reading order for the groups above — a rough beginner-to-advanced path. */
+  private static readonly groupOrder = [
+    'Foundation Courses', 'Certificate Courses', 'Diploma Courses',
+    'Specialisation Courses', 'Degree & Higher Secondary', 'Junior & Kids Courses',
+    'Other Courses'
+  ];
+
+  /** The 48 courses split into named groups, in a fixed reading order. */
+  protected readonly courseGroups = computed(() => {
+    const courses = this.page()?.courses ?? [];
+    const byGroup = new Map<string, AboutCourse[]>();
+
+    for (const course of courses) {
+      const { group } = HomeComponent.classify(course.name);
+      (byGroup.get(group) ?? byGroup.set(group, []).get(group)!).push(course);
+    }
+
+    return HomeComponent.groupOrder
+      .map(group => ({ group, courses: byGroup.get(group) ?? [] }))
+      .filter(g => g.courses.length > 0);
+  });
+
+  /** The tile letter for a course — its group's letter, or its own initials. */
+  protected courseBadge(name: string): string {
+    const { badge } = HomeComponent.classify(name);
+    return badge || this.courseInitials(name);
+  }
+
+  /**
+   * The ten most-enrolled courses, for the popularity chart. Capped at ten because
+   * a bar for every one of the 48 courses would be too short to read a label
+   * against; courses with nobody currently on them are left off rather than shown
+   * as an empty bar.
+   */
+  protected readonly popularCourses = computed(() =>
+    [...(this.page()?.courses ?? [])]
+      .filter(c => c.enrolledCount > 0)
+      .sort((a, b) => b.enrolledCount - a.enrolledCount)
+      .slice(0, 10));
+
+  protected enrolmentPercent(count: number): number {
+    const highest = Math.max(1, ...this.popularCourses().map(c => c.enrolledCount));
+    return Math.max(6, Math.round((count / highest) * 100));
+  }
+
+  /**
+   * How far the duration bar fills, relative to the longest course currently on the
+   * page — so the bars compare courses to each other rather than to an arbitrary
+   * fixed ceiling that would make every course look short once one long diploma is
+   * added.
+   */
+  protected durationPercent(months: number): number {
+    const longest = Math.max(
+      1, ...(this.page()?.courses.map(c => c.durationMonths ?? 0) ?? [0]));
+
+    return Math.max(8, Math.round((months / longest) * 100));
+  }
+
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(200)]],
     email: ['', [Validators.required, Validators.email, Validators.maxLength(200)]],
@@ -111,6 +239,15 @@ export class HomeComponent implements OnDestroy {
         this.loading.set(false);
       },
       error: () => this.loading.set(false)
+    });
+
+    /* The competition banner. Asked for unconditionally rather than behind the
+       feature flag, because the flag arrives asynchronously too and the banner is
+       hidden in the template until both have answered — an older API with no such
+       endpoint simply leaves it null and nothing is shown. */
+    this.competitions.publicNotice().subscribe({
+      next: competition => this.competition.set(competition),
+      error: () => this.competition.set(null)
     });
   }
 

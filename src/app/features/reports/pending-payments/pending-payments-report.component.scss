@@ -1,0 +1,62 @@
+.pp__branches {
+  margin-bottom: 1rem;
+  padding: 1rem 1.15rem;
+
+  h2 {
+    margin: 0 0 0.7rem;
+    font-size: 1rem;
+  }
+}
+
+.pp__branch-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+
+  th,
+  td {
+    padding: 0.45rem 0.6rem;
+    border-bottom: 1px solid var(--surface-border, #e0e3ec);
+    text-align: left;
+  }
+
+  th {
+    font-weight: 600;
+    color: var(--text-color-secondary, #5b6b84);
+  }
+}
+
+.pp__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.pp__tab {
+  border: 1px solid var(--surface-border, #d8dee9);
+  background: transparent;
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-color-secondary, #5b6b84);
+  cursor: pointer;
+
+  &--active {
+    background: var(--primary-color, #2f6fed);
+    border-color: var(--primary-color, #2f6fed);
+    color: #fff;
+  }
+}
+
+/* Marks From and To as required, matching the asterisk convention on the masters. */
+.rpt__req {
+  color: var(--app-negative, #a11919);
+}
+
+/* The owing figure on the admission-fee list, which is the column the reader is
+   there for. `rpt__tile--negative` is the tile equivalent; this is the cell one. */
+.rpt__negative {
+  color: var(--app-negative);
+}

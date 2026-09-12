@@ -1,0 +1,327 @@
+<header class="rpt__header">
+  <div>
+    <p class="app-section-title">Reports</p>
+    <h1>Pending payments</h1>
+    <p class="app-muted">
+      Active students who did not pay inside the period you choose — who to ring, how
+      much they owe, and how many months it has been.
+    </p>
+  </div>
+</header>
+
+<!-- ------------------------------------------------------------- filters -->
+<section class="app-card rpt__filter">
+  <div class="rpt__field">
+    <label for="branch">Branch</label>
+    <p-select
+      inputId="branch"
+      [options]="branches()"
+      optionLabel="name"
+      optionValue="name"
+      [ngModel]="branch()"
+      (ngModelChange)="branch.set($event)"
+      placeholder="All branches"
+      [showClear]="true"
+      styleClass="rpt__select" />
+  </div>
+
+  <div class="rpt__field">
+    <label for="course">Course</label>
+    <p-select
+      inputId="course"
+      [options]="courses()"
+      optionLabel="name"
+      optionValue="courseId"
+      [ngModel]="courseId()"
+      (ngModelChange)="courseId.set($event ?? 0)"
+      placeholder="All courses"
+      [showClear]="true"
+      [filter]="true"
+      filterBy="name"
+      styleClass="rpt__select" />
+  </div>
+
+  <div class="rpt__field">
+    <label for="from">From <span class="rpt__req">*</span></label>
+    <p-datepicker
+      inputId="from"
+      [ngModel]="from()"
+      (ngModelChange)="from.set($event)"
+      dateFormat="dd/mm/yy"
+      [showIcon]="true"
+      styleClass="rpt__picker" />
+  </div>
+
+  <div class="rpt__field">
+    <label for="to">To <span class="rpt__req">*</span></label>
+    <p-datepicker
+      inputId="to"
+      [ngModel]="to()"
+      (ngModelChange)="to.set($event)"
+      dateFormat="dd/mm/yy"
+      [showIcon]="true"
+      styleClass="rpt__picker" />
+  </div>
+
+  <div class="rpt__filter-actions">
+    <p-button label="Run" icon="pi pi-search" (onClick)="load()" [loading]="loading()" />
+    <p-button label="Clear" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="clear()" />
+  </div>
+</section>
+
+@if (error()) {
+  <p class="app-card rpt__empty">{{ error() }}</p>
+}
+
+@if (report(); as r) {
+  <!-- ------------------------------------------------------ branch totals -->
+  <div class="rpt__tiles">
+    <div class="app-card rpt__tile rpt__tile--negative">
+      <span>Total outstanding</span>
+      <strong>{{ r.totalOutstanding | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+    </div>
+
+    <div class="app-card rpt__tile">
+      <span>Never paid</span>
+      <strong>{{ r.neverPaid.length }}</strong>
+    </div>
+
+    <div class="app-card rpt__tile">
+      <span>Fallen behind</span>
+      <strong>{{ r.regular.length }}</strong>
+    </div>
+
+    @if ((r.totalAdmissionDue ?? 0) > 0) {
+      <div class="app-card rpt__tile rpt__tile--negative">
+        <span>Admission fees owing</span>
+        <strong>{{ r.totalAdmissionDue ?? 0 | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+        <small class="app-muted">{{ (r.admissionDues ?? []).length }} student(s)</small>
+      </div>
+    }
+  </div>
+
+  @if (r.branchTotals.length) {
+    <section class="app-card pp__branches">
+      <h2>Branch wise</h2>
+
+      <table class="pp__branch-table">
+        <thead>
+          <tr>
+            <th>Branch</th>
+            <th class="rpt__num">Never paid</th>
+            <th class="rpt__num">Fallen behind</th>
+            <th class="rpt__num">Outstanding</th>
+            <th class="rpt__num">Admission owing</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (b of r.branchTotals; track b.branch) {
+            <tr>
+              <td>{{ b.branch }}</td>
+              <td class="rpt__num">{{ b.neverPaidCount }}</td>
+              <td class="rpt__num">{{ b.regularCount }}</td>
+              <td class="rpt__num">{{ b.totalOutstanding | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</td>
+              <td class="rpt__num">
+                {{ (b.totalAdmissionDue ?? 0) > 0
+                    ? ((b.totalAdmissionDue ?? 0) | currency: 'INR' : 'symbol-narrow' : '1.2-2')
+                    : '—' }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+  }
+
+  <!-- Its own section, not a third tab beside the two above: those two answer
+       "who is behind on monthly fees", which the owner defined precisely and which
+       the admission fee is explicitly not part of. A student can be perfectly up to
+       date on monthly fees and still owe admission money, and would otherwise never
+       appear here at all. Not bounded by the date range either — an admission
+       balance is outstanding today or it is not. -->
+  @if ((r.admissionDues ?? []).length) {
+    <section class="app-card rpt__result">
+      <header class="rpt__result-head">
+        <h2>Admission fees still owing</h2>
+        <span class="app-muted">
+          {{ (r.admissionDues ?? []).length }} student(s) &middot;
+          {{ r.totalAdmissionDue ?? 0 | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}
+          &middot; as it stands today, whatever the date range above
+        </span>
+      </header>
+
+      <p-table
+        [value]="r.admissionDues ?? []"
+        [paginator]="(r.admissionDues ?? []).length > 25"
+        [rows]="25"
+        styleClass="p-datatable-sm"
+        [tableStyle]="{ 'min-width': '52rem' }">
+
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Student</th>
+            <th style="width: 10rem">Branch</th>
+            <th>Course</th>
+            <th style="width: 9rem">Joined</th>
+            <th class="rpt__num" style="width: 8rem">Admission fee</th>
+            <th class="rpt__num" style="width: 8rem">Received</th>
+            <th class="rpt__num" style="width: 8rem">Owing</th>
+            <th style="width: 9rem">Last received</th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-row>
+          <tr>
+            <td>
+              <strong>{{ row.studentName || '—' }}</strong>
+              <small class="app-muted rpt__cell-sub">
+                <code class="rpt__code">{{ row.registrationId }}</code>
+                @if (row.phone) { &middot; {{ row.phone }} }
+              </small>
+            </td>
+            <td>{{ row.branch || '—' }}</td>
+            <td>{{ row.courseName || '—' }}</td>
+            <td>{{ row.dateOfJoining ? (row.dateOfJoining | date: 'd MMM y') : '—' }}</td>
+            <td class="rpt__num">{{ row.admissionFees | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</td>
+            <td class="rpt__num">{{ row.admissionFeesPaid | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</td>
+            <td class="rpt__num rpt__negative">
+              <strong>{{ row.admissionDue | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+            </td>
+            <td>{{ row.lastPaidOn ? (row.lastPaidOn | date: 'd MMM y') : '—' }}</td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="footer">
+          <tr class="rpt__total-row">
+            <td colspan="6">Total admission fees owing</td>
+            <td class="rpt__num">
+              {{ r.totalAdmissionDue ?? 0 | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}
+            </td>
+            <td></td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </section>
+  }
+
+  <!-- ----------------------------------------------------------- sections -->
+  <section class="app-card rpt__result">
+    <header class="rpt__result-head">
+      <div class="pp__tabs">
+        <button
+          type="button"
+          class="pp__tab"
+          [class.pp__tab--active]="section() === 'never'"
+          (click)="section.set('never')">
+          Never paid ({{ r.neverPaid.length }})
+        </button>
+
+        <button
+          type="button"
+          class="pp__tab"
+          [class.pp__tab--active]="section() === 'regular'"
+          (click)="section.set('regular')">
+          Regular — fallen behind ({{ r.regular.length }})
+        </button>
+      </div>
+
+      <div class="rpt__result-head-right">
+        <span class="app-muted">
+          Section total
+          {{ sectionTotal(visibleRows()) | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}
+        </span>
+        <p-button
+          label="CSV"
+          icon="pi pi-download"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="!visibleRows().length"
+          (onClick)="exportCsv()" />
+      </div>
+    </header>
+
+    <p class="rpt__note">
+      @if (section() === 'never') {
+        Admitted, but not one monthly payment since. The admission fee does not count
+        as a monthly payment, so a student who paid to enrol and nothing after is here.
+      } @else {
+        Has paid before and has since fallen behind.
+      }
+    </p>
+
+    <p-table
+      [value]="visibleRows()"
+      [loading]="loading()"
+      [paginator]="visibleRows().length > 25"
+      [rows]="25"
+      [rowsPerPageOptions]="[25, 50, 100]"
+      styleClass="p-datatable-sm"
+      [tableStyle]="{ 'min-width': '76rem' }"
+      currentPageReportTemplate="{first}–{last} of {totalRecords}"
+      [showCurrentPageReport]="true">
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Registration</th>
+          <th>Student</th>
+          <th>Phone</th>
+          <th>Branch</th>
+          <th>Course</th>
+          <th>Teacher</th>
+          <th>Joined</th>
+          <th>Last payment</th>
+          <th class="rpt__num">Monthly</th>
+          <th class="rpt__num">Months due</th>
+          <th class="rpt__num">Late fine</th>
+          <th class="rpt__num">Total due</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td><code class="rpt__code">{{ row.registrationId || '—' }}</code></td>
+          <td><strong>{{ row.studentName || '—' }}</strong></td>
+          <td>{{ row.phone || '—' }}</td>
+          <td>{{ row.branch || '—' }}</td>
+          <td>{{ row.courseName || '—' }}</td>
+          <td>
+            @if (row.teachers.length) {
+              {{ row.teachers.join(', ') }}
+            } @else {
+              <span class="app-muted">—</span>
+            }
+          </td>
+          <td>{{ row.dateOfJoining ? (row.dateOfJoining | date: 'd MMM y') : '—' }}</td>
+          <td>
+            @if (row.lastPaymentDate) {
+              {{ row.lastPaymentDate | date: 'd MMM y' }}
+            } @else {
+              <p-tag severity="danger" value="Never" />
+            }
+          </td>
+          <td class="rpt__num">{{ row.monthlyFee | currency: 'INR' : 'symbol-narrow' : '1.0-0' }}</td>
+          <td class="rpt__num">{{ row.monthsUnpaid }}</td>
+          <td class="rpt__num">{{ row.lateFine | currency: 'INR' : 'symbol-narrow' : '1.0-0' }}</td>
+          <td class="rpt__num"><strong>{{ row.outstandingDue | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong></td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="12" class="rpt__empty">
+            @if (section() === 'never') {
+              Nobody in this filter is waiting on their first payment.
+            } @else {
+              Nobody in this filter has fallen behind.
+            }
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </section>
+
+  <p class="rpt__generated">
+    Not paid between {{ r.from | date: 'd MMM y' }} and {{ r.to | date: 'd MMM y' }}, active students only · generated
+    {{ r.generatedOn | date: 'd MMM y, h:mm a' }}
+  </p>
+}

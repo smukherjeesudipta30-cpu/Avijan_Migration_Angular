@@ -1,0 +1,286 @@
+<div class="cad">
+  <header class="cad__head">
+    <div>
+      <p class="app-section-title">Master</p>
+      <h1>Competition setup</h1>
+      <p class="app-muted">
+        Everything the public portal shows comes from here. Registration stays closed
+        until you set the opening date, so creating a year does not advertise it.
+      </p>
+    </div>
+
+    <div class="cad__years">
+      @for (y of years(); track y.competitionId) {
+        <button
+          type="button"
+          class="cad__year"
+          [class.is-on]="chosen()?.competitionId === y.competitionId"
+          (click)="choose(y)">
+          {{ y.year }}
+          @if (y.isOpen) { <span class="cad__open">open</span> }
+        </button>
+      }
+
+      <button type="button" class="cad__year cad__year--new" (click)="startNewYear()">
+        + New year
+      </button>
+    </div>
+  </header>
+
+  @if (message()) { <p class="cad__ok">{{ message() }}</p> }
+  @if (error()) { <p class="cad__bad">{{ error() }}</p> }
+
+  <section class="cad__card">
+    <h2>{{ chosen() ? 'Edit ' + chosen()!.year : 'New competition' }}</h2>
+
+    <div class="cad__grid">
+      <label>
+        <span>Year</span>
+        <input type="number" [(ngModel)]="form.year" />
+      </label>
+
+      <label>
+        <span>Event date</span>
+        <input type="date" [(ngModel)]="form.eventDate" />
+      </label>
+
+      <label>
+        <span>Drawing fee (&#8377;)</span>
+        <input type="number" [(ngModel)]="form.drawingFee" min="0" />
+      </label>
+
+      <label>
+        <span>Dance fee (&#8377;)</span>
+        <input type="number" [(ngModel)]="form.danceFee" min="0" />
+      </label>
+
+      <label>
+        <span>Drawing starts</span>
+        <input type="time" [(ngModel)]="form.drawingStartTime" />
+      </label>
+
+      <label>
+        <span>Dance starts</span>
+        <input type="time" [(ngModel)]="form.danceStartTime" />
+      </label>
+
+      <label>
+        <span>Prize giving</span>
+        <input type="time" [(ngModel)]="form.prizeGivingTime" />
+      </label>
+
+      <label>
+        <span>Registration opens</span>
+        <input type="date" [(ngModel)]="form.registrationOpensOn" />
+        <small>The front-page banner appears on this date.</small>
+      </label>
+
+      <label>
+        <span>Registration closes</span>
+        <input type="date" [(ngModel)]="form.registrationClosesOn" />
+        <small>Blank means it stays open.</small>
+      </label>
+
+      <label class="cad__wide">
+        <span>Venue</span>
+        <input type="text" [(ngModel)]="form.venue" maxlength="200" />
+      </label>
+
+      <div class="cad__wide cad__field">
+          <span>Venue in Bengali</span>
+          <app-bengali-editor [rows]="1" [maxlength]="200"
+                              [(ngModel)]="form.venueBengali" name="venueBengali" />
+        </div>
+
+      <label class="cad__wide">
+        <span>Contact numbers</span>
+        <input type="text" [(ngModel)]="form.contactPhones" maxlength="200" />
+      </label>
+    </div>
+
+    <h3>Notice</h3>
+    <div class="cad__two">
+      <label>
+        <span>English</span>
+        <textarea rows="3" [(ngModel)]="form.noticeEnglish"></textarea>
+      </label>
+
+      <div class="cad__field">
+          <span>Bengali</span>
+          <app-bengali-editor [rows]="3" [(ngModel)]="form.noticeBengali" name="noticeBengali" />
+        </div>
+    </div>
+
+    <h3>Drawing rules</h3>
+    <p class="app-muted cad__hint">
+      One rule per line. Both languages are shown side by side on the portal, under a
+      Drawing heading of their own.
+    </p>
+
+    <div class="cad__two">
+      <label>
+        <span>English</span>
+        <textarea rows="8" [(ngModel)]="form.drawingRulesEnglish"></textarea>
+      </label>
+
+      <div class="cad__field">
+          <span>Bengali</span>
+          <app-bengali-editor [rows]="8" [(ngModel)]="form.drawingRulesBengali" name="drawingRulesBengali" />
+        </div>
+    </div>
+
+    <h3>Dance rules</h3>
+    <p class="app-muted cad__hint">Shown separately, so a dance entrant reads only these.</p>
+
+    <div class="cad__two">
+      <label>
+        <span>English</span>
+        <textarea rows="8" [(ngModel)]="form.danceRulesEnglish"></textarea>
+      </label>
+
+      <div class="cad__field">
+          <span>Bengali</span>
+          <app-bengali-editor [rows]="8" [(ngModel)]="form.danceRulesBengali" name="danceRulesBengali" />
+        </div>
+    </div>
+
+    <div class="cad__actions">
+      <button type="button" [disabled]="saving()" (click)="save()">
+        {{ saving() ? 'Saving…' : 'Save' }}
+      </button>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------- the posters -->
+  @if (chosen(); as c) {
+    <section class="cad__card">
+      <h2>Advertisements</h2>
+      <p class="app-muted cad__hint">
+        The printed posters, shown to visitors on the registration page. One for each
+        competition. Put last year's artwork up now to see how it looks, and replace
+        it when the new one is ready — this is per year, so previous years keep theirs.
+        JPG or PNG, up to 5 MB.
+      </p>
+
+      <div class="cad__two">
+        @for (slot of advertSlots; track slot.key) {
+          <div class="cad__advert">
+            <h3>{{ slot.label }}</h3>
+
+            @if (slot.key === 'Drawing' ? c.hasDrawingAdvert : c.hasDanceAdvert) {
+              <img class="cad__advert-preview"
+                   [src]="advertUrl(c.competitionId, slot.key) + '&t=' + cacheBuster()"
+                   [alt]="slot.label" />
+
+              <div class="cad__row-actions">
+                <label class="cad__upload">
+                  Replace
+                  <input type="file" accept="image/*"
+                         (change)="uploadAdvert(c.competitionId, slot.key, $event)" />
+                </label>
+
+                <button type="button" class="cad__danger"
+                        (click)="removeAdvert(c.competitionId, slot.key)">Remove</button>
+              </div>
+            } @else {
+              <label class="cad__advert-empty">
+                <span>No advertisement uploaded</span>
+                <small>Choose a picture</small>
+                <input type="file" accept="image/*"
+                       (change)="uploadAdvert(c.competitionId, slot.key, $event)" />
+              </label>
+            }
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- ------------------------------------------------ divisions and groups -->
+  @if (chosen(); as c) {
+    <section class="cad__card">
+      <h2>Divisions and groups</h2>
+      <p class="app-muted cad__hint">
+        Drawing is grouped by class and dance by age. A dancer's chest number is
+        issued within their group as they register, so no batch timing is needed.
+      </p>
+
+      <div class="cad__two">
+        <div>
+          <h3>Drawing divisions</h3>
+          <ul class="cad__list">
+            @for (d of c.drawingDivisions; track d.id) {
+              <li>
+                <strong>{{ d.code }}</strong>
+                <span>{{ d.labelEnglish }}</span>
+                <span class="app-muted">no limit</span>
+              </li>
+            }
+          </ul>
+        </div>
+
+        <div>
+          <h3>Dance groups</h3>
+          <ul class="cad__list">
+            @for (g of c.danceGroups; track g.id) {
+              <li>
+                <strong>{{ g.code }}</strong>
+                <span>{{ g.labelEnglish }}</span>
+                <span class="app-muted">
+                  @if (g.capacity) { {{ g.capacity }} places } @else { no limit }
+                </span>
+              </li>
+            }
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------------------------------------------------- organiser names -->
+    <section class="cad__card">
+      <h2>Names shown on the registration form</h2>
+
+      <ul class="cad__organisers">
+        @for (o of organisers(); track o.id) {
+          <li>
+            <div>
+              <strong>{{ o.name }}</strong>
+              @if (o.designation) { <span class="app-muted"> — {{ o.designation }}</span> }
+              @if (o.phone) { <span class="app-muted"> · {{ o.phone }}</span> }
+            </div>
+
+            <div class="cad__row-actions">
+              <button type="button" (click)="editOrganiser(o)">Edit</button>
+              <button type="button" class="cad__danger" (click)="removeOrganiser(o)">Remove</button>
+            </div>
+          </li>
+        } @empty {
+          <li class="app-muted">No names added yet.</li>
+        }
+      </ul>
+
+      <div class="cad__grid cad__organiser-form">
+        <label>
+          <span>Name</span>
+          <input type="text" [(ngModel)]="organiserForm.name" maxlength="150" />
+        </label>
+
+        <label>
+          <span>Position</span>
+          <input type="text" [(ngModel)]="organiserForm.designation" maxlength="150" />
+        </label>
+
+        <label>
+          <span>Phone</span>
+          <input type="text" [(ngModel)]="organiserForm.phone" maxlength="20" />
+        </label>
+      </div>
+
+      <div class="cad__actions">
+        <button type="button" (click)="saveOrganiser()">
+          {{ organiserForm.id ? 'Save name' : 'Add name' }}
+        </button>
+      </div>
+    </section>
+  }
+</div>

@@ -7,6 +7,34 @@
   </p>
 </header>
 
+@if (payrollSettings(); as ps) {
+  <section class="app-card rpt__payroll-rule">
+    @if (isAdmin()) {
+      <label class="rpt__payroll-toggle">
+        <input
+          type="checkbox"
+          [checked]="ps.missedScanOutDeductionEnabled"
+          [disabled]="savingPayrollSettings()"
+          (change)="toggleDeductionRule($any($event.target).checked)" />
+        <span>Deduct for missed scan-outs (3+ costs 5%, another 5% for every further 3 — 6+ is 10%, 9+ is 15%…)</span>
+      </label>
+      <small class="app-muted">
+        Your own switch — off means every report reads exactly as it did before
+        this rule existed, however many scan-outs anyone missed.
+        @if (ps.modifiedOn) {
+          Last changed {{ ps.modifiedOn | date: 'd MMM y, h:mm a' }}{{ ps.modifiedBy ? ' by ' + ps.modifiedBy : '' }}.
+        }
+      </small>
+    } @else {
+      <p class="app-muted rpt__payroll-readonly">
+        Missed-scan-out deduction is currently
+        <strong>{{ ps.missedScanOutDeductionEnabled ? 'ON' : 'OFF' }}</strong>
+        — set by the admin.
+      </p>
+    }
+  </section>
+}
+
 <section class="app-card rpt__filter">
   <!-- A signed-in teacher is pinned to their own record, so there is nothing to pick. -->
   @if (isStaff()) {
@@ -74,6 +102,14 @@
       <small class="app-muted">Share of fees collected in the range</small>
     </div>
 
+    @if (r.totalDeduction > 0) {
+      <div class="app-card rpt__tile rpt__tile--negative">
+        <span>Deducted — missed scan-outs</span>
+        <strong>{{ r.totalDeduction | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+        <small class="app-muted">Net earned {{ r.netEarned | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</small>
+      </div>
+    }
+
     <div class="app-card rpt__tile">
       <span>Paid out</span>
       <strong>{{ r.totalPaid | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
@@ -89,6 +125,26 @@
       <small class="app-muted">{{ r.teacherName }}{{ r.teacherPhone ? ' · ' + r.teacherPhone : '' }}</small>
     </div>
   </div>
+
+  @if (r.deductions.length) {
+    <section class="app-card rpt__deductions">
+      <h2>Missed scan-out deductions</h2>
+      <p class="app-muted rpt__deductions-hint">
+        3-5 missed scan-outs in a month costs 5% of that month's earnings, 6-8 costs
+        10%, 9-11 costs 15%, and so on. Shown here exactly as it reads to
+        {{ r.teacherName || 'the teacher' }}.
+      </p>
+
+      <ul class="rpt__deduction-list">
+        @for (d of r.deductions; track d.year + '-' + d.month) {
+          <li>
+            <span class="rpt__deduction-badge">−{{ d.deductionPercent }}%</span>
+            <span>{{ d.reason }}</span>
+          </li>
+        }
+      </ul>
+    </section>
+  }
 
   <section class="app-card rpt__result">
     <header class="rpt__result-head">
