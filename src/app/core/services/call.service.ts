@@ -113,15 +113,20 @@ export class CallService implements OnDestroy {
   readonly errorMessage = signal<string | null>(null);
 
   /**
-   * Android WebView defaults call audio to the earpiece. Actually switching
-   * the physical route needs `setSinkId` on the element the remote audio
-   * plays through — the component owns that element (see call-overlay's
-   * hidden audio tag), so it registers it here via {@link registerAudioSink}
-   * rather than this service reaching into the DOM itself. Best-effort: on a
-   * browser/WebView build without output-device selection, the toggle still
-   * flips visually but the OS keeps routing audio wherever it already was —
-   * the same "don't let a missing platform capability break the call" stance
-   * the rest of this service takes with mic/camera permission failures.
+   * Which output the remote audio plays through, chosen with `setSinkId` on
+   * the element playing it — the component owns that element (see
+   * call-overlay's hidden audio tag) and registers it via
+   * {@link registerAudioSink} rather than this service reaching into the DOM.
+   *
+   * Browser-only, and deliberately so: a machine running the website has no
+   * earpiece, so this picks between real output devices (headset, speakers)
+   * rather than routing a call the way a phone does. The Android app solves a
+   * different problem — earpiece versus loudspeaker — which `setSinkId` cannot
+   * express at all, so it drives AudioManager through a native plugin instead.
+   *
+   * Best-effort either way: where a browser offers no output-device selection
+   * the toggle still reflects what was asked for rather than the call breaking
+   * over a missing capability, the same stance taken with mic/camera failures.
    */
   readonly speakerOn = signal(false);
   private audioSinkEl: HTMLMediaElement | null = null;
