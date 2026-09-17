@@ -8,7 +8,7 @@ import { AuthService } from '../services/auth.service';
 let refreshInFlight = false;
 const refreshedToken$ = new BehaviorSubject<string | null>(null);
 
-const PUBLIC_PATHS = ['/auth/login', '/auth/refresh', '/public/'];
+const PUBLIC_PATHS = ['/auth/login', '/auth/refresh', '/public/', '/chat/guest/'];
 
 export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const auth = inject(AuthService);

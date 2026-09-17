@@ -1,0 +1,273 @@
+<header class="rpt__header">
+  <div>
+    <p class="app-section-title">Reports</p>
+    <h1>Competition registrations</h1>
+    <p class="app-muted">
+      Everyone entered for the Drawing &amp; Dance competition, year by year.
+    </p>
+  </div>
+</header>
+
+<!-- ------------------------------------------------------------- filters -->
+<section class="app-card rpt__filter">
+  @if (report(); as r) {
+    <div class="rpt__field">
+      <label for="year">Year</label>
+      <p-select
+        inputId="year"
+        [options]="r.availableYears"
+        [ngModel]="year()"
+        (ngModelChange)="year.set($event); load()"
+        styleClass="rpt__select" />
+    </div>
+  }
+
+  <div class="rpt__field">
+    <label for="kind">Competition</label>
+    <p-select
+      inputId="kind"
+      [options]="kindOptions"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="kind()"
+      (ngModelChange)="kind.set($event)"
+      styleClass="rpt__select" />
+  </div>
+
+  <div class="rpt__field">
+    <label for="status">Payment</label>
+    <p-select
+      inputId="status"
+      [options]="statusOptions"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="status()"
+      (ngModelChange)="status.set($event)"
+      styleClass="rpt__select" />
+  </div>
+
+  <div class="rpt__field">
+    <label for="search">Search</label>
+    <input
+      id="search"
+      type="text"
+      class="cmr__search"
+      [ngModel]="search()"
+      (ngModelChange)="search.set($event)"
+      (keyup.enter)="load()"
+      placeholder="Number, name or phone" />
+  </div>
+
+  <div class="rpt__filter-actions">
+    <p-button label="Run" icon="pi pi-search" (onClick)="load()" [loading]="loading()" />
+    <p-button label="Clear" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="clear()" />
+  </div>
+</section>
+
+@if (error()) {
+  <p class="app-card rpt__empty">{{ error() }}</p>
+}
+
+@if (report(); as r) {
+  <div class="rpt__tiles">
+    <div class="app-card rpt__tile">
+      <span>Drawing entries</span>
+      <strong>{{ r.drawingCount }}</strong>
+    </div>
+
+    <div class="app-card rpt__tile">
+      <span>Dance entries</span>
+      <strong>{{ r.danceCount }}</strong>
+    </div>
+
+    <div class="app-card rpt__tile" [class.rpt__tile--negative]="r.pendingCount > 0">
+      <span>Payments to check</span>
+      <strong>{{ r.pendingCount }}</strong>
+    </div>
+
+    <div class="app-card rpt__tile rpt__tile--positive">
+      <span>Collected</span>
+      <strong>{{ r.totalCollected | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+    </div>
+
+    <div class="app-card rpt__tile">
+      <span>Due at the venue</span>
+      <strong>{{ r.totalDueAtVenue | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+    </div>
+  </div>
+
+  <section class="app-card rpt__result">
+    <header class="rpt__result-head">
+      <h2>{{ r.year }} · {{ r.rows.length }} entr{{ r.rows.length === 1 ? 'y' : 'ies' }}</h2>
+
+      <div class="rpt__result-head-right">
+        <p-button
+          label="CSV"
+          icon="pi pi-download"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="!r.rows.length"
+          (onClick)="exportCsv()" />
+
+        <p-button
+          label="Print"
+          icon="pi pi-print"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="!r.rows.length"
+          (onClick)="print()" />
+      </div>
+    </header>
+
+    <p-table
+      [value]="r.rows"
+      [loading]="loading()"
+      [paginator]="r.rows.length > 25"
+      [rows]="25"
+      [rowsPerPageOptions]="[25, 50, 100]"
+      styleClass="p-datatable-sm"
+      [tableStyle]="{ 'min-width': '82rem' }"
+      currentPageReportTemplate="{first}–{last} of {totalRecords}"
+      [showCurrentPageReport]="true">
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Registration</th>
+          <th class="rpt__num">Chest</th>
+          <th>Competition</th>
+          <th>Group</th>
+          <th>Participant</th>
+          <th>Guardian</th>
+          <th>School · Class</th>
+          <th>Phone</th>
+          <th class="rpt__num">Amount</th>
+          <th>Payment</th>
+          <th>Documents</th>
+          <th class="cmr__actions-col">Action</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td><code class="rpt__code">{{ row.registrationNo }}</code></td>
+
+          <td class="rpt__num">
+            @if (row.batchNo) {
+              <strong class="cmr__chest">{{ row.batchNo }}</strong>
+            } @else {
+              <span class="app-muted">—</span>
+            }
+          </td>
+
+          <td>
+            <p-tag
+              [severity]="row.kind === 'Dance' ? 'danger' : 'info'"
+              [value]="row.kind" />
+          </td>
+
+          <td>{{ row.groupLabel || '—' }}</td>
+
+          <td>
+            <strong>{{ row.participantName }}</strong>
+            @if (row.age !== null && row.age !== undefined) {
+              <small class="app-muted cmr__sub">Age {{ row.age }}</small>
+            }
+          </td>
+
+          <td>{{ row.guardianName || '—' }}</td>
+
+          <td>
+            {{ row.schoolName || '—' }}
+            @if (row.className) { <small class="app-muted cmr__sub">Class {{ row.className }}</small> }
+          </td>
+
+          <td>{{ row.phone }}</td>
+
+          <td class="rpt__num">{{ row.amount | currency: 'INR' : 'symbol-narrow' : '1.0-0' }}</td>
+
+          <td>
+            <p-tag [severity]="statusTone(row.paymentStatus)" [value]="statusLabel(row.paymentStatus)" />
+            @if (row.transactionRef) {
+              <small class="app-muted cmr__sub">{{ row.transactionRef }}</small>
+            }
+            @if (row.confirmedBy) {
+              <small class="app-muted cmr__sub">by {{ row.confirmedBy }}</small>
+            }
+            @if (row.cancelReason) {
+              <small class="cmr__reason">{{ row.cancelReason }}</small>
+            }
+          </td>
+
+          <td>
+            <div class="cmr__docs">
+              @if (row.hasPhoto) {
+                <button type="button" (click)="openDocument(row, 'Photo')">Photo</button>
+              }
+              @if (row.hasSchoolId) {
+                <button type="button" (click)="openDocument(row, 'SchoolId')">School id</button>
+              }
+              @if (row.hasBirthCertificate) {
+                <button type="button" (click)="openDocument(row, 'BirthCertificate')">Birth cert.</button>
+              }
+              @if (row.hasPaymentSlip) {
+                <button type="button" (click)="openDocument(row, 'PaymentSlip')">Payment</button>
+              }
+            </div>
+          </td>
+
+          <td>
+            @if (mayConfirm() && row.paymentStatus === 'Pending') {
+              <div class="cmr__actions">
+                <button
+                  type="button"
+                  class="cmr__confirm"
+                  [disabled]="isWorking(row.applicantId)"
+                  (click)="setStatus(row, 'Confirmed')">Confirm</button>
+
+                <button
+                  type="button"
+                  class="cmr__reject"
+                  [disabled]="isWorking(row.applicantId)"
+                  (click)="setStatus(row, 'Rejected')">Reject</button>
+              </div>
+            } @else if (mayConfirm() && row.paymentStatus === 'AtVenue') {
+              <button
+                type="button"
+                class="cmr__confirm"
+                [disabled]="isWorking(row.applicantId)"
+                (click)="setStatus(row, 'Confirmed')">Paid at desk</button>
+            }
+
+            <!-- Cancelling refunds the whole amount and gives the dance place and
+                 chest number back. Admin only. -->
+            @if (mayCancel() && row.paymentStatus !== 'Cancelled') {
+              <button
+                type="button"
+                class="cmr__cancel"
+                [disabled]="isWorking(row.applicantId)"
+                (click)="cancel(row)">Cancel &amp; refund</button>
+            }
+
+            @if (!mayConfirm() && !mayCancel()) {
+              <span class="app-muted">—</span>
+            }
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="12" class="rpt__empty">No registrations match these filters.</td>
+        </tr>
+      </ng-template>
+    </p-table>
+
+    <p class="rpt__note">
+      A payment is confirmed by a person after checking the centre's account. The
+      portal itself only refuses a UPI reference that another entrant has already
+      used — it cannot ask the bank whether money arrived.
+    </p>
+  </section>
+
+  <p class="rpt__generated">Generated {{ r.generatedOn | date: 'd MMM y, h:mm a' }}</p>
+}

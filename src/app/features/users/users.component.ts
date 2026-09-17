@@ -19,7 +19,12 @@ import { TooltipModule } from 'primeng/tooltip';
 import { Observable, debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { ApiResponse } from '../../core/models/api-response.model';
-import { UpcomingBirthday, UserListItem, UserSaveRequest } from '../../core/models/user.model';
+import {
+  RoleCount,
+  UpcomingBirthday,
+  UserListItem,
+  UserSaveRequest
+} from '../../core/models/user.model';
 import {
   canIssueReleaseLetter,
   isLetterEligible,
@@ -80,6 +85,18 @@ export class UsersComponent {
   readonly page = signal(1);
   readonly pageSize = signal(10);
 
+  /** null shows every role — the grid's own "All" tile. */
+  readonly roleFilter = signal<string | null>(null);
+  readonly roleCounts = signal<RoleCount[]>([]);
+  readonly roleCountsLoading = signal(false);
+
+  /**
+   * Every account, regardless of role. Kept separate from the role counts because
+   * a user can hold more than one role (a receptionist who also teaches), so those
+   * counts do not sum to the total and cannot stand in for it.
+   */
+  readonly totalUsers = signal(0);
+
   /** Live result of the email-exists check (legacy `ufnGetEmailChk`). */
   readonly emailTaken = signal(false);
 
@@ -130,9 +147,11 @@ export class UsersComponent {
     });
 
     this.load();
+    this.loadRoleCounts();
 
     effect(() => {
       this.statusFilter();
+      this.roleFilter();
       this.page();
       this.pageSize();
       this.load();
@@ -165,7 +184,8 @@ export class UsersComponent {
         page: this.page(),
         pageSize: this.pageSize(),
         isActive: status === 'all' ? null : status === 'active',
-        email: this.searchEmail().trim() || null
+        email: this.searchEmail().trim() || null,
+        role: this.roleFilter()
       })
       .subscribe({
         next: result => {
@@ -188,6 +208,32 @@ export class UsersComponent {
   search(): void {
     this.page.set(1);
     this.load();
+  }
+
+  /** Loads the role-wise counts shown as a grid above the table. */
+  loadRoleCounts(): void {
+    this.roleCountsLoading.set(true);
+
+    this.users.roleCounts().subscribe({
+      next: data => {
+        this.roleCounts.set(data);
+        this.roleCountsLoading.set(false);
+      },
+      error: () => this.roleCountsLoading.set(false)
+    });
+
+    // One unfiltered row is enough to read the grand total off the paging info,
+    // without a separate "how many accounts exist" endpoint.
+    this.users.list({ page: 1, pageSize: 1, isActive: null, role: null }).subscribe({
+      next: result => this.totalUsers.set(result.totalCount),
+      error: () => {}
+    });
+  }
+
+  /** Clicking a tile on the role-wise grid filters the table below it. */
+  chooseRole(role: string | null): void {
+    this.page.set(1);
+    this.roleFilter.set(role);
   }
 
   clearSearch(): void {
@@ -239,6 +285,7 @@ export class UsersComponent {
         });
         this.resetForm();
         this.load();
+        this.loadRoleCounts();
       },
       error: (error: unknown) => {
         this.saving.set(false);
@@ -302,7 +349,16 @@ export class UsersComponent {
    */
   openPasswordDialog(user: UserListItem): void {
     this.passwordUser.set(user);
-    this.generatePassword();
+
+    // A student's portal password is stored in clear on their student record, so
+    // it can be shown as-is: the dialog becomes "here is their password, change it
+    // if you like". For staff there is only a hash, so a fresh one is generated.
+    if (user.studentPassword) {
+      this.sharePassword.set(user.studentPassword);
+    } else {
+      this.generatePassword();
+    }
+
     this.passwordVisible.set(true);
   }
 

@@ -7,6 +7,35 @@
   </div>
 </header>
 
+<!-- ---------------------------------------------------------------- search -->
+<!-- At the top of the page, matching the Students master. It was previously only
+     in the list header further down, where it was easy to miss on a screen that
+     opens with a form. -->
+<section class="app-card tch__search-card">
+  <div class="tch__search-field">
+    <label for="teacherSearch">Find a teacher</label>
+    <input
+      pInputText
+      id="teacherSearch"
+      [ngModel]="search()"
+      (ngModelChange)="search.set($event)"
+      (keyup.enter)="runSearch()"
+      [ngModelOptions]="{ standalone: true }"
+      placeholder="Name, user id or phone" />
+  </div>
+
+  <div class="tch__search-actions">
+    <p-button label="Search" icon="pi pi-search" (onClick)="runSearch()" />
+    <p-button
+      label="Clear"
+      icon="pi pi-times"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="!search()"
+      (onClick)="clearSearch()" />
+  </div>
+</section>
+
 <!-- ------------------------------------------------------------- entry form -->
 <section class="app-card tch__form" id="teacher-form">
   <header class="tch__form-head">
@@ -41,7 +70,9 @@
         @if (form.controls.loginId.touched && form.controls.loginId.hasError('required')) {
           <small class="tch__error">User id is required.</small>
         } @else if (form.controls.loginId.touched && form.controls.loginId.hasError('pattern')) {
-          <small class="tch__error">Letters, digits, dot, underscore or hyphen only.</small>
+          <small class="tch__error">Letters, digits, at-sign, dot, underscore or hyphen only.</small>
+        } @else if (form.controls.loginId.touched && form.controls.loginId.hasError('maxlength')) {
+          <small class="tch__error">User id must be 50 characters or fewer.</small>
         } @else if (loginTaken()) {
           <small class="tch__error">That user id belongs to another teacher.</small>
         }
@@ -54,6 +85,46 @@
           <small class="tch__error">Enter a valid 10-digit phone number.</small>
         }
       </div>
+
+      <!-- Where the attendance confirmation code is sent. The avijan.in login is an
+           identifier, not a mailbox, so without this the teacher cannot mark
+           attendance at all. -->
+      <div class="tch__field">
+        <label for="personalEmail">Personal email</label>
+        <input pInputText id="personalEmail" formControlName="personalEmail" type="email"
+               placeholder="for attendance codes" />
+        @if (form.controls.personalEmail.touched && form.controls.personalEmail.invalid) {
+          <small class="tch__error">Enter a valid email address.</small>
+        }
+      </div>
+
+      <!-- Position is what puts a teacher on the staff hierarchy chart: somebody
+           with none is left off it until it is filled in. -->
+      <div class="tch__field">
+        <label for="designation">Position</label>
+        <input pInputText id="designation" formControlName="designation"
+               placeholder="Teacher, Dance Section…" />
+        <small class="tch__hint">Shown on the staff hierarchy chart.</small>
+      </div>
+
+      <div class="tch__field">
+        <label for="branch">Branch</label>
+        <p-select
+          inputId="branch"
+          formControlName="branch"
+          [options]="branches()"
+          optionLabel="name"
+          optionValue="name"
+          [showClear]="true"
+          placeholder="Choose a branch"
+          appendTo="body" />
+        <small class="tch__hint">Shown on their honorarium pay slip.</small>
+      </div>
+
+      <p class="tch__hint tch__field--wide">
+        Qualification, computer training and technical-staff status are set from
+        <a routerLink="/team/manage">Staff Hierarchy</a> once this teacher appears there.
+      </p>
     </div>
 
     <footer class="tch__form-actions">
@@ -76,20 +147,18 @@
 </section>
 
 <!-- ------------------------------------------------------------------ list -->
-<section class="app-card tch__list">
+<section class="app-card tch__list" id="teacher-list">
   <header class="tch__list-head">
     <h2>All teachers</h2>
 
+    <!-- The search moved to its own card at the top of the page; a second box here
+         would be two ways to do one thing. -->
     <div class="tch__list-head-right">
-      <input
-        pInputText
-        class="tch__search"
-        [ngModel]="search()"
-        (ngModelChange)="search.set($event)"
-        (keyup.enter)="runSearch()"
-        [ngModelOptions]="{ standalone: true }"
-        placeholder="Search name, user id or phone" />
-      <p-button label="Search" icon="pi pi-search" size="small" (onClick)="runSearch()" />
+      @if (search()) {
+        <span class="app-muted">
+          Showing matches for &ldquo;{{ search() }}&rdquo;
+        </span>
+      }
 
       <label class="tch__toggle">
         <p-toggleSwitch
@@ -227,9 +296,119 @@
         appendTo="body" />
     </div>
 
-    <p-button label="Apply" icon="pi pi-filter" size="small" (onClick)="loadEarnings()" />
+    <p-button label="Apply" icon="pi pi-filter" size="small" (onClick)="applyEarningsRange()" />
     <p-button label="All time" severity="secondary" [text]="true" size="small" (onClick)="clearEarningsRange()" />
   </div>
+
+  <!-- ------------------------------------------ the teacher's account -->
+  @if (account(); as acc) {
+    <!-- The period these three figures cover, stated on them, because a filtered
+         "still pending" is that period's balance and not the lifetime one. -->
+    <p class="tch__account-period">
+      @if (acc.isFiltered) {
+        Showing
+        <strong>
+          {{ acc.from ? (acc.from | date: 'd MMM y') : 'the beginning' }}
+          &ndash;
+          {{ acc.to ? (acc.to | date: 'd MMM y') : 'today' }}
+        </strong>
+      } @else {
+        Showing <strong>all time</strong>
+      }
+    </p>
+
+    <div class="tch__account">
+      <div class="tch__account-tile">
+        <span>Earned from fees</span>
+        <strong>{{ money(acc.totalEarned) }}</strong>
+      </div>
+      <div class="tch__account-tile">
+        <span>Paid to teacher</span>
+        <strong>{{ money(acc.totalPaid) }}</strong>
+      </div>
+      <div class="tch__account-tile" [class.tch__account-tile--owed]="acc.pending > 0">
+        <span>
+          {{ acc.pending < 0 ? 'Overpaid by' : 'Balance' }}
+          @if (acc.isFiltered) { <em>this period</em> }
+        </span>
+        <strong>{{ money(acc.pending < 0 ? -acc.pending : acc.pending) }}</strong>
+      </div>
+    </div>
+
+    @if (canPay()) {
+      <!-- Recording a payment is what moves the "paid" figure, and with it the
+           teacher account report. Administrator only. -->
+      <div class="tch__pay">
+        <div class="tch__pay-field">
+          <label for="payAmount">Pay this teacher</label>
+          <p-inputNumber
+            inputId="payAmount"
+            [ngModel]="payAmount()"
+            (ngModelChange)="payAmount.set($event)"
+            [ngModelOptions]="{ standalone: true }"
+            mode="currency"
+            currency="INR"
+            locale="en-IN"
+            [min]="0"
+            [maxFractionDigits]="2"
+            placeholder="Amount handed over" />
+        </div>
+
+        <div class="tch__pay-field">
+          <label for="payDate">Paid on</label>
+          <p-datePicker
+            inputId="payDate"
+            [ngModel]="payDate()"
+            (ngModelChange)="payDate.set($event)"
+            [ngModelOptions]="{ standalone: true }"
+            dateFormat="dd/mm/yy"
+            [showIcon]="true"
+            [maxDate]="today"
+            appendTo="body" />
+        </div>
+
+        <p-button
+          label="Record payment"
+          icon="pi pi-check"
+          [loading]="savingPayment()"
+          [disabled]="!payAmount() || savingPayment()"
+          (onClick)="recordPayment()" />
+      </div>
+    }
+
+    @if (payments().length) {
+      <div class="tch__paid-list">
+        <h4>Payments made</h4>
+        <ul>
+          @for (payment of payments(); track payment.id) {
+            <li>
+              <span class="tch__paid-date">
+                {{ payment.paidOn ? (payment.paidOn | date: 'd MMM y') : '&mdash;' }}
+              </span>
+              <strong>{{ money(payment.amount) }}</strong>
+              @if (payment.recordedBy) {
+                <span class="app-muted tch__paid-by">by {{ payment.recordedBy }}</span>
+              }
+              @if (canPay()) {
+                <p-button
+                  icon="pi pi-times"
+                  severity="danger"
+                  [text]="true"
+                  size="small"
+                  pTooltip="Remove this payment"
+                  tooltipPosition="left"
+                  (onClick)="removePayment(payment)" />
+              }
+            </li>
+          }
+        </ul>
+      </div>
+    } @else if (!paymentsLoading()) {
+      <p class="app-muted tch__paid-empty">
+        No payments recorded yet, so the whole earned amount is still pending.
+      </p>
+    }
+  }
 
   <div class="tch__earn-total">
     <span>Showing {{ earnings().length }} of {{ earningsTotal() }} payout(s)</span>

@@ -7,7 +7,8 @@ export type IncomeSection =
   | 'Expenses'
   | 'TeacherPayouts'
   | 'TeacherExpenses'
-  | 'Dues';
+  | 'Dues'
+  | 'ReceptionistPay';
 
 export interface IncomeSectionTotal {
   section: IncomeSection;
@@ -16,7 +17,7 @@ export interface IncomeSectionTotal {
   rowCount: number;
   /** Counts against profit rather than towards it. */
   isCost: boolean;
-  /** Informational only — excluded from the totals to avoid double counting. */
+  /** Informational only â excluded from the totals to avoid double counting. */
   isBreakdown: boolean;
 }
 
@@ -44,6 +45,9 @@ export interface IncomeReport {
   expenses: number;
   teacherPayouts: number;
   teacherExpenses: number;
+
+  /** Receptionists' monthly pay — a cost like any other salary. */
+  receptionistPay: number;
   totalCost: number;
 
   netProfit: number;
@@ -53,6 +57,15 @@ export interface IncomeReport {
   sections: IncomeSectionTotal[];
   monthly: IncomeTrendPoint[];
   generatedOn: string;
+
+  /** The branch this report is scoped to, or absent for the whole institute. */
+  branch?: string;
+
+  /**
+   * True when a branch filter is applied. Other income and teacher expenses are
+   * then excluded — neither records a branch.
+   */
+  branchScoped: boolean;
 }
 
 export interface IncomeDetail {

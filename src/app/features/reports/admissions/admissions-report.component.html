@@ -51,6 +51,21 @@
       styleClass="rpt__select" />
   </div>
 
+  <div class="rpt__field">
+    <label for="branch">Branch</label>
+    <p-select
+      inputId="branch"
+      [options]="branches()"
+      optionLabel="name"
+      optionValue="name"
+      [ngModel]="branch()"
+      (ngModelChange)="branch.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      [showClear]="true"
+      placeholder="All branches"
+      appendTo="body"
+      styleClass="rpt__select" />
+  </div>
   <div class="rpt__filter-actions">
     <p-button label="Run" icon="pi pi-search" [loading]="loading()" (onClick)="run()" />
     <p-button

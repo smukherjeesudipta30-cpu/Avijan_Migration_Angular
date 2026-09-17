@@ -1,23 +1,83 @@
 import { Routes } from '@angular/router';
 
-import { authGuard, roleGuard } from './core/guards/auth.guard';
+import { authGuard, passwordResetGuard, roleGuard } from './core/guards/auth.guard';
 
 /**
- * One lazy chunk per feature (MIGRATION_PLAN §6). Only the three migrated pages
- * are wired up so far — the remaining routes from the plan slot in beside them.
+ * One lazy chunk per feature (MIGRATION_PLAN §6).
+ *
+ * The public front page is the landing route. Everything behind a sign-in lives
+ * under the shell, which matches the same empty prefix — so the order matters:
+ * the `pathMatch: 'full'` entry below claims `/` before the shell can.
  */
 export const routes: Routes = [
   {
-    path: 'about',
-    title: 'About Us · Avijan',
+    // The public front page. Replaces Views/About/Index.cshtml — the site at
+    // www.avijan.in — and is what an unauthenticated visitor lands on.
+    path: '',
+    pathMatch: 'full',
+    title: 'Avijan — An Unit of Computer Professionals & Learners',
     loadComponent: () =>
-      import('./features/about/about.component').then(m => m.AboutComponent)
+      import('./features/home/home.component').then(m => m.HomeComponent)
+  },
+  {
+    // The old URL still resolves; the front page carries the About section.
+    path: 'about',
+    pathMatch: 'full',
+    redirectTo: ''
+  },
+  {
+    /* The public competition portal. Outside the shell and outside the sign-in:
+       entrants are children from any school with no account here, and the owner
+       asked for it to be reachable straight from the landing page. */
+    path: 'competition',
+    title: 'Drawing & Dance Competition - Avijan',
+    loadComponent: () =>
+      import('./features/competition/competition-portal.component')
+        .then(m => m.CompetitionPortalComponent)
   },
   {
     path: 'login',
     title: 'Sign in · Avijan',
     loadComponent: () =>
       import('./features/auth/login/login.component').then(m => m.LoginComponent)
+  },
+  {
+    // Anonymous by design: this is exactly for someone who cannot sign in.
+    path: 'forgot-password',
+    title: 'Forgot password · Avijan',
+    loadComponent: () =>
+      import('./features/auth/forgot-password/forgot-password.component')
+        .then(m => m.ForgotPasswordComponent)
+  },
+  {
+    path: 'reset-password',
+    title: 'Reset password · Avijan',
+    loadComponent: () =>
+      import('./features/auth/reset-password/reset-password.component')
+        .then(m => m.ResetPasswordComponent)
+  },
+  {
+    /* The forced first-login reset. Outside the shell on purpose: the shell's
+       sidebar is a set of links to pages a flagged account cannot open yet, so
+       showing it would be an invitation to bounce off every guard in turn. */
+    path: 'change-password',
+    title: 'Choose a new password · Avijan',
+    canActivate: [passwordResetGuard],
+    loadComponent: () =>
+      import('./features/auth/change-password/change-password.component')
+        .then(m => m.ChangePasswordComponent)
+  },
+  {
+    /* The page the attendance QR opens on a phone. Outside the shell on purpose:
+       it is opened by a camera at the door, and a sidebar full of links is not
+       what anyone needs while standing there. Signing in is still required — the
+       authGuard on it sends them to login and back. */
+    path: 'attendance/scan',
+    title: 'Mark attendance · Avijan',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/attendance/scan/attendance-scan.component')
+        .then(m => m.AttendanceScanComponent)
   },
   {
     path: '',
@@ -35,35 +95,36 @@ export const routes: Routes = [
       {
         path: 'students',
         title: 'Student registration · Avijan',
-        canActivate: [roleGuard('Admin', 'Editor')],
+        canActivate: [roleGuard('Admin', 'Editor', 'Receptionist')],
         loadComponent: () =>
           import('./features/students/students.component').then(m => m.StudentsComponent)
       },
       {
         path: 'users',
         title: 'Users · Avijan',
-        canActivate: [roleGuard('Admin', 'Editor')],
+        canActivate: [roleGuard('Admin', 'Editor', 'Receptionist')],
         loadComponent: () =>
           import('./features/users/users.component').then(m => m.UsersComponent)
       },
       {
+        // Taking the monthly fee at the counter is the receptionist's job.
         path: 'fees',
         title: 'Monthly course fees · Avijan',
-        canActivate: [roleGuard('Admin', 'Editor')],
+        canActivate: [roleGuard('Admin', 'Editor', 'Receptionist')],
         loadComponent: () =>
           import('./features/fees/fees.component').then(m => m.FeesComponent)
       },
       {
         path: 'teachers',
         title: 'Teachers · Avijan',
-        canActivate: [roleGuard('Admin', 'Editor')],
+        canActivate: [roleGuard('Admin', 'Editor', 'Receptionist')],
         loadComponent: () =>
           import('./features/teachers/teachers.component').then(m => m.TeachersComponent)
       },
       {
         path: 'branches',
         title: 'Branch details · Avijan',
-        canActivate: [roleGuard('Admin', 'Editor')],
+        canActivate: [roleGuard('Admin', 'Editor', 'Receptionist')],
         loadComponent: () =>
           import('./features/branches/branches.component').then(m => m.BranchesComponent)
       },
@@ -77,16 +138,128 @@ export const routes: Routes = [
       {
         path: 'marks',
         title: 'Marks · Avijan',
-        canActivate: [roleGuard('Admin', 'Editor')],
+        canActivate: [roleGuard('Admin', 'Editor', 'Receptionist')],
         loadComponent: () =>
           import('./features/marks/marks.component').then(m => m.MarksComponent)
       },
       {
         path: 'notices',
         title: 'Notices · Avijan',
-        canActivate: [roleGuard('Admin', 'Editor')],
+        canActivate: [roleGuard('Admin', 'Editor', 'Receptionist')],
         loadComponent: () =>
           import('./features/notices/notices.component').then(m => m.NoticesComponent)
+      },
+      {
+        // The administrator's side of the examination portal. Receptionist is
+        // included too, but only to put a Practical date on a student once
+        // Theory is done — the component itself hides everything else from them.
+        path: 'exams',
+        title: 'Exam papers · Avijan',
+        canActivate: [roleGuard('Admin', 'Editor', 'Receptionist')],
+        loadComponent: () =>
+          import('./features/exams/exams.component').then(m => m.ExamsComponent)
+      },
+      {
+        // The student's side. Student role only, as their statement is.
+        path: 'my-exams',
+        title: 'My exams · Avijan',
+        canActivate: [roleGuard('Student')],
+        loadComponent: () =>
+          import('./features/my-exams/my-exams.component').then(m => m.MyExamsComponent)
+      },
+      {
+        path: 'my-exams/:examId/sit',
+        title: 'Examination · Avijan',
+        canActivate: [roleGuard('Student')],
+        loadComponent: () =>
+          import('./features/my-exams/exam-sitting/exam-sitting.component')
+            .then(m => m.ExamSittingComponent)
+      },
+      {
+        /* Attendance. The staff page carries the QR to display at the centre and
+           the person's own day; the rota is the administrator's master form. */
+        path: 'attendance',
+        title: 'Attendance · Avijan',
+        canActivate: [roleGuard('Admin', 'Editor', 'Receptionist', 'Teacher')],
+        loadComponent: () =>
+          import('./features/attendance/attendance.component')
+            .then(m => m.AttendanceComponent)
+      },
+      {
+        path: 'attendance/rota',
+        title: 'Staff rota · Avijan',
+        canActivate: [roleGuard('Admin', 'Editor')],
+        loadComponent: () =>
+          import('./features/attendance/rota/attendance-rota.component')
+            .then(m => m.AttendanceRotaComponent)
+      },
+      {
+        /* The staff hierarchy. Everybody signed in may look at it -- a student
+           should be able to see who runs the centre and who teaches them -- while
+           building it stays with the back office. */
+        path: 'team',
+        title: 'Institute Hierarchy · Avijan',
+        canActivate: [roleGuard('Admin', 'Editor', 'Student', 'Teacher', 'Receptionist')],
+        loadComponent: () =>
+          import('./features/org/org-chart-page.component')
+            .then(m => m.OrgChartPageComponent)
+      },
+      {
+        path: 'team/manage',
+        title: 'Staff hierarchy · Avijan',
+        canActivate: [roleGuard('Admin', 'Editor')],
+        loadComponent: () =>
+          import('./features/org/org-manage.component')
+            .then(m => m.OrgManageComponent)
+      },
+      {
+        path: 'reports/attendance',
+        title: 'Staff attendance · Avijan',
+        canActivate: [roleGuard('Admin', 'Editor')],
+        loadComponent: () =>
+          import('./features/reports/attendance/attendance-report.component')
+            .then(m => m.AttendanceReportComponent)
+      },
+      {
+        /* The walk-in enquiry register. The receptionist takes these, so they
+           reach it as well as the back office. */
+        path: 'enquiries',
+        title: 'Course enquiries · Avijan',
+        canActivate: [roleGuard('Admin', 'Editor', 'Receptionist')],
+        loadComponent: () =>
+          import('./features/enquiries/enquiries.component').then(m => m.EnquiriesComponent)
+      },
+      {
+        path: 'reports/enquiries',
+        title: 'Enquiry follow-up · Avijan',
+        canActivate: [roleGuard('Admin', 'Editor', 'Receptionist')],
+        loadComponent: () =>
+          import('./features/reports/enquiries/enquiry-report.component')
+            .then(m => m.EnquiryReportComponent)
+      },
+      {
+        path: 'receptionists',
+        title: 'Receptionists · Avijan',
+        canActivate: [roleGuard('Admin', 'Editor', 'Receptionist')],
+        loadComponent: () =>
+          import('./features/receptionists/receptionists.component')
+            .then(m => m.ReceptionistsComponent)
+      },
+      {
+        path: 'reports/receptionists',
+        title: 'Receptionist pay · Avijan',
+        canActivate: [roleGuard('Admin', 'Editor')],
+        loadComponent: () =>
+          import('./features/reports/receptionists/receptionist-report.component')
+            .then(m => m.ReceptionistReportComponent)
+      },
+      {
+        path: 'reports/branch',
+        title: 'Branch performance · Avijan',
+        canActivate: [roleGuard('Admin', 'Editor')],
+        loadComponent: () =>
+          import('./features/reports/branch/branch-report.component')
+            .then(m => m.BranchReportComponent)
       },
       {
         path: 'reports/admissions',
@@ -97,17 +270,57 @@ export const routes: Routes = [
             .then(m => m.AdmissionsReportComponent)
       },
       {
+        // The receptionist chases the unpaid fees, so they need the list.
         path: 'reports/dues',
         title: 'Outstanding dues · Avijan',
-        canActivate: [roleGuard('Admin', 'Editor')],
+        canActivate: [roleGuard('Admin', 'Editor', 'Receptionist')],
         loadComponent: () =>
           import('./features/reports/dues/dues-report.component')
             .then(m => m.DuesReportComponent)
       },
       {
+        /* Branch-wise arrears in two sections. Admin and the front desk only, at
+           the owner's instruction — it names every student's outstanding balance. */
+        path: 'reports/pending-payments',
+        title: 'Pending payments · Avijan',
+        canActivate: [roleGuard('Admin', 'Receptionist')],
+        loadComponent: () =>
+          import('./features/reports/pending-payments/pending-payments-report.component')
+            .then(m => m.PendingPaymentsReportComponent)
+      },
+      {
+        /* Cash-versus-bank and who collected it, branch-wise. Admin and the front
+           desk only, the same rule as pending-payments — this names who collected
+           what. */
+        path: 'reports/fee-collections',
+        title: 'Fee collections · Avijan',
+        canActivate: [roleGuard('Admin', 'Receptionist')],
+        loadComponent: () =>
+          import('./features/reports/fee-collections/fee-collections-report.component')
+            .then(m => m.FeeCollectionsReportComponent)
+      },
+      {
+        /* The competition register. Editor is here on purpose: it is the role the
+           owner asked to be given to Arkita Nath for the programme section. */
+        path: 'reports/competition',
+        title: 'Competition registrations - Avijan',
+        canActivate: [roleGuard('Admin', 'Editor', 'Receptionist')],
+        loadComponent: () =>
+          import('./features/reports/competition/competition-report.component')
+            .then(m => m.CompetitionReportComponent)
+      },
+      {
+        path: 'competition/setup',
+        title: 'Competition setup - Avijan',
+        canActivate: [roleGuard('Admin')],
+        loadComponent: () =>
+          import('./features/competition/competition-admin.component')
+            .then(m => m.CompetitionAdminComponent)
+      },
+      {
         path: 'reports/expenses',
         title: 'Expense report · Avijan',
-        canActivate: [roleGuard('Admin', 'Editor')],
+        canActivate: [roleGuard('Admin', 'Editor', 'Receptionist')],
         loadComponent: () =>
           import('./features/reports/expenses/expenses-report.component')
             .then(m => m.ExpensesReportComponent)
@@ -115,7 +328,7 @@ export const routes: Routes = [
       {
         path: 'reports/teacher-earnings',
         title: 'Teacher account · Avijan',
-        canActivate: [roleGuard('Admin', 'Editor', 'Teacher')],
+        canActivate: [roleGuard('Admin', 'Editor', 'Receptionist', 'Teacher')],
         loadComponent: () =>
           import('./features/reports/teacher-earnings/teacher-earnings-report.component')
             .then(m => m.TeacherEarningsReportComponent)
@@ -123,7 +336,7 @@ export const routes: Routes = [
       {
         path: 'reports/students-by-teacher',
         title: 'Students by teacher · Avijan',
-        canActivate: [roleGuard('Admin', 'Editor')],
+        canActivate: [roleGuard('Admin', 'Editor', 'Teacher')],
         loadComponent: () =>
           import('./features/reports/students-by-teacher/students-by-teacher-report.component')
             .then(m => m.StudentsByTeacherReportComponent)
@@ -139,11 +352,28 @@ export const routes: Routes = [
             .then(m => m.StudentStatementComponent)
       },
       {
+        // The student paying their own fee. Student role only — the ledger is
+        // resolved from their sign-in, so there is no id to pass.
+        path: 'my-fees',
+        title: 'Pay my fees · Avijan',
+        canActivate: [roleGuard('Student')],
+        loadComponent: () =>
+          import('./features/my-fees/my-fees.component').then(m => m.MyFeesComponent)
+      },
+      {
         path: 'expenses',
         title: 'Expenses · Avijan',
-        canActivate: [roleGuard('Admin', 'Editor')],
+        canActivate: [roleGuard('Admin', 'Editor', 'Receptionist')],
         loadComponent: () =>
           import('./features/expenses/expenses.component').then(m => m.ExpensesComponent)
+      },
+      {
+        path: 'other-income',
+        title: 'Other income · Avijan',
+        canActivate: [roleGuard('Admin', 'Editor', 'Receptionist')],
+        loadComponent: () =>
+          import('./features/other-income/other-income.component')
+            .then(m => m.OtherIncomeComponent)
       },
       {
         path: 'income',
@@ -152,8 +382,9 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/income/income.component').then(m => m.IncomeComponent)
       },
+      // Reaching the shell with no child sends staff to their dashboard.
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' }
     ]
   },
-  { path: '**', redirectTo: 'about' }
+  { path: '**', redirectTo: '' }
 ];

@@ -12,6 +12,12 @@ export interface UserListItem {
   lastLoginOn?: string;
   /** False for the one migrated account that had no password on record. */
   hasPassword: boolean;
+
+  /**
+   * For a student account only: the portal password as issued, which production
+   * stores in clear so the office can read it back. Null for staff.
+   */
+  studentPassword?: string | null;
 }
 
 export interface UserSaveRequest {
@@ -43,4 +49,10 @@ export interface UserQuery {
   email?: string | null;
   role?: string | null;
   search?: string | null;
+}
+
+/** How many accounts hold one role, for the role-wise grid above the table. */
+export interface RoleCount {
+  role: string;
+  count: number;
 }

@@ -1,0 +1,225 @@
+<header class="rep__header">
+  <p class="rep__eyebrow">REPORTS</p>
+  <h1>Enquiry follow-up</h1>
+  <p class="app-muted">
+    Who walked in asking about a course, what came of it, and who is still waiting
+    on a call.
+  </p>
+</header>
+
+<!-- ================================================================= filters -->
+<section class="app-card rep__card rep__filters-card">
+  <div class="rep__filters">
+    <div class="rep__field">
+      <label for="fromDate">From</label>
+      <p-datepicker
+        inputId="fromDate"
+        [ngModel]="fromDate()"
+        (ngModelChange)="fromDate.set($event)"
+        dateFormat="dd/mm/yy"
+        [showIcon]="true"
+        appendTo="body"
+        styleClass="rep__datepicker" />
+    </div>
+
+    <div class="rep__field">
+      <label for="toDate">To</label>
+      <p-datepicker
+        inputId="toDate"
+        [ngModel]="toDate()"
+        (ngModelChange)="toDate.set($event)"
+        dateFormat="dd/mm/yy"
+        [showIcon]="true"
+        appendTo="body"
+        styleClass="rep__datepicker" />
+    </div>
+
+    <div class="rep__field">
+      <label for="status">Status</label>
+      <p-select
+        inputId="status"
+        [ngModel]="status()"
+        (ngModelChange)="status.set($event)"
+        [options]="statusOptions"
+        optionLabel="label"
+        optionValue="value"
+        appendTo="body"
+        styleClass="rep__select" />
+    </div>
+
+    <div class="rep__field">
+      <label for="courseId">Course</label>
+      <p-select
+        inputId="courseId"
+        [ngModel]="courseId()"
+        (ngModelChange)="courseId.set($event)"
+        [options]="courses()"
+        optionLabel="name"
+        optionValue="courseId"
+        placeholder="All courses"
+        [filter]="true"
+        filterBy="name"
+        [showClear]="true"
+        appendTo="body"
+        styleClass="rep__select" />
+    </div>
+
+    <div class="rep__field">
+      <label for="branchId">Branch</label>
+      <p-select
+        inputId="branchId"
+        [ngModel]="branchId()"
+        (ngModelChange)="branchId.set($event)"
+        [options]="branches()"
+        optionLabel="name"
+        optionValue="branchId"
+        placeholder="All branches"
+        [showClear]="true"
+        appendTo="body"
+        styleClass="rep__select" />
+    </div>
+
+    <div class="rep__filter-actions">
+      <p-button label="Run" icon="pi pi-search" [loading]="loading()" (onClick)="run()" />
+      <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true"
+                (onClick)="reset()" />
+      <p-button label="Print" icon="pi pi-print" severity="secondary" [text]="true"
+                (onClick)="print()" />
+    </div>
+  </div>
+</section>
+
+@if (report(); as data) {
+  <!-- ============================================================== totals -->
+  <section class="rep__totals">
+    <article class="app-card rep__stat">
+      <span class="rep__stat-label">Enquiries</span>
+      <strong class="rep__stat-value">{{ data.totals.total }}</strong>
+      <span class="rep__stat-note app-muted">in the selected range</span>
+    </article>
+
+    <article class="app-card rep__stat rep__stat--good">
+      <span class="rep__stat-label">Converted</span>
+      <strong class="rep__stat-value">{{ data.totals.converted }}</strong>
+      <span class="rep__stat-note app-muted">{{ data.totals.conversionRate }}% of enquiries</span>
+    </article>
+
+    <article class="app-card rep__stat">
+      <span class="rep__stat-label">Still open</span>
+      <strong class="rep__stat-value">{{ data.totals.new + data.totals.following }}</strong>
+      <span class="rep__stat-note app-muted">
+        {{ data.totals.new }} new · {{ data.totals.following }} following
+      </span>
+    </article>
+
+    <article class="app-card rep__stat" [class.rep__stat--bad]="data.totals.due > 0">
+      <span class="rep__stat-label">Overdue a call</span>
+      <strong class="rep__stat-value">{{ data.totals.due }}</strong>
+      @if (data.totals.due > 0) {
+        <button type="button" class="rep__stat-link" (click)="showDueOnly()">
+          Show only these
+        </button>
+      } @else {
+        <span class="rep__stat-note app-muted">nobody is waiting</span>
+      }
+    </article>
+  </section>
+
+  <!-- ============================================================ by course -->
+  @if (data.byCourse.length) {
+    <section class="app-card rep__card">
+      <h2>By course</h2>
+
+      <p-table [value]="data.byCourse" styleClass="rep__table" [scrollable]="true">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Course</th>
+            <th class="rep__num">Enquiries</th>
+            <th class="rep__num">Converted</th>
+            <th class="rep__num">Rate</th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-row>
+          <tr>
+            <td>{{ row.courseName }}</td>
+            <td class="rep__num">{{ row.enquiries }}</td>
+            <td class="rep__num">{{ row.converted }}</td>
+            <td class="rep__num">{{ courseRate(row.enquiries, row.converted) }}%</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </section>
+  }
+
+  <!-- =============================================================== detail -->
+  <section class="app-card rep__card">
+    <header class="rep__card-head">
+      <h2>Enquiries</h2>
+      @if (dueOnly()) {
+        <p-tag severity="danger" value="Showing overdue only" icon="pi pi-filter" />
+      }
+    </header>
+
+    <p-table
+      [value]="data.rows"
+      styleClass="rep__table"
+      [paginator]="data.rows.length > 25"
+      [rows]="25"
+      dataKey="id">
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Name</th>
+          <th>Phone</th>
+          <th>Course</th>
+          <th>Address</th>
+          <th>Enquired</th>
+          <th>Follow up</th>
+          <th class="rep__num">Calls</th>
+          <th>Status</th>
+          <th class="rep__remarks-col">Remarks</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td><strong>{{ row.studentName }}</strong></td>
+          <td class="rep__nowrap">{{ row.phone }}</td>
+          <td>{{ row.courseName || '—' }}</td>
+          <td class="rep__address">{{ row.address || '—' }}</td>
+          <td class="rep__nowrap">{{ row.enquiryDate | date: 'd MMM y' }}</td>
+          <td class="rep__nowrap">
+            @if (row.nextFollowUpOn) {
+              <span [class.rep__due]="row.isDue">{{ row.nextFollowUpOn | date: 'd MMM y' }}</span>
+            } @else {
+              <span class="app-muted">—</span>
+            }
+          </td>
+          <td class="rep__num">{{ row.followUpCount }}</td>
+          <td>
+            <p-tag [severity]="severityFor(row.status)" [value]="labelFor(row.status)" />
+            @if (row.convertedStudentRegistrationId) {
+              <div class="rep__sub">{{ row.convertedStudentRegistrationId }}</div>
+            }
+          </td>
+            <td class="rep__remarks-col">
+              @if (row.remarks) {
+                <div class="rep__remarks" [pTooltip]="row.remarks" tooltipPosition="left">{{ row.remarks }}</div>
+              } @else {
+                <span class="app-muted">—</span>
+              }
+            </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="9" class="rep__empty app-muted">
+            No enquiries in this range.
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </section>
+}

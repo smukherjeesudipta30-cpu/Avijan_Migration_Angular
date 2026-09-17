@@ -11,6 +11,8 @@ import {
   FeeReceipt,
   FeeRecorded,
   FeeSaveRequest,
+  MyFeeDue,
+  OnlinePaymentNotice,
   StudentFeeBill
 } from '../models/fee.model';
 import { PagedResult } from '../models/student.model';
@@ -59,5 +61,39 @@ export class FeeService {
     return this.http
       .get<ApiResponse<FeeReceipt>>(`${this.base}/payments/${id}/receipt`)
       .pipe(map(r => r.data));
+  }
+
+  /* --------------------------- online payment (the student's own) */
+
+  /** What this student owes for their next unpaid month, with the UPI details. */
+  myDue(): Observable<MyFeeDue> {
+    return this.http
+      .get<ApiResponse<MyFeeDue>>(`${environment.apiBaseUrl}/my-fees/due`)
+      .pipe(map(r => r.data));
+  }
+
+  /**
+   * Submits the UPI reference after paying against the QR code.
+   *
+   * Only the reference is sent — the amount comes from the server's own
+   * calculation, so a student cannot choose what their month costs.
+   */
+  payOnline(transactionId: string): Observable<ApiResponse<FeeRecorded>> {
+    return this.http.post<ApiResponse<FeeRecorded>>(
+      `${environment.apiBaseUrl}/my-fees/pay`, { transactionId });
+  }
+
+  /* ------------------------------- online payment (the office's view) */
+
+  unverifiedOnline(take = 25): Observable<OnlinePaymentNotice[]> {
+    return this.http
+      .get<ApiResponse<OnlinePaymentNotice[]>>(`${this.base}/online/unverified`, {
+        params: new HttpParams().set('take', String(take))
+      })
+      .pipe(map(r => r.data));
+  }
+
+  verifyOnline(feeId: number): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.base}/online/${feeId}/verify`, {});
   }
 }

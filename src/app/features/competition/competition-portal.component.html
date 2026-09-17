@@ -1,0 +1,697 @@
+@if (loading()) {
+  <p class="cmp__state">Loading&hellip;</p>
+} @else {
+  <!-- The alias has to be declared on a primary @if: Angular refuses "as" on an
+       @else if (NG5002), so the nesting is load-bearing rather than stylistic. -->
+  @if (notice(); as n) {
+
+  <!-- ===================================================== the poster ===== -->
+  <header class="cmp__hero">
+    <div class="cmp__hero-inner">
+      <p class="cmp__organised">Organised by <strong>Avijan Computer Centre</strong></p>
+
+      <h1 class="cmp__title">
+        <span class="cmp__title-draw">Drawing</span>
+        <span class="cmp__amp">&amp;</span>
+        <span class="cmp__title-dance">Dance</span>
+        <span class="cmp__title-comp">Competition</span>
+      </h1>
+
+      <p class="cmp__title-bn">বসে আঁকো ও নৃত্য প্রতিযোগিতা</p>
+
+      <dl class="cmp__facts">
+        @if (n.eventDate) {
+          <div>
+            <dt>Date · তারিখ</dt>
+            <dd>{{ n.eventDate | date: 'd MMMM y' }}</dd>
+          </div>
+        }
+        @if (n.drawingStartTime) {
+          <div>
+            <dt>Drawing · আঁকা</dt>
+            <dd>{{ time(n.drawingStartTime) }}</dd>
+          </div>
+        }
+        @if (n.danceStartTime) {
+          <div>
+            <dt>Dance · নৃত্য</dt>
+            <dd>{{ time(n.danceStartTime) }}</dd>
+          </div>
+        }
+        @if (n.prizeGivingTime) {
+          <div>
+            <dt>Prizes · পুরস্কার</dt>
+            <dd>{{ time(n.prizeGivingTime) }}</dd>
+          </div>
+        }
+      </dl>
+
+      @if (n.venue) {
+        <p class="cmp__venue">
+          <strong>Venue:</strong> {{ n.venue }}
+          @if (n.venueBengali) { <span class="cmp__bn">· {{ n.venueBengali }}</span> }
+        </p>
+      }
+
+      @if (n.contactPhones) {
+        <p class="cmp__contact">Contact · যোগাযোগ: {{ n.contactPhones }}</p>
+      }
+    </div>
+  </header>
+
+  <main class="cmp__body">
+
+    <!-- ------------------------------------------------------- the notice -->
+    @if (n.noticeEnglish || n.noticeBengali) {
+      <section class="cmp__card cmp__notice">
+        @if (n.noticeEnglish) { <p>{{ n.noticeEnglish }}</p> }
+        @if (n.noticeBengali) { <p class="cmp__bn">{{ n.noticeBengali }}</p> }
+      </section>
+    }
+
+    <!-- -------------------------------------------------- what is on offer -->
+    <section class="cmp__two">
+      <article class="cmp__card cmp__event cmp__event--draw">
+        <h2>Drawing <span class="cmp__bn">বসে আঁকো</span></h2>
+        <p class="cmp__fee">&#8377;{{ n.drawingFee }}</p>
+        <p class="cmp__fee-note">Payable online, or at the venue on the day.</p>
+
+        <ul class="cmp__divisions">
+          @for (d of n.drawingDivisions; track d.id) {
+            <li>
+              <strong>{{ d.code }}</strong>
+              <span>{{ d.labelEnglish }}</span>
+              @if (d.labelBengali) { <span class="cmp__bn">{{ d.labelBengali }}</span> }
+            </li>
+          }
+        </ul>
+      </article>
+
+      <article class="cmp__card cmp__event cmp__event--dance">
+        <h2>Dance <span class="cmp__bn">নৃত্য</span></h2>
+        <p class="cmp__fee">&#8377;{{ n.danceFee }}</p>
+        <p class="cmp__fee-note">Online payment only. 40% is refunded at the venue.</p>
+
+        <ul class="cmp__divisions">
+          @for (g of n.danceGroups; track g.id) {
+            <li>
+              <strong>{{ g.code }}</strong>
+              <span>{{ g.labelEnglish }}</span>
+              @if (g.capacity) {
+                <span class="cmp__batch">{{ g.capacity }} places</span>
+              }
+            </li>
+          }
+        </ul>
+      </article>
+    </section>
+
+    <!-- ------------------------------------------------------ the posters -->
+    @if (n.hasDrawingAdvert || n.hasDanceAdvert) {
+      <section class="cmp__posters">
+        @if (n.hasDrawingAdvert) {
+          <a class="cmp__poster" [href]="advertUrl('Drawing')" target="_blank" rel="noopener">
+            <img [src]="advertUrl('Drawing')" alt="Drawing competition advertisement" loading="lazy" />
+          </a>
+        }
+        @if (n.hasDanceAdvert) {
+          <a class="cmp__poster" [href]="advertUrl('Dance')" target="_blank" rel="noopener">
+            <img [src]="advertUrl('Dance')" alt="Dance competition advertisement" loading="lazy" />
+          </a>
+        }
+      </section>
+    }
+
+    <!-- --------------------------------------------------------- the rules
+         Kept apart per competition: a parent entering only the drawing should not
+         have to read past the dance rules to find theirs. -->
+    <section class="cmp__card cmp__rules">
+      <h2>Rules &amp; Regulations <span class="cmp__bn">নিয়মাবলী</span></h2>
+
+      @if (rulesLines(n.drawingRulesEnglish).length || rulesLines(n.drawingRulesBengali).length) {
+        <h3 class="cmp__rules-for cmp__rules-for--draw">
+          Drawing <span class="cmp__bn">বসে আঁকো</span>
+        </h3>
+
+        <div class="cmp__rules-two">
+          <div>
+            @for (line of rulesLines(n.drawingRulesEnglish); track line) {
+              <p class="cmp__rule">{{ line }}</p>
+            }
+          </div>
+          <div class="cmp__bn">
+            @for (line of rulesLines(n.drawingRulesBengali); track line) {
+              <p class="cmp__rule">{{ line }}</p>
+            }
+          </div>
+        </div>
+      }
+
+      @if (rulesLines(n.danceRulesEnglish).length || rulesLines(n.danceRulesBengali).length) {
+        <h3 class="cmp__rules-for cmp__rules-for--dance">
+          Dance <span class="cmp__bn">নৃত্য</span>
+        </h3>
+
+        <div class="cmp__rules-two">
+          <div>
+            @for (line of rulesLines(n.danceRulesEnglish); track line) {
+              <p class="cmp__rule">{{ line }}</p>
+            }
+          </div>
+          <div class="cmp__bn">
+            @for (line of rulesLines(n.danceRulesBengali); track line) {
+              <p class="cmp__rule">{{ line }}</p>
+            }
+          </div>
+        </div>
+      }
+
+      @if (n.organisers.length) {
+        <div class="cmp__organisers">
+          <h3>Organised by</h3>
+          <ul>
+            @for (o of n.organisers; track o.id) {
+              <li>
+                <strong>{{ o.name }}</strong>
+                @if (o.designation) { <span>{{ o.designation }}</span> }
+                @if (o.phone) { <span>{{ o.phone }}</span> }
+              </li>
+            }
+          </ul>
+        </div>
+      }
+
+      @if (stage() === 'notice') {
+        @if (n.isOpen) {
+          <button type="button" class="cmp__go" (click)="openForm()">
+            I have read the rules — register now
+          </button>
+        } @else {
+          <p class="cmp__closed">
+            Registration is closed at the moment.
+            @if (n.registrationOpensOn) {
+              It opens on {{ n.registrationOpensOn | date: 'd MMMM y' }}.
+            }
+          </p>
+        }
+      }
+    </section>
+
+    <!-- ----------------------------------------------------- quick start -->
+    @if (stage() === 'quickstart' && n.isOpen) {
+      <section class="cmp__card cmp__quickstart" id="cmp-quickstart">
+        <div class="cmp__qs-tabs">
+          <button type="button"
+                  class="cmp__qs-tab"
+                  [class.cmp__qs-tab--active]="quickStartMode() === 'start'"
+                  (click)="quickStartMode.set('start'); quickStartError.set(null)">
+            Start a new registration
+          </button>
+          <button type="button"
+                  class="cmp__qs-tab"
+                  [class.cmp__qs-tab--active]="quickStartMode() === 'resume'"
+                  (click)="quickStartMode.set('resume'); quickStartError.set(null)">
+            Resume one I started earlier
+          </button>
+        </div>
+
+        @if (quickStartMode() === 'start') {
+          <p class="cmp__qs-hint">
+            Give a name, phone number and a password of your own choosing. You'll get a
+            registration id straight away — keep it and the password safe, so you can
+            come back later and finish the form if you don't complete it now.
+          </p>
+
+          <div class="cmp__grid">
+            <label>
+              <span>Participant's name <em>*</em></span>
+              <input type="text" [(ngModel)]="quickStart.participantName" maxlength="150" />
+            </label>
+            <label>
+              <span>Phone <em>*</em></span>
+              <input type="tel" [(ngModel)]="quickStart.phone" maxlength="10" inputmode="numeric" />
+            </label>
+            <label>
+              <span>Email <em>*</em></span>
+              <input type="email" [(ngModel)]="quickStart.email" maxlength="50" autocomplete="email" />
+              <small class="cmp__hint">Where we'd send a reset code if you forget your password.</small>
+            </label>
+            <label>
+              <span>Choose a password <em>*</em></span>
+              <input type="password" [(ngModel)]="quickStart.password" maxlength="100" />
+              <small class="cmp__hint">At least 6 characters.</small>
+            </label>
+          </div>
+
+          @if (quickStartError()) {
+            <p class="cmp__error">{{ quickStartError() }}</p>
+          }
+
+          <button type="button" class="cmp__go" [disabled]="quickStartSaving()" (click)="startDraft()">
+            {{ quickStartSaving() ? 'Starting…' : 'Start & continue to the form' }}
+          </button>
+        } @else if (!showForgotPassword()) {
+          <p class="cmp__qs-hint">
+            Enter the registration id and password you were given when you started.
+          </p>
+
+          <div class="cmp__grid">
+            <label>
+              <span>Registration id <em>*</em></span>
+              <input type="text" [(ngModel)]="resumeLogin.registrationCode"
+                     placeholder="e.g. AVI/CMP/2027/0001" maxlength="30" />
+            </label>
+            <label>
+              <span>Password <em>*</em></span>
+              <input type="password" [(ngModel)]="resumeLogin.password" maxlength="100" />
+            </label>
+          </div>
+
+          @if (quickStartError()) {
+            <p class="cmp__error">{{ quickStartError() }}</p>
+          }
+
+          <button type="button" class="cmp__go" [disabled]="quickStartSaving()" (click)="resumeDraft()">
+            {{ quickStartSaving() ? 'Checking…' : 'Resume & continue to the form' }}
+          </button>
+
+          <button type="button" class="cmp__link-btn"
+                  (click)="showForgotPassword.set(true); forgotRegistrationCode = resumeLogin.registrationCode">
+            Forgot password?
+          </button>
+        } @else if (!forgotSent()) {
+          <!-- Step one: which registration has lost its password. -->
+          <p class="cmp__qs-hint">
+            Enter your registration id. If it has an email on file, we'll send a
+            reset code to it.
+          </p>
+
+          <div class="cmp__grid">
+            <label>
+              <span>Registration id <em>*</em></span>
+              <input type="text" [(ngModel)]="forgotRegistrationCode"
+                     placeholder="e.g. AVI/CMP/2027/0001" maxlength="30" />
+            </label>
+          </div>
+
+          @if (forgotError()) {
+            <p class="cmp__error">{{ forgotError() }}</p>
+          }
+
+          <button type="button" class="cmp__go" [disabled]="forgotSaving()" (click)="sendForgotPasswordCode()">
+            {{ forgotSaving() ? 'Sending…' : 'Send reset code' }}
+          </button>
+          <button type="button" class="cmp__link-btn" (click)="cancelForgotPassword()">
+            Back to sign in
+          </button>
+        } @else if (!resetDone()) {
+          <!-- Step two: the code just emailed, spent to set a new password. -->
+          <p class="cmp__qs-hint">
+            Check the email on file for <strong>{{ forgotRegistrationCode }}</strong> —
+            the code is valid for 15 minutes and works once. Registered before an
+            email was on file? There's nothing to send it to; call the office instead.
+          </p>
+
+          <div class="cmp__grid">
+            <label>
+              <span>6-digit code <em>*</em></span>
+              <input type="text" [(ngModel)]="resetCode" maxlength="6" inputmode="numeric"
+                     placeholder="123456" />
+            </label>
+            <label>
+              <span>New password <em>*</em></span>
+              <input type="password" [(ngModel)]="resetNewPassword" maxlength="100" />
+              <small class="cmp__hint">At least 6 characters.</small>
+            </label>
+          </div>
+
+          @if (resetError()) {
+            <p class="cmp__error">{{ resetError() }}</p>
+          }
+
+          <button type="button" class="cmp__go" [disabled]="resetSaving()" (click)="submitDraftPasswordReset()">
+            {{ resetSaving() ? 'Resetting…' : 'Reset password' }}
+          </button>
+          <button type="button" class="cmp__link-btn" (click)="sendForgotPasswordCode()">
+            Send another code
+          </button>
+          <button type="button" class="cmp__link-btn" (click)="cancelForgotPassword()">
+            Back to sign in
+          </button>
+        } @else {
+          <!-- Done. -->
+          <p class="cmp__qs-ok">
+            Password reset. Sign in with it on the "Resume one I started earlier" tab.
+          </p>
+
+          <button type="button" class="cmp__go" (click)="cancelForgotPassword()">
+            Back to sign in
+          </button>
+        }
+      </section>
+    }
+
+    <!-- ---------------------------------------------------------- the form -->
+    @if (stage() === 'form' && n.isOpen) {
+      <section class="cmp__card cmp__form" id="cmp-form">
+        <h2>Registration form</h2>
+
+        @if (draftCode()) {
+          <div class="cmp__draft-banner">
+            @if (draftJustStarted()) {
+              <p>
+                Your registration id is <strong>{{ draftCode() }}</strong>. Write it down along
+                with your password — if you need to stop and come back later, use them on the
+                "Resume one I started earlier" tab at the top of this page.
+              </p>
+            } @else {
+              <p>Continuing registration <strong>{{ draftCode() }}</strong>.</p>
+            }
+
+            @if (!changingPassword() && !passwordChanged()) {
+              <button type="button" class="cmp__link-btn" (click)="changingPassword.set(true)">
+                Change password
+              </button>
+            }
+
+            @if (passwordChanged()) {
+              <span class="cmp__qs-ok">Password changed.</span>
+            }
+
+            @if (changingPassword()) {
+              <div class="cmp__grid">
+                <label>
+                  <span>Current password</span>
+                  <input type="password" [(ngModel)]="changePassword.currentPassword" maxlength="100" />
+                </label>
+                <label>
+                  <span>New password</span>
+                  <input type="password" [(ngModel)]="changePassword.newPassword" maxlength="100" />
+                </label>
+              </div>
+
+              @if (passwordChangeError()) {
+                <p class="cmp__error">{{ passwordChangeError() }}</p>
+              }
+
+              <button type="button" class="cmp__link-btn" [disabled]="passwordChangeSaving()"
+                      (click)="submitPasswordChange()">
+                {{ passwordChangeSaving() ? 'Saving…' : 'Save new password' }}
+              </button>
+              <button type="button" class="cmp__link-btn" (click)="changingPassword.set(false)">
+                Cancel
+              </button>
+            }
+          </div>
+        }
+
+        <div class="cmp__grid">
+          <label>
+            <span>Participant's name <em>*</em></span>
+            <input type="text" [(ngModel)]="form.participantName" maxlength="150" />
+          </label>
+
+          <label>
+            <span>Guardian's name</span>
+            <input type="text" [(ngModel)]="form.guardianName" maxlength="150" />
+          </label>
+
+          <label>
+            <span>Date of birth</span>
+            <input type="date" [(ngModel)]="form.dateOfBirth" (change)="suggestDance()" />
+          </label>
+
+          <label>
+            <span>Phone <em>*</em></span>
+            <input type="tel" [(ngModel)]="form.phone" maxlength="10" inputmode="numeric" />
+          </label>
+
+          <label>
+            <span>School</span>
+            <input type="text" [(ngModel)]="form.schoolName" maxlength="200" />
+          </label>
+
+          <label>
+            <span>Class @if (form.drawingGroupId !== null) { <em>*</em> }</span>
+            <input type="text" [(ngModel)]="form.className" (change)="suggestDrawing()"
+                   placeholder="e.g. V, or Nursery" maxlength="50" />
+            @if (form.drawingGroupId !== null) {
+              <small class="cmp__hint">Decides the drawing division — checked against the school id.</small>
+            }
+          </label>
+
+          <label>
+            <span>Email</span>
+            <input type="email" [(ngModel)]="form.email" maxlength="150" />
+          </label>
+
+          <label class="cmp__wide">
+            <span>Address</span>
+            <input type="text" [(ngModel)]="form.address" maxlength="400" />
+          </label>
+        </div>
+
+        <!-- which competitions -->
+        <h3>Which competition?</h3>
+
+        <div class="cmp__pickers">
+          <label class="cmp__pick" [class.is-on]="enterDrawing()">
+            <input type="checkbox" [ngModel]="enterDrawing()" (ngModelChange)="enterDrawing.set($event)" />
+            <span>Drawing &#8377;{{ n.drawingFee }}</span>
+          </label>
+
+          <label class="cmp__pick" [class.is-on]="enterDance()">
+            <input type="checkbox" [ngModel]="enterDance()" (ngModelChange)="enterDance.set($event)" />
+            <span>Dance &#8377;{{ n.danceFee }}</span>
+          </label>
+        </div>
+
+        @if (enterDrawing()) {
+          <label class="cmp__select">
+            <span>Drawing division <em>*</em></span>
+            <select [(ngModel)]="form.drawingGroupId">
+              <option [ngValue]="null">Choose a division</option>
+              @for (d of n.drawingDivisions; track d.id) {
+                <option [ngValue]="d.id">{{ groupLabel(d) }}</option>
+              }
+            </select>
+          </label>
+        }
+
+        @if (enterDance()) {
+          <label class="cmp__select">
+            <span>Dance group <em>*</em></span>
+            <select [(ngModel)]="form.danceGroupId">
+              <option [ngValue]="null">Choose a group</option>
+              @for (g of n.danceGroups; track g.id) {
+                <option [ngValue]="g.id">{{ g.labelEnglish }}</option>
+              }
+            </select>
+          </label>
+        }
+
+        <!-- documents -->
+        <h3>Documents</h3>
+        <p class="cmp__hint">Photographs of the papers are fine. Large pictures are made smaller here before sending.</p>
+
+        <div class="cmp__uploads">
+          <label class="cmp__upload" [class.is-set]="photo()">
+            <span>Participant's photograph <em>*</em></span>
+            <input type="file" accept="image/*" (change)="pick($event, 'photo')" />
+            <small>{{ photo() ? photo()!.fileName : 'Choose a file' }}</small>
+          </label>
+
+          @if (enterDrawing()) {
+            <label class="cmp__upload" [class.is-set]="schoolId()">
+              <span>School id card <em>*</em></span>
+              <input type="file" accept="image/*" (change)="pick($event, 'schoolId')" />
+              <small>{{ schoolId() ? schoolId()!.fileName : 'Choose a file' }}</small>
+            </label>
+          }
+
+          @if (enterDance()) {
+            <label class="cmp__upload" [class.is-set]="birthCertificate()">
+              <span>Birth certificate <em>*</em></span>
+              <input type="file" accept="image/*" (change)="pick($event, 'birthCertificate')" />
+              <small>{{ birthCertificate() ? birthCertificate()!.fileName : 'Choose a file' }}</small>
+            </label>
+          }
+        </div>
+
+        <!-- payment -->
+        <h3>Payment</h3>
+
+        <p class="cmp__amount">
+          Total to pay <strong>&#8377;{{ amount() }}</strong>
+        </p>
+
+        @if (venueAllowed()) {
+          <div class="cmp__pickers">
+            <label class="cmp__pick" [class.is-on]="form.paymentMode === 'Online'">
+              <input type="radio" name="mode" value="Online" [(ngModel)]="form.paymentMode" />
+              <span>Pay online now</span>
+            </label>
+
+            <label class="cmp__pick" [class.is-on]="form.paymentMode === 'Venue'">
+              <input type="radio" name="mode" value="Venue" [(ngModel)]="form.paymentMode" />
+              <span>Pay at the venue</span>
+            </label>
+          </div>
+        } @else if (enterDance()) {
+          <p class="cmp__hint">Dance registration must be paid online.</p>
+        }
+
+        @if (!venueAllowed() || form.paymentMode === 'Online') {
+          <div class="cmp__pay">
+            <p>
+              Pay <strong>&#8377;{{ amount() }}</strong> by UPI to the centre, then type the
+              reference number your app shows and attach the screenshot.
+            </p>
+
+            <!-- The QR carries the exact amount, so there is nothing to type in the
+                 payment app and nothing to mistype. -->
+            @if (qrDataUrl(); as qr) {
+              <figure class="cmp__qr">
+                <img [src]="qr" alt="Scan to pay Avijan" />
+                <figcaption>
+                  <strong>&#8377;{{ amount() }}</strong>
+                  <span>already filled in — just scan</span>
+                </figcaption>
+              </figure>
+
+              @if (upiLink(); as link) {
+                <!-- On a phone this opens the UPI app directly; ignored on a desktop. -->
+                <a class="cmp__upi-link" [href]="link">Open in a UPI app on this phone</a>
+              }
+            } @else if (n.upiId) {
+              <p class="cmp__hint">
+                The payment code could not be drawn. You can still pay to the UPI id
+                below for exactly &#8377;{{ amount() }}.
+              </p>
+            }
+
+            @if (n.upiId) {
+              <p class="cmp__upi">UPI ID: <code>{{ n.upiId }}</code></p>
+            }
+
+            <label class="cmp__select">
+              <span>UPI reference number <em>*</em></span>
+              <input type="text" [(ngModel)]="form.transactionRef" maxlength="64"
+                     placeholder="e.g. 481203557712" />
+            </label>
+
+            <label class="cmp__upload" [class.is-set]="paymentSlip()">
+              <span>Payment screenshot <em>*</em></span>
+              <input type="file" accept="image/*" (change)="pick($event, 'paymentSlip')" />
+              <small>{{ paymentSlip() ? paymentSlip()!.fileName : 'Choose a file' }}</small>
+            </label>
+
+            <p class="cmp__hint">
+              The office checks every payment against the centre's account before a
+              registration is confirmed.
+            </p>
+          </div>
+        } @else {
+          <p class="cmp__hint">
+            Bring &#8377;{{ amount() }} to the venue on the day. Your registration number is
+            issued now and holds your place.
+          </p>
+        }
+
+        @if (error()) {
+          <p class="cmp__error">{{ error() }}</p>
+        }
+
+        <button type="button" class="cmp__go" [disabled]="saving()" (click)="submit()">
+          {{ saving() ? 'Sending…' : 'Complete registration' }}
+        </button>
+      </section>
+    }
+
+    <!-- ------------------------------------------------------------- done -->
+    @if (stage() === 'done' && result(); as r) {
+      <section class="cmp__card cmp__done">
+        <h2>Registered</h2>
+        <p class="cmp__done-name">{{ r.participantName }}</p>
+
+        <div class="cmp__tickets">
+          @for (e of r.entries; track e.registrationNo) {
+            <div class="cmp__ticket" [class.cmp__ticket--dance]="e.kind === 'Dance'">
+              <span class="cmp__ticket-kind">{{ e.kind }}</span>
+              <strong class="cmp__ticket-no">{{ e.registrationNo }}</strong>
+              @if (e.groupLabel) { <span class="cmp__ticket-group">{{ e.groupLabel }}</span> }
+              @if (e.batchNo) {
+                <span class="cmp__ticket-batch">
+                  <em>Chest number</em>
+                  <strong>{{ e.batchNo }}</strong>
+                </span>
+              }
+            </div>
+          }
+        </div>
+
+        <p class="cmp__done-msg">{{ r.message }}</p>
+
+        @if (r.entries.length && r.paymentMode !== 'Venue') {
+          <p class="cmp__hint">
+            Your chest number can be downloaded as a PDF from this page once the
+            office has confirmed your payment.
+          </p>
+        }
+        <p class="cmp__done-amount">Amount &#8377;{{ r.amount }} · {{ r.paymentMode === 'Venue' ? 'to pay at the venue' : 'paid online' }}</p>
+
+        <p class="cmp__hint">
+          Please write the registration number down, or take a photograph of this
+          screen. Bring it with you on the day.
+        </p>
+
+        <div class="cmp__done-actions">
+          <button type="button" class="cmp__go" (click)="print()">Print this</button>
+          <button type="button" class="cmp__ghost" (click)="startAnother()">Register someone else</button>
+        </div>
+      </section>
+    }
+
+    <!-- ------------------------------------------- chest number download
+         For somebody who registered earlier and has come back for their number
+         once the office confirmed the payment. -->
+    <section class="cmp__card cmp__lookup">
+      <h2>Already registered for dance?</h2>
+      <p class="cmp__hint">
+        Download your chest number here once the office has confirmed your payment.
+        Print it and pin it on before the performance.
+      </p>
+
+      <div class="cmp__lookup-fields">
+        <label>
+          <span>Registration number</span>
+          <input type="text" [(ngModel)]="lookup.registrationNo"
+                 placeholder="AVI/DNC/{{ n.year }}/001" maxlength="40" />
+        </label>
+
+        <label>
+          <span>Phone number on the form</span>
+          <input type="tel" [(ngModel)]="lookup.phone" maxlength="10" inputmode="numeric" />
+        </label>
+      </div>
+
+      @if (lookupError()) {
+        <p class="cmp__error">{{ lookupError() }}</p>
+      }
+
+      <button type="button" class="cmp__go" [disabled]="lookupBusy()"
+              (click)="downloadChestCard()">
+        {{ lookupBusy() ? 'Fetching…' : 'Download chest number (PDF)' }}
+      </button>
+    </section>
+
+    <p class="cmp__back"><a routerLink="/">Back to the Avijan home page</a></p>
+  </main>
+  } @else {
+    <div class="cmp__state">
+      <h1>No competition is running at the moment</h1>
+      <p>Please check back later, or telephone the centre.</p>
+      <a routerLink="/">Back to the Avijan home page</a>
+    </div>
+  }
+}

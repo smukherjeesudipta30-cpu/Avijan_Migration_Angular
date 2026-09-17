@@ -1,0 +1,201 @@
+<header class="rpt__header">
+  <p class="app-section-title">Reports</p>
+  <h1>Staff attendance</h1>
+  <p class="app-muted">
+    Hours worked from the actual scan times. Every day counts as a working day, so a
+    day without a scan is leave.
+  </p>
+</header>
+
+<section class="app-card rpt__filter">
+  <div class="rpt__field">
+    <label for="from">From</label>
+    <p-datePicker
+      inputId="from" [ngModel]="from()" (ngModelChange)="from.set($event)"
+      [ngModelOptions]="{ standalone: true }" dateFormat="dd/mm/yy"
+      [showIcon]="true" appendTo="body" styleClass="rpt__picker" />
+  </div>
+
+  <div class="rpt__field">
+    <label for="to">To</label>
+    <p-datePicker
+      inputId="to" [ngModel]="to()" (ngModelChange)="to.set($event)"
+      [ngModelOptions]="{ standalone: true }" dateFormat="dd/mm/yy"
+      [showIcon]="true" appendTo="body" styleClass="rpt__picker" />
+  </div>
+
+  <div class="rpt__field">
+    <label for="groupBy">Group by</label>
+    <p-select
+      inputId="groupBy" [options]="groupings" optionLabel="label" optionValue="value"
+      [ngModel]="groupBy()" (ngModelChange)="groupBy.set($event)"
+      [ngModelOptions]="{ standalone: true }" appendTo="body" styleClass="rpt__select" />
+  </div>
+
+  <div class="rpt__field">
+    <label for="staffType">Staff</label>
+    <p-select
+      inputId="staffType" [options]="staffTypes" optionLabel="label" optionValue="value"
+      [ngModel]="staffType()" (ngModelChange)="staffType.set($event)"
+      [ngModelOptions]="{ standalone: true }" [showClear]="true"
+      placeholder="Everyone" appendTo="body" styleClass="rpt__select" />
+  </div>
+
+  <!-- The branch each scan was taken at, which comes from the centre's own fence
+       rather than from where anybody's record says they work. -->
+  <div class="rpt__field">
+    <label for="branch">Branch</label>
+    <p-select
+      inputId="branch" [options]="branches()" optionLabel="name" optionValue="name"
+      [ngModel]="branch()" (ngModelChange)="branch.set($event)"
+      [ngModelOptions]="{ standalone: true }" [showClear]="true"
+      placeholder="All branches" appendTo="body" styleClass="rpt__select" />
+  </div>
+
+  <div class="rpt__filter-actions">
+    <p-button label="Run" icon="pi pi-search" [loading]="loading()" (onClick)="run()" />
+    <p-button
+      label="CSV" icon="pi pi-download" severity="secondary" [outlined]="true"
+      [disabled]="!report() || report()!.days.length === 0" (onClick)="exportCsv()" />
+  </div>
+</section>
+
+@if (report(); as r) {
+  <div class="rpt__tiles">
+    <div class="app-card rpt__tile">
+      <span>Staff with attendance</span>
+      <strong>{{ r.staffCount }}</strong>
+      <small class="app-muted">{{ r.from | date: 'd MMM y' }} – {{ r.to | date: 'd MMM y' }}</small>
+    </div>
+
+    <div class="app-card rpt__tile">
+      <span>Total hours</span>
+      <strong>{{ r.totalHours | number: '1.2-2' }}</strong>
+      <small class="app-muted">From paired in and out scans</small>
+    </div>
+
+    <div class="app-card rpt__tile">
+      <span>Days lost to no scan-out</span>
+      <strong>{{ daysLostToNoScanOut() }}</strong>
+      <small class="app-muted">Present, but counted as leave</small>
+    </div>
+  </div>
+
+  <!-- ------------------------------------------------------ the summary -->
+  <section class="app-card rpt__result">
+    <header class="rpt__result-head">
+      <h2>Summary by {{ r.groupBy | lowercase }}</h2>
+    </header>
+
+    <p-table [value]="r.rows" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '58rem' }">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Staff</th>
+          <th style="width: 10rem">Period</th>
+          <th class="rpt__num" style="width: 7rem">Present</th>
+          <th class="rpt__num" style="width: 7rem">Leave</th>
+          <th class="rpt__num" style="width: 9rem">Total hours</th>
+          <th class="rpt__num" style="width: 9rem">Avg / day</th>
+          <th class="rpt__num" style="width: 9rem">No scan-out</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td>
+            <strong>{{ row.staffName || '—' }}</strong>
+            <small class="app-muted rpt__cell-sub">{{ row.staffType }}</small>
+          </td>
+          <td>{{ row.periodLabel }}</td>
+          <td class="rpt__num">{{ row.daysPresent }}</td>
+          <td class="rpt__num" [class.rpt__due]="row.daysAbsent > 0">{{ row.daysAbsent }}</td>
+          <td class="rpt__num"><strong>{{ row.totalHours | number: '1.2-2' }}</strong></td>
+          <td class="rpt__num">{{ row.averageHoursPerPresentDay | number: '1.2-2' }}</td>
+          <td class="rpt__num" [class.rpt__due]="row.daysMissingScanOut > 0">
+            {{ row.daysMissingScanOut }}
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr><td colspan="7" class="app-muted rpt__empty">No attendance recorded in this range.</td></tr>
+      </ng-template>
+    </p-table>
+  </section>
+
+  <!-- --------------------------------------------------- day by day -->
+  <section class="app-card rpt__result">
+    <header class="rpt__result-head">
+      <h2>Day by day</h2>
+      <span class="app-muted">{{ r.days.length }} day(s) with a scan</span>
+    </header>
+
+    <p-table
+      [value]="r.days" [paginator]="r.days.length > 25" [rows]="25"
+      styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '58rem' }">
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 10rem">Date</th>
+          <th>Staff</th>
+          <th style="width: 9rem">Branch</th>
+          <th style="width: 9rem">In</th>
+          <th style="width: 9rem">Out</th>
+          <th class="rpt__num" style="width: 8rem">Hours</th>
+          <th style="width: 11rem">Status</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-day>
+        <tr>
+          <td>{{ day.onDate | date: 'd MMM y' }}</td>
+          <td>
+            <strong>{{ day.staffName || '—' }}</strong>
+            <small class="app-muted rpt__cell-sub">{{ day.staffType }}</small>
+          </td>
+          <td>{{ day.branch || '—' }}</td>
+          <td>
+            {{ day.firstIn ? (day.firstIn | date: 'h:mm a') : '—' }}
+            @if (day.visits.length > 1) {
+              <small class="app-muted rpt__cell-sub">{{ day.visits.length }} visits</small>
+            }
+          </td>
+          <td>{{ day.lastOut ? (day.lastOut | date: 'h:mm a') : '—' }}</td>
+          <td class="rpt__num">{{ day.hours !== null && day.hours !== undefined ? (day.hours | number: '1.2-2') : '—' }}</td>
+          <td>
+            @if (day.stillOpen) {
+              <p-tag severity="info" value="Still in" />
+            } @else if (day.countedAsLeave) {
+              <p-tag severity="danger" value="Leave — no scan out" />
+            } @else {
+              <p-tag severity="success" value="Present" />
+            }
+          </td>
+        </tr>
+        @if (day.visits.length > 1) {
+          <tr class="rpt__visits-row">
+            <td></td>
+            <td colspan="5">
+              <div class="rpt__visits">
+                @for (visit of day.visits; track visit.in) {
+                  <span class="rpt__visit">
+                    {{ visit.in | date: 'h:mm a' }} –
+                    {{ visit.out ? (visit.out | date: 'h:mm a') : 'no scan out' }}
+                    @if (visit.hours !== null && visit.hours !== undefined) {
+                      ({{ visit.hours | number: '1.2-2' }}h)
+                    }
+                  </span>
+                }
+              </div>
+            </td>
+          </tr>
+        }
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr><td colspan="7" class="app-muted rpt__empty">Nothing to show.</td></tr>
+      </ng-template>
+    </p-table>
+
+    <p class="app-muted rpt__generated">Generated {{ r.generatedOn | date: 'd MMM y, h:mm a' }}</p>
+  </section>
+}

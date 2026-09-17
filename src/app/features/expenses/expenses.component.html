@@ -62,6 +62,27 @@
           <small class="exp__error">Enter an amount greater than zero.</small>
         }
       </div>
+
+      <div class="exp__field">
+        <label for="branch">Branch <span class="exp__req">*</span></label>
+        <p-select
+          inputId="branch"
+          formControlName="branch"
+          [options]="branches()"
+          optionLabel="name"
+          optionValue="name"
+          placeholder="Choose a branch"
+          appendTo="body"
+          styleClass="exp__picker" />
+        @if (form.controls.branch.touched && form.controls.branch.invalid) {
+          <small class="exp__error">Choose the branch this expense belongs to.</small>
+        } @else if (branches().length === 0) {
+          <small class="exp__error">
+            No active branch is on record. Add one on the Branches screen before
+            recording expenses.
+          </small>
+        }
+      </div>
     </div>
 
     <footer class="exp__form-actions">

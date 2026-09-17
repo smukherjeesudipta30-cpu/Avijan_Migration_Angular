@@ -5,9 +5,21 @@
   </div>
 
   @if (report(); as data) {
-    <span class="app-muted inc__generated">
-      Generated {{ data.generatedOn | date: 'd MMM y, h:mm a' }}
-    </span>
+    <div class="inc__header-actions">
+      <span class="app-muted inc__generated">
+        Generated {{ data.generatedOn | date: 'd MMM y, h:mm a' }}
+      </span>
+
+      <p-button
+        label="Full statement PDF"
+        icon="pi pi-file-pdf"
+        size="small"
+        pTooltip="Income, expenditure, net profit and the period-by-period movement, on letterhead"
+        tooltipPosition="bottom"
+        [loading]="summaryBusy()"
+        [disabled]="summaryBusy()"
+        (onClick)="downloadSummaryPdf()" />
+    </div>
   }
 </header>
 
@@ -41,6 +53,22 @@
       styleClass="inc__datepicker" />
   </div>
 
+  <div class="inc__field">
+    <label for="branch">Branch</label>
+    <p-select
+      inputId="branch"
+      [options]="branches()"
+      optionLabel="name"
+      optionValue="name"
+      [ngModel]="branch()"
+      (ngModelChange)="branch.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      [showClear]="true"
+      placeholder="Whole institute"
+      appendTo="body"
+      styleClass="inc__datepicker" />
+  </div>
+
   <p-button label="Run report" icon="pi pi-chart-bar" [loading]="loading()" (onClick)="run()" />
 
   <div class="inc__presets">
@@ -56,6 +84,24 @@
 </section>
 
 @if (report(); as data) {
+
+  @if (data.branchScoped) {
+    <!-- Two lines cannot be branch-attributed, and a P&L that silently omits
+         costs without saying so would flatter the branch. -->
+    <section class="app-card inc__scope">
+      <i class="pi pi-building"></i>
+      <div>
+        <strong>Scoped to {{ data.branch }}.</strong>
+        <p>
+          Fee collections, admission fees, late fines, teacher payouts and institute
+          expenses are counted for this branch only. <strong>Other income and
+          teacher expenses are excluded</strong> &mdash; neither records a branch,
+          and charging institute-wide amounts to one branch would understate it.
+          Clear the branch filter for the full picture.
+        </p>
+      </div>
+    </section>
+  }
 
   <!-- ------------------------------------------------- profit and loss -->
   <section class="inc__pnl">
@@ -89,9 +135,27 @@
       <p class="inc__pnl-label">Total cost</p>
       <strong class="inc__pnl-value">{{ money(data.totalCost) }}</strong>
       <ul class="inc__pnl-breakdown">
-        @for (section of costSections(); track section.section) {
+        <!-- The lines that actually add up to the total above. -->
+        @for (section of countedCostSections(); track section.section) {
           <li>
             <span>{{ section.label }}</span>
+            <span>{{ money(section.amount) }}</span>
+          </li>
+        }
+
+        <!-- Shown for information and deliberately NOT in the total, marked the
+             same way "of which late fines" is on the income card. Without this
+             the four lines did not sum to the figure above them. -->
+        @for (section of informationalCostSections(); track section.section) {
+          <li class="inc__pnl-of-which">
+            <span>
+              {{ section.label }}
+              <i class="pi pi-info-circle"
+                 [pTooltip]="section.section === 'TeacherExpenses'
+                   ? 'Cash handed over, settling the share teachers already earned — the same money, so it is not added to the cost again'
+                   : 'Shown for information — not added to the total'"
+                 tooltipPosition="top"></i>
+            </span>
             <span>{{ money(section.amount) }}</span>
           </li>
         }
@@ -145,14 +209,28 @@
   <section class="app-card inc__panel">
     <header class="inc__panel-head">
       <h2>Detail</h2>
-      <p-button
-        label="Export CSV"
-        icon="pi pi-download"
-        severity="secondary"
-        [outlined]="true"
-        size="small"
-        [disabled]="detail().length === 0"
-        (onClick)="exportCsv()" />
+      <div class="inc__panel-actions">
+        <p-button
+          label="Export CSV"
+          icon="pi pi-download"
+          severity="secondary"
+          [outlined]="true"
+          size="small"
+          pTooltip="The rows on this page, as a spreadsheet"
+          tooltipPosition="bottom"
+          [disabled]="detail().length === 0"
+          (onClick)="exportCsv()" />
+
+        <p-button
+          label="Download PDF"
+          icon="pi pi-file-pdf"
+          size="small"
+          pTooltip="Every entry in this tab, on letterhead — for a bank or auditor"
+          tooltipPosition="bottom"
+          [loading]="pdfBusy()"
+          [disabled]="pdfBusy() || (activeSectionTotal()?.rowCount ?? 0) === 0"
+          (onClick)="downloadPdf()" />
+      </div>
     </header>
 
     <div class="inc__tabs">
@@ -197,6 +275,11 @@
               <i class="pi pi-info-circle" aria-hidden="true"></i>
               @if (active.section === 'LateFines') {
                 Already counted inside fee collections — not added to total income.
+              } @else if (active.section === 'TeacherExpenses') {
+                The cash settling the share teachers earned — the same money, so it
+                is not added again to the cost total. It can be larger than the
+                share earned in a range, because a payment often settles work
+                accrued before that range began.
               } @else {
                 Informational — not part of the income or cost totals.
               }

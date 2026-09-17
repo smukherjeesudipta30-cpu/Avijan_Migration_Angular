@@ -7,15 +7,26 @@ import { ButtonModule } from 'primeng/button';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DatePickerModule } from 'primeng/datepicker';
 import { DialogModule } from 'primeng/dialog';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
-import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { RouterLink } from '@angular/router';
 import { TooltipModule } from 'primeng/tooltip';
 import { Observable, debounceTime, distinctUntilChanged } from 'rxjs';
 
+import { formatMoney } from '../../core/format/money';
 import { ApiResponse } from '../../core/models/api-response.model';
-import { TeacherEarning, TeacherListItem, TeacherSaveRequest } from '../../core/models/master.model';
+import {
+  BranchListItem,
+  TeacherAccount,
+  TeacherEarning,
+  TeacherListItem,
+  TeacherPayment,
+  TeacherSaveRequest
+} from '../../core/models/master.model';
+import { AuthService } from '../../core/services/auth.service';
 import { MasterService } from '../../core/services/master.service';
 
 /**
@@ -34,10 +45,12 @@ import { MasterService } from '../../core/services/master.service';
     ConfirmDialogModule,
     DatePickerModule,
     DialogModule,
+    InputNumberModule,
     InputTextModule,
+    SelectModule,
     TableModule,
     TagModule,
-    ToggleSwitchModule,
+    RouterLink,
     TooltipModule
   ],
   providers: [ConfirmationService],
@@ -49,6 +62,7 @@ export class TeachersComponent {
   private readonly masters = inject(MasterService);
   private readonly messages = inject(MessageService);
   private readonly confirm = inject(ConfirmationService);
+  private readonly auth = inject(AuthService);
 
   readonly rows = signal<TeacherListItem[]>([]);
   readonly totalCount = signal(0);
@@ -63,6 +77,8 @@ export class TeachersComponent {
   readonly includePlaceholders = signal(true);
   readonly page = signal(1);
   readonly pageSize = signal(10);
+
+  readonly branches = signal<BranchListItem[]>([]);
 
   /** Live result of the duplicate user-id check. */
   readonly loginTaken = signal(false);
@@ -83,12 +99,35 @@ export class TeachersComponent {
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(50)]],
-    loginId: ['', [Validators.required, Validators.maxLength(20), Validators.pattern(/^[A-Za-z0-9._-]+$/)]],
-    phone: ['', [Validators.pattern(/^[0-9]{10}$/)]]
+    // Matches the server's own rule (TeacherSaveRequestValidator): most live logins
+    // are the teacher's email address, so '@' has to be allowed, and the limit is
+    // 50 to match the database column — a stale 20-character cap here used to
+    // reject real logins such as "priyankahaldertea@avijan.in" (27 characters) on
+    // every save, including one where only the personal email was being added.
+    loginId: ['', [Validators.required, Validators.maxLength(50), Validators.pattern(/^[A-Za-z0-9@._-]+$/)]],
+    phone: ['', [Validators.pattern(/^[0-9]{10}$/)]],
+    personalEmail: ['', [Validators.email, Validators.maxLength(150)]],
+    designation: ['', [Validators.maxLength(150)]],
+    // Optional, unlike a receptionist's — nothing else in the app is scoped by
+    // a teacher's branch, this just puts it on their pay slip.
+    branch: [null as string | null]
   });
+
+  /* Qualification, computer training and IsTechnical are set from Staff Hierarchy
+     (org-manage.component), not from this form. They are still columns on the same
+     Teacher row, so editing a teacher's phone number here must not wipe out values
+     Staff Hierarchy already put there -- carried through unedited rather than dropped
+     from the save request. */
+  private currentQualification: string | null = null;
+  private currentComputerTraining: string | null = null;
+  private currentIsTechnical = false;
 
   constructor() {
     this.load();
+
+    this.masters.branches().subscribe({
+      next: rows => this.branches.set(rows.filter(b => b.isActive))
+    });
 
     this.form.controls.loginId.valueChanges
       .pipe(debounceTime(400), distinctUntilChanged())
@@ -133,6 +172,17 @@ export class TeachersComponent {
   runSearch(): void {
     this.page.set(1);
     this.load();
+
+    // The search sits above the form, so the results are below the fold on a
+    // laptop. Bringing the list into view is the difference between "it searched"
+    // and "nothing happened".
+    document.getElementById('teacher-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  clearSearch(): void {
+    this.search.set('');
+    this.page.set(1);
+    this.load();
   }
 
   togglePlaceholders(value: boolean): void {
@@ -170,7 +220,13 @@ export class TeachersComponent {
     const payload: TeacherSaveRequest = {
       name: v.name.trim(),
       loginId: v.loginId.trim(),
-      phone: v.phone?.trim() || null
+      phone: v.phone?.trim() || null,
+      personalEmail: v.personalEmail?.trim() || null,
+      designation: v.designation?.trim() || null,
+      branch: v.branch,
+      qualification: this.currentQualification,
+      computerTraining: this.currentComputerTraining,
+      isTechnical: this.currentIsTechnical
     };
 
     const id = this.editingId();
@@ -216,14 +272,26 @@ export class TeachersComponent {
     this.form.patchValue({
       name: teacher.isPlaceholder ? '' : teacher.name ?? '',
       loginId: teacher.isPlaceholder ? '' : teacher.loginId ?? '',
-      phone: teacher.phone ?? ''
+      phone: teacher.phone ?? '',
+      personalEmail: teacher.personalEmail ?? '',
+      designation: teacher.designation ?? '',
+      branch: teacher.branch ?? null
     });
+
+    this.currentQualification = teacher.qualification ?? null;
+    this.currentComputerTraining = teacher.computerTraining ?? null;
+    this.currentIsTechnical = teacher.isTechnical ?? false;
 
     document.getElementById('teacher-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   resetForm(): void {
-    this.form.reset({ name: '', loginId: '', phone: '' });
+    this.form.reset({
+      name: '', loginId: '', phone: '', personalEmail: '', designation: '', branch: null
+    });
+    this.currentQualification = null;
+    this.currentComputerTraining = null;
+    this.currentIsTechnical = false;
     this.editingId.set(null);
     this.editingIsPlaceholder.set(false);
     this.loginTaken.set(false);
@@ -266,6 +334,114 @@ export class TeachersComponent {
     this.earningsVisible.set(true);
     this.earnings.set([]);
     this.loadEarnings();
+    this.loadAccount();
+  }
+
+  /* ------------------------------ payments made to the teacher */
+
+  /** Only an administrator may pay a teacher. */
+  readonly canPay = computed(() => this.auth.hasAnyRole(['Admin']));
+
+  readonly account = signal<TeacherAccount | null>(null);
+  readonly payments = signal<TeacherPayment[]>([]);
+  readonly paymentsLoading = signal(false);
+  readonly savingPayment = signal(false);
+
+  readonly payAmount = signal<number | null>(null);
+  readonly payDate = signal<Date | null>(new Date());
+
+  /**
+   * The account figures and the payments list, both over the same dates as the
+   * earnings list above them — so the three tiles always describe the period on
+   * screen rather than the teacher's lifetime.
+   */
+  loadAccount(): void {
+    const teacher = this.earningsFor();
+    if (!teacher) return;
+
+    const from = this.toIsoDate(this.earningsFrom());
+    const to = this.toIsoDate(this.earningsTo());
+
+    this.paymentsLoading.set(true);
+
+    this.masters.teacherAccount(teacher.id, from, to).subscribe({
+      next: data => this.account.set(data),
+      error: () => this.account.set(null)
+    });
+
+    this.masters.teacherPayments(teacher.id, from, to).subscribe({
+      next: rows => {
+        this.payments.set(rows);
+        this.paymentsLoading.set(false);
+      },
+      error: () => this.paymentsLoading.set(false)
+    });
+  }
+
+  recordPayment(): void {
+    const teacher = this.earningsFor();
+    const amount = this.payAmount();
+
+    if (!teacher || !amount || amount <= 0) {
+      this.messages.add({
+        severity: 'warn',
+        summary: 'Enter an amount',
+        detail: 'How much was handed to the teacher?',
+        life: 4000
+      });
+      return;
+    }
+
+    this.savingPayment.set(true);
+
+    this.masters
+      .recordTeacherPayment({
+        teacherId: teacher.id,
+        paidOn: this.toIsoDate(this.payDate()),
+        amount
+      })
+      .subscribe({
+        next: () => {
+          this.savingPayment.set(false);
+          this.payAmount.set(null);
+          this.payDate.set(new Date());
+
+          this.messages.add({
+            severity: 'success',
+            summary: 'Payment recorded',
+            detail: `${this.money(amount)} to ${teacher.name}.`,
+            life: 5000
+          });
+
+          this.loadAccount();
+          // The list's "last paid" and lifetime totals move with it.
+          this.load();
+        },
+        error: () => this.savingPayment.set(false)
+      });
+  }
+
+  removePayment(payment: TeacherPayment): void {
+    this.confirm.confirm({
+      header: 'Remove payment',
+      message:
+        `Remove the ${this.money(payment.amount)} payment recorded on ` +
+        `${payment.paidOn ? new Date(payment.paidOn).toLocaleDateString('en-IN') : 'an unknown date'}? ` +
+        "This raises the teacher's pending balance again.",
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Remove',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.masters.deleteTeacherPayment(payment.id).subscribe({
+          next: () => {
+            this.messages.add({ severity: 'success', summary: 'Payment removed', life: 4000 });
+            this.loadAccount();
+            this.load();
+          }
+        });
+      }
+    });
   }
 
   loadEarnings(): void {
@@ -289,16 +465,18 @@ export class TeachersComponent {
   clearEarningsRange(): void {
     this.earningsFrom.set(null);
     this.earningsTo.set(null);
+    this.applyEarningsRange();
+  }
+
+  /** Apply moves the earnings list and the account tiles together. */
+  applyEarningsRange(): void {
     this.loadEarnings();
+    this.loadAccount();
   }
 
   /* ----------------------------------------------------------- helpers */
   money(value?: number | null): string {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(value ?? 0);
+    return formatMoney(value);
   }
 
   private toIsoDate(date: Date | null): string | null {

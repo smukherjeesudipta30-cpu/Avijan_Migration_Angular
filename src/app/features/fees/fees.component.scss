@@ -131,6 +131,27 @@
   color: var(--app-negative);
 }
 
+.fee__mode {
+  display: flex;
+  gap: 1rem;
+  padding: 0.4rem 0;
+}
+
+.fee__mode-option {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.fee__hint {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.74rem;
+  color: var(--text-color-secondary, #6b7280);
+}
+
 :host ::ng-deep .fee__datepicker,
 :host ::ng-deep .fee__datepicker input,
 :host ::ng-deep .p-inputnumber,

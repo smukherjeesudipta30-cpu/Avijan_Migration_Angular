@@ -1,0 +1,103 @@
+<header class="rota__header">
+  <p class="app-section-title">Master</p>
+  <h1>Staff rota</h1>
+  <p class="app-muted">
+    Who works which shift on which day. This decides the time by which each person
+    must scan out — miss it and the day counts as leave.
+  </p>
+</header>
+
+<section class="app-card rota__filter">
+  <div class="rota__field">
+    <label for="staffType">Staff</label>
+    <p-select
+      inputId="staffType" [options]="staffTypes" optionLabel="label" optionValue="value"
+      [ngModel]="staffType()" (ngModelChange)="staffType.set($event); load()"
+      [ngModelOptions]="{ standalone: true }" appendTo="body" />
+  </div>
+
+  <div class="rota__shifts">
+    @for (shift of shifts(); track shift.id) {
+      <span class="rota__shift-chip">
+        <strong>{{ shift.name }}</strong>
+        {{ hhmm(shift.startTime) }}–{{ hhmm(shift.endTime) }}
+        <em>scan out by {{ hhmm(shift.scanOutBy) }}</em>
+      </span>
+    }
+  </div>
+</section>
+
+@if (loading()) {
+  <section class="app-card"><p class="app-muted">Loading&hellip;</p></section>
+} @else if (!anyStaff()) {
+  <section class="app-card"><p class="app-muted">Nobody to roster here.</p></section>
+} @else {
+  @for (person of staff(); track person.staffType + person.staffId) {
+    <section class="app-card rota__person">
+      <header class="rota__person-head">
+        <div>
+          <h2>{{ person.staffName }}</h2>
+          <p class="app-muted rota__summary">{{ summary(person) }}</p>
+        </div>
+
+        <div class="rota__person-actions">
+          @if (!person.canSignIn) {
+            <p-tag
+              severity="danger"
+              value="No sign-in — cannot scan"
+              pTooltip="This staff record has no matching login, so they cannot mark attendance." />
+          }
+          <p-button
+            label="Save" icon="pi pi-check"
+            [loading]="saving() === person.staffId"
+            (onClick)="save(person)" />
+        </div>
+      </header>
+
+      <div class="rota__grid-wrap">
+        <table class="rota__grid">
+          <thead>
+            <tr>
+              <th class="rota__shift-col">Shift</th>
+              @for (day of days; track day.value) {
+                <th>{{ day.short }}</th>
+              }
+              <th class="rota__all-col">All</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (shift of shifts(); track shift.id) {
+              <tr>
+                <th class="rota__shift-col">
+                  {{ shift.name }}
+                  <small>out by {{ hhmm(shift.scanOutBy) }}</small>
+                </th>
+
+                @for (day of days; track day.value) {
+                  <td>
+                    <button
+                      type="button"
+                      class="rota__cell"
+                      [class.rota__cell--on]="isOn(person, day.value, shift.id)"
+                      [attr.aria-label]="day.name + ' ' + shift.name"
+                      [attr.aria-pressed]="isOn(person, day.value, shift.id)"
+                      (click)="toggle(person, day.value, shift.id)">
+                      @if (isOn(person, day.value, shift.id)) {
+                        <i class="pi pi-check"></i>
+                      }
+                    </button>
+                  </td>
+                }
+
+                <td class="rota__all-col">
+                  <button type="button" class="rota__all" (click)="toggleShiftRow(person, shift.id, true)">All</button>
+                  <button type="button" class="rota__all" (click)="toggleShiftRow(person, shift.id, false)">None</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+}

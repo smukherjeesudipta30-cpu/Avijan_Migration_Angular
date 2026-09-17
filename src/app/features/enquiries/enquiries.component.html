@@ -1,0 +1,373 @@
+<p-confirmDialog />
+
+<header class="enq__header">
+  <p class="enq__eyebrow">FRONT DESK</p>
+  <h1>Course enquiries</h1>
+  <p class="app-muted">
+    Someone came in and asked about a course. Take their details here so they can
+    be followed up.
+  </p>
+</header>
+
+<!-- ============================================================== entry form -->
+<section class="app-card enq__card">
+  <header class="enq__card-head">
+    <div>
+      <h2>{{ isEditing() ? 'Edit enquiry' : 'New enquiry' }}</h2>
+      <p class="app-muted enq__hint">
+        Name and phone number are what make an enquiry followable — the rest can be
+        filled in later.
+      </p>
+    </div>
+
+    @if (isEditing()) {
+      <p-button
+        label="Cancel edit"
+        icon="pi pi-times"
+        size="small"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="reset()" />
+    }
+  </header>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="enq__form">
+    <div class="enq__field">
+      <label for="studentName">Name <span class="enq__req">*</span></label>
+      <input pInputText id="studentName" formControlName="studentName" placeholder="Who asked" />
+      @if (form.controls.studentName.touched && form.controls.studentName.invalid) {
+        <small class="enq__error">Name is required.</small>
+      }
+    </div>
+
+    <div class="enq__field">
+      <label for="phone">Phone number <span class="enq__req">*</span></label>
+      <input pInputText id="phone" formControlName="phone" placeholder="10 digits" inputmode="numeric" />
+      @if (form.controls.phone.touched && form.controls.phone.invalid) {
+        <small class="enq__error">Enter a 10-digit phone number.</small>
+      }
+    </div>
+
+    <div class="enq__field">
+      <label for="courseId">Course</label>
+      <p-select
+        inputId="courseId"
+        formControlName="courseId"
+        [options]="courses()"
+        optionLabel="name"
+        optionValue="courseId"
+        placeholder="--Select Course--"
+        [filter]="true"
+        filterBy="name"
+        [showClear]="true"
+        appendTo="body"
+        styleClass="enq__select" />
+      <small class="enq__help">Leave blank if they were not sure which one.</small>
+    </div>
+
+    <div class="enq__field">
+      <label for="enquiryDate">Enquiry date <span class="enq__req">*</span></label>
+      <p-datepicker
+        inputId="enquiryDate"
+        formControlName="enquiryDate"
+        dateFormat="dd/mm/yy"
+        [showIcon]="true"
+        [maxDate]="today"
+        appendTo="body"
+        styleClass="enq__datepicker" />
+    </div>
+
+    <div class="enq__field">
+      <label for="nextFollowUpOn">Follow up on</label>
+      <p-datepicker
+        inputId="nextFollowUpOn"
+        formControlName="nextFollowUpOn"
+        dateFormat="dd/mm/yy"
+        [showIcon]="true"
+        [minDate]="today"
+        appendTo="body"
+        styleClass="enq__datepicker" />
+      <small class="enq__help">When to ring them back.</small>
+    </div>
+
+    <div class="enq__field">
+      <label for="branchId">Branch</label>
+      <p-select
+        inputId="branchId"
+        formControlName="branchId"
+        [options]="branches()"
+        optionLabel="name"
+        optionValue="branchId"
+        placeholder="--Select Branch--"
+        [showClear]="true"
+        appendTo="body"
+        styleClass="enq__select" />
+    </div>
+
+    <div class="enq__field enq__field--wide">
+      <label for="address">Address</label>
+      <textarea pTextarea id="address" formControlName="address" rows="2"
+                placeholder="Where they live"></textarea>
+    </div>
+
+    <div class="enq__field enq__field--wide">
+      <label for="remarks">Remarks</label>
+      <textarea pTextarea id="remarks" formControlName="remarks" rows="2"
+                placeholder="Anything worth remembering about the conversation"></textarea>
+    </div>
+
+    <div class="enq__actions">
+      <p-button
+        type="submit"
+        [label]="isEditing() ? 'Update enquiry' : 'Save enquiry'"
+        [icon]="isEditing() ? 'pi pi-check' : 'pi pi-plus'"
+        [loading]="saving()"
+        [disabled]="saving()" />
+
+      <p-button
+        type="button"
+        label="Clear"
+        icon="pi pi-refresh"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="reset()" />
+    </div>
+  </form>
+</section>
+
+<!-- ================================================================ register -->
+<section class="app-card enq__card">
+  <header class="enq__card-head">
+    <h2>Enquiry register</h2>
+
+    <div class="enq__filters">
+      <p-selectButton
+        [options]="statusOptions"
+        [ngModel]="statusFilter()"
+        (ngModelChange)="statusFilter.set($event); applyFilter()"
+        [ngModelOptions]="{ standalone: true }"
+        optionLabel="label"
+        optionValue="value"
+        [allowEmpty]="false"
+        styleClass="enq__status-filter" />
+
+      <input
+        pInputText
+        type="search"
+        placeholder="Name or phone"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        (keyup.enter)="applyFilter()"
+        [ngModelOptions]="{ standalone: true }"
+        class="enq__search" />
+
+      <p-button icon="pi pi-search" size="small" (onClick)="applyFilter()" />
+      <p-button icon="pi pi-times" size="small" severity="secondary" [outlined]="true"
+                (onClick)="clearFilters()" pTooltip="Clear filters" />
+    </div>
+  </header>
+
+  <p-table
+    [value]="rows()"
+    [lazy]="true"
+    (onLazyLoad)="onLazyLoad($event)"
+    [paginator]="true"
+    [rows]="pageSize()"
+    [totalRecords]="totalCount()"
+    [rowsPerPageOptions]="[10, 25, 50]"
+    [loading]="loading()"
+    dataKey="id"
+    styleClass="enq__table"
+    currentPageReportTemplate="{first}–{last} of {totalRecords}"
+    [showCurrentPageReport]="true">
+
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Name</th>
+        <th>Phone</th>
+        <th>Course</th>
+        <th>Enquired</th>
+        <th>Follow up</th>
+        <th>Status</th>
+        <th class="enq__col-remarks">Remarks</th>
+        <th class="enq__col-actions">Actions</th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-row>
+      <tr [class.enq__row--due]="row.isDue">
+        <td>
+          <strong>{{ row.studentName }}</strong>
+          @if (row.address) {
+            <div class="enq__sub">{{ row.address }}</div>
+          }
+        </td>
+        <td>
+          <a [href]="'tel:' + row.phone" class="enq__phone">
+            <i class="pi pi-phone"></i> {{ row.phone }}
+          </a>
+        </td>
+        <td>
+          {{ row.courseName || '—' }}
+          @if (row.branchName) {
+            <div class="enq__sub">{{ row.branchName }}</div>
+          }
+        </td>
+        <td>{{ row.enquiryDate | date: 'd MMM y' }}</td>
+        <td>
+          @if (row.nextFollowUpOn) {
+            <span [class.enq__due]="row.isDue">
+              {{ row.nextFollowUpOn | date: 'd MMM y' }}
+            </span>
+            @if (row.isDue) {
+              <div class="enq__sub enq__due">due now</div>
+            }
+          } @else {
+            <span class="app-muted">—</span>
+          }
+          @if (row.followUpCount > 0) {
+            <div class="enq__sub">{{ row.followUpCount }} call(s)</div>
+          }
+        </td>
+        <td>
+          <p-tag [severity]="severityFor(row.status)" [value]="labelFor(row.status)" />
+          @if (row.convertedStudentRegistrationId) {
+            <div class="enq__sub">{{ row.convertedStudentRegistrationId }}</div>
+          }
+        </td>
+        <!-- The running history. Each follow-up appends a dated line, so this is
+             where the conversation actually lives — it was being written and then
+             never shown anywhere. -->
+        <td class="enq__col-remarks">
+          @if (row.remarks) {
+            <div class="enq__remarks" [pTooltip]="row.remarks" tooltipPosition="left">
+              {{ row.remarks }}
+            </div>
+          } @else {
+            <span class="app-muted">—</span>
+          }
+        </td>
+
+        <td class="enq__col-actions">
+          <p-button
+            icon="pi pi-phone"
+            size="small"
+            [rounded]="true"
+            [text]="true"
+            pTooltip="Record a follow-up"
+            (onClick)="openFollowUp(row)" />
+          <p-button
+            icon="pi pi-pencil"
+            size="small"
+            [rounded]="true"
+            [text]="true"
+            severity="secondary"
+            pTooltip="Edit"
+            (onClick)="edit(row)" />
+          @if (canDelete()) {
+            <p-button
+              icon="pi pi-trash"
+              size="small"
+              [rounded]="true"
+              [text]="true"
+              severity="danger"
+              pTooltip="Delete"
+              (onClick)="remove(row)" />
+          }
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td colspan="8" class="enq__empty app-muted">
+          No enquiries match this filter.
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</section>
+
+<!-- ========================================================= follow-up dialog -->
+<p-dialog
+  header="Record a follow-up"
+  [visible]="followUpVisible()"
+  (visibleChange)="followUpVisible.set($event)"
+  [modal]="true"
+  [style]="{ width: '480px' }"
+  [draggable]="false">
+
+  @if (followUpTarget(); as target) {
+    <p class="enq__dialog-lead">
+      <strong>{{ target.studentName }}</strong> &middot; {{ target.phone }}
+      @if (target.courseName) {
+        <span class="app-muted"> &middot; {{ target.courseName }}</span>
+      }
+    </p>
+
+    <form [formGroup]="followUpForm" (ngSubmit)="saveFollowUp()" novalidate>
+      <div class="enq__field">
+        <label for="fuStatus">Outcome <span class="enq__req">*</span></label>
+        <p-select
+          inputId="fuStatus"
+          formControlName="status"
+          [options]="followUpStatusOptions"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+          styleClass="enq__select" />
+      </div>
+
+      <div class="enq__field">
+        <label for="fuRemarks">What was said</label>
+        <textarea pTextarea id="fuRemarks" formControlName="remarks" rows="3"
+                  placeholder="Added to the history — nothing already there is lost"></textarea>
+      </div>
+
+      @if (!followUpIsClosing()) {
+        <div class="enq__field">
+          <label for="fuNext">Next follow-up</label>
+          <p-datepicker
+            inputId="fuNext"
+            formControlName="nextFollowUpOn"
+            dateFormat="dd/mm/yy"
+            [showIcon]="true"
+            [minDate]="today"
+            appendTo="body"
+            styleClass="enq__datepicker" />
+        </div>
+      } @else {
+        <p class="app-muted enq__hint">
+          A closed enquiry gets no follow-up date — nobody needs to ring them again.
+        </p>
+      }
+
+      @if (followUpForm.controls.status.value === 'Converted') {
+        <div class="enq__field">
+          <label for="fuReg">Registration id</label>
+          <input pInputText id="fuReg" formControlName="convertedStudentRegistrationId"
+                 placeholder="e.g. AVI/Raj/4990/26" />
+          <small class="enq__help">
+            Links the enquiry to the admission it produced.
+          </small>
+        </div>
+      }
+
+      <div class="enq__actions">
+        <p-button
+          type="submit"
+          label="Save follow-up"
+          icon="pi pi-check"
+          [loading]="followUpSaving()"
+          [disabled]="followUpSaving()" />
+
+        <p-button
+          type="button"
+          label="Cancel"
+          severity="secondary"
+          [outlined]="true"
+          (onClick)="followUpVisible.set(false)" />
+      </div>
+    </form>
+  }
+</p-dialog>

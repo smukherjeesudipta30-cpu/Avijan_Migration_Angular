@@ -1,29 +1,36 @@
 <header class="rpt__header">
   <p class="app-section-title">Reports</p>
-  <h1>Students by teacher</h1>
+  <h1>{{ isStaff() ? 'Students by teacher' : 'My students' }}</h1>
   <p class="app-muted">
-    Every student assigned to a teacher, in any of the three teacher slots on
-    their registration.
+    @if (isStaff()) {
+      Every student assigned to a teacher, in any of the three teacher slots on
+      their registration.
+    } @else {
+      Every student assigned to you, in any of your three teacher slots on their
+      registration.
+    }
   </p>
 </header>
 
 <section class="app-card rpt__filter">
-  <div class="rpt__field">
-    <label for="teacher">Teacher</label>
-    <p-select
-      inputId="teacher"
-      [options]="teachers()"
-      optionLabel="name"
-      optionValue="teacherId"
-      [ngModel]="teacherId()"
-      (ngModelChange)="teacherId.set($event)"
-      [ngModelOptions]="{ standalone: true }"
-      [filter]="true"
-      filterBy="name"
-      placeholder="Select a teacher"
-      appendTo="body"
-      styleClass="rpt__select" />
-  </div>
+  @if (isStaff()) {
+    <div class="rpt__field">
+      <label for="teacher">Teacher</label>
+      <p-select
+        inputId="teacher"
+        [options]="teachers()"
+        optionLabel="name"
+        optionValue="teacherId"
+        [ngModel]="teacherId()"
+        (ngModelChange)="teacherId.set($event)"
+        [ngModelOptions]="{ standalone: true }"
+        [filter]="true"
+        filterBy="name"
+        placeholder="Select a teacher"
+        appendTo="body"
+        styleClass="rpt__select" />
+    </div>
+  }
 
   <div class="rpt__field">
     <label for="search">Search</label>

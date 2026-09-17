@@ -6,6 +6,7 @@ import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
 import { PagedResult } from '../models/student.model';
 import {
+  RoleCount,
   UpcomingBirthday,
   UserListItem,
   UserQuery,
@@ -34,6 +35,13 @@ export class UserService {
   roles(): Observable<string[]> {
     return this.http
       .get<ApiResponse<string[]>>(`${this.base}/roles`)
+      .pipe(map(r => r.data));
+  }
+
+  /** How many accounts hold each role, for the grid above the table. */
+  roleCounts(): Observable<RoleCount[]> {
+    return this.http
+      .get<ApiResponse<RoleCount[]>>(`${this.base}/role-counts`)
       .pipe(map(r => r.data));
   }
 

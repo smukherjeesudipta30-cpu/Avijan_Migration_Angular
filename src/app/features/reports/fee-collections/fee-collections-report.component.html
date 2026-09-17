@@ -1,0 +1,247 @@
+<header class="rpt__header">
+  <div>
+    <p class="app-section-title">Reports</p>
+    <h1>Fee collections</h1>
+    <p class="app-muted">
+      Every fee payment in the period — cash versus bank, and who recorded it —
+      branch-wise, for the month-end count against the counter.
+    </p>
+  </div>
+</header>
+
+<!-- ------------------------------------------------------------- filters -->
+<section class="app-card rpt__filter">
+  <div class="rpt__field">
+    <label for="branch">Branch</label>
+    <p-select
+      inputId="branch"
+      [options]="branches()"
+      optionLabel="name"
+      optionValue="name"
+      [ngModel]="branch()"
+      (ngModelChange)="branch.set($event)"
+      placeholder="All branches"
+      [showClear]="true"
+      styleClass="rpt__select" />
+  </div>
+
+  <div class="rpt__field">
+    <label for="mode">Payment mode</label>
+    <p-select
+      inputId="mode"
+      [options]="modes"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="mode()"
+      (ngModelChange)="mode.set($event)"
+      styleClass="rpt__select" />
+  </div>
+
+  <div class="rpt__field">
+    <label for="kind">Payment kind</label>
+    <p-select
+      inputId="kind"
+      [options]="kinds"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="kind()"
+      (ngModelChange)="kind.set($event)"
+      styleClass="rpt__select" />
+  </div>
+
+  <div class="rpt__field">
+    <label for="from">From <span class="rpt__req">*</span></label>
+    <p-datepicker
+      inputId="from"
+      [ngModel]="from()"
+      (ngModelChange)="from.set($event)"
+      dateFormat="dd/mm/yy"
+      [showIcon]="true"
+      styleClass="rpt__picker" />
+  </div>
+
+  <div class="rpt__field">
+    <label for="to">To <span class="rpt__req">*</span></label>
+    <p-datepicker
+      inputId="to"
+      [ngModel]="to()"
+      (ngModelChange)="to.set($event)"
+      dateFormat="dd/mm/yy"
+      [showIcon]="true"
+      styleClass="rpt__picker" />
+  </div>
+
+  <div class="rpt__filter-actions">
+    <p-button label="Run" icon="pi pi-search" (onClick)="load()" [loading]="loading()" />
+    <p-button label="Clear" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="clear()" />
+  </div>
+</section>
+
+@if (error()) {
+  <p class="app-card rpt__empty">{{ error() }}</p>
+}
+
+@if (report(); as r) {
+  <div class="rpt__tiles">
+    <div class="app-card rpt__tile">
+      <span>Total collected</span>
+      <strong>{{ r.grandTotal | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+    </div>
+
+    <div class="app-card rpt__tile">
+      <span>Cash</span>
+      <strong>{{ r.cashTotal | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+    </div>
+
+    <div class="app-card rpt__tile">
+      <span>Bank</span>
+      <strong>{{ r.bankTotal | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+    </div>
+
+    <div class="app-card rpt__tile">
+      <span>Payments</span>
+      <strong>{{ r.rows.length }}</strong>
+    </div>
+
+    <!-- The same money split by what it was for. Whole range, whatever the kind
+         filter below is set to, so the two always add up to the grand total. -->
+    <div class="app-card rpt__tile">
+      <span>Monthly fees</span>
+      <strong>{{ (r.monthlyTotal ?? 0) | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+      <small class="app-muted">{{ r.monthlyCount ?? 0 }} payment(s)</small>
+    </div>
+
+    <div class="app-card rpt__tile fcr__tile--admission">
+      <span>Admission fees</span>
+      <strong>{{ (r.admissionTotal ?? 0) | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+      <small class="app-muted">{{ r.admissionCount ?? 0 }} payment(s)</small>
+    </div>
+  </div>
+
+  <!-- --------------------------------------------------- reconciliation -->
+  @if (r.totals.length) {
+    <section class="app-card fcr__totals">
+      <header class="rpt__result-head">
+        <h2>Month-end reconciliation</h2>
+        <div class="rpt__result-head-right">
+          <p-button
+            label="CSV"
+            icon="pi pi-download"
+            severity="secondary"
+            [outlined]="true"
+            (onClick)="exportTotalsCsv()" />
+        </div>
+      </header>
+      <p class="rpt__note">
+        What each receptionist should be holding, or should have paid into the bank,
+        for the branch and mode on each line.
+      </p>
+
+      <table class="fcr__totals-table">
+        <thead>
+          <tr>
+            <th>Branch</th>
+            <th>Collected by</th>
+            <th>Mode</th>
+            <th class="rpt__num">Payments</th>
+            <th class="rpt__num">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of r.totals; track t.branch + t.collectedBy + t.paymentMode) {
+            <tr>
+              <td>{{ t.branch }}</td>
+              <td>{{ t.collectedBy }}</td>
+              <td>
+                <p-tag [severity]="t.paymentMode === 'Bank' ? 'info' : 'success'" [value]="t.paymentMode" />
+              </td>
+              <td class="rpt__num">{{ t.paymentCount }}</td>
+              <td class="rpt__num"><strong>{{ t.amount | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+  }
+
+  <!-- ---------------------------------------------------------- payments -->
+  <section class="app-card rpt__result">
+    <header class="rpt__result-head">
+      <h2>Payments</h2>
+      <div class="rpt__result-head-right">
+        <p-button
+          label="CSV"
+          icon="pi pi-download"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="!r.rows.length"
+          (onClick)="exportCsv()" />
+      </div>
+    </header>
+
+    <p-table
+      [value]="r.rows"
+      [loading]="loading()"
+      [paginator]="r.rows.length > 25"
+      [rows]="25"
+      [rowsPerPageOptions]="[25, 50, 100]"
+      styleClass="p-datatable-sm"
+      [tableStyle]="{ 'min-width': '68rem' }"
+      currentPageReportTemplate="{first}–{last} of {totalRecords}"
+      [showCurrentPageReport]="true">
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Date</th>
+          <th>Kind</th>
+          <th>Registration</th>
+          <th>Student</th>
+          <th>Branch</th>
+          <th class="rpt__num">Amount</th>
+          <th>Mode</th>
+          <th>Collected by</th>
+          <th>Bill</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td>{{ row.paidOn ? (row.paidOn | date: 'd MMM y') : '—' }}</td>
+          <td>
+            <!-- Tagged rather than plain text: an admission row among a hundred
+                 monthly ones has to be visible at a glance when scrolling. -->
+            @if (row.kind === 'Monthly fee') {
+              <span class="app-muted">{{ row.kind }}</span>
+            } @else {
+              <p-tag [value]="row.kind" severity="warn" />
+            }
+          </td>
+          <td><code class="rpt__code">{{ row.registrationId || '—' }}</code></td>
+          <td><strong>{{ row.studentName || '—' }}</strong></td>
+          <td>{{ row.branch || '—' }}</td>
+          <td class="rpt__num">{{ row.amount | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</td>
+          <td>
+            @if (row.paymentMode) {
+              <p-tag [severity]="row.paymentMode === 'Bank' ? 'info' : 'success'" [value]="row.paymentMode" />
+            } @else {
+              <span class="app-muted">—</span>
+            }
+          </td>
+          <td>{{ row.collectedBy || '—' }}</td>
+          <td>{{ row.billNo || '—' }}</td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="9" class="rpt__empty">No payments in this filter.</td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </section>
+
+  <p class="rpt__generated">
+    {{ r.from | date: 'd MMM y' }} to {{ r.to | date: 'd MMM y' }} · generated
+    {{ r.generatedOn | date: 'd MMM y, h:mm a' }}
+  </p>
+}

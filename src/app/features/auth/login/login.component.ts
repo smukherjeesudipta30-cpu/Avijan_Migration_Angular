@@ -67,6 +67,15 @@ export class LoginComponent {
       next: response => {
         this.submitting.set(false);
 
+        // A migrated account goes nowhere but the reset screen, whatever it was
+        // originally reaching for. The returnUrl is dropped rather than kept for
+        // afterwards: the reset revokes the session, so they sign in again and
+        // land normally on the second pass.
+        if (response.data.user.mustChangePassword) {
+          void this.router.navigate(['/change-password']);
+          return;
+        }
+
         const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
         void this.router.navigateByUrl(returnUrl ?? response.data.user.landingRoute);
       },

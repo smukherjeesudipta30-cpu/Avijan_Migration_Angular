@@ -1,0 +1,125 @@
+:host { display: block; }
+
+.brp__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+
+  h1 { margin-top: 0.25rem; font-size: 1.5rem; }
+}
+
+.brp__lede {
+  max-width: 60ch;
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+/* ------------------------------------------------------------- filters */
+.brp__filter {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.brp__field {
+  flex: 1 1 12rem;
+  min-width: 0;
+
+  label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--app-text-muted);
+  }
+}
+
+.brp__field--group { flex: 0 0 auto; }
+
+.brp__actions { flex: 0 0 auto; }
+
+:host ::ng-deep .brp__wide,
+:host ::ng-deep .brp__wide input { width: 100%; }
+
+/* -------------------------------------------------------------- notice */
+.brp__notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 1rem 1.2rem;
+  margin-bottom: 1.25rem;
+  border-left: 3px solid var(--app-accent);
+
+  i { font-size: 1.15rem; color: var(--app-accent); padding-top: 0.1rem; }
+  strong { font-size: 0.88rem; }
+  p { margin: 0.35rem 0 0; font-size: 0.8rem; line-height: 1.55; max-width: 78ch; }
+}
+
+/* ------------------------------------------------------------ sections */
+.brp__section {
+  padding: 1.15rem 1.25rem 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.brp__section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+
+  h2 { margin: 0; font-size: 1.05rem; }
+  span { font-size: 0.8rem; }
+}
+
+.brp__num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.brp__sub { font-size: 0.73rem; }
+
+/* Money going out, so it reads differently from money coming in. */
+.brp__out { color: var(--app-text-muted); }
+
+.brp__negative { color: var(--app-negative); }
+
+/* Records with no branch: present and counted, but visibly not a branch. */
+.brp__unassigned { background: var(--app-page-bg); }
+
+.brp__group td {
+  background: var(--app-page-bg);
+  font-size: 0.85rem;
+}
+
+.brp__grand td {
+  border-top: 2px solid var(--app-border);
+  background: var(--app-page-bg);
+}
+
+.brp__empty {
+  padding: 1.75rem 0.5rem;
+  text-align: center;
+}
+
+.brp__note {
+  margin: 0.85rem 0 0;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--app-radius);
+  background: var(--app-page-bg);
+  border-left: 3px solid var(--app-accent);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 900px) {
+  .brp__filter { flex-direction: column; align-items: stretch; }
+}

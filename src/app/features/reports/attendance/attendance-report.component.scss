@@ -1,0 +1,18 @@
+@use '../report.shared.scss';
+
+.rpt__visits-row td {
+  border-top: none;
+  padding-top: 0;
+}
+
+.rpt__visits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  font-size: 0.78rem;
+  color: var(--text-color-secondary, #6b7280);
+}
+
+.rpt__visit {
+  &::before { content: '•'; margin-right: 0.35rem; }
+}

@@ -1,0 +1,465 @@
+:host {
+  display: contents;
+}
+
+/* -------------------------------------------------------------- header */
+.chat__header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+}
+
+.chat__back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  color: var(--app-text-muted);
+
+  &:hover { background: var(--app-page-bg); }
+}
+
+.chat__header-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  strong { font-size: 1rem; }
+  small { font-size: 0.75rem; color: var(--app-text-muted); }
+}
+
+.chat__call-actions {
+  display: flex;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+
+.chat__call-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border: 0;
+  border-radius: 50%;
+  background: var(--app-page-bg);
+  color: var(--app-accent, #0ea5e9);
+  cursor: pointer;
+
+  &:hover { background: rgba(14, 165, 233, 0.15); }
+}
+
+/* ---------------------------------------------------------------- body */
+.chat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.chat__tabs {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0 0 0.85rem;
+  border-bottom: 1px solid var(--app-border);
+  margin-bottom: 0.85rem;
+}
+
+.chat__tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: none;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: var(--app-text-muted);
+}
+
+.chat__tab--active {
+  border-color: var(--app-brand);
+  color: var(--app-brand);
+  background: color-mix(in srgb, var(--app-brand) 8%, transparent);
+  font-weight: 600;
+}
+
+.chat__tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--app-negative);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.chat__new-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.chat__new-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem;
+  border: 1px dashed var(--app-border);
+  border-radius: var(--app-radius);
+  background: none;
+  font-size: 0.78rem;
+  color: var(--app-brand);
+  cursor: pointer;
+
+  &:hover { background: var(--app-page-bg); }
+}
+
+.chat__empty {
+  margin: 2rem 0;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--app-text-muted);
+}
+
+/* ------------------------------------------------------- conversation list */
+.chat__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.chat__list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 0.4rem;
+  border-radius: var(--app-radius);
+  cursor: pointer;
+
+  &:hover { background: var(--app-page-bg); }
+}
+
+.chat__list-item--checkable.chat__list-item--checked {
+  background: color-mix(in srgb, var(--app-brand) 8%, transparent);
+}
+
+.chat__avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.chat__presence-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: #22c55e;
+  border: 2px solid var(--app-card-bg, #fff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Connected, but idle or on a hidden tab — not gone, just not looking right now. */
+  &--away {
+    background: #f59e0b;
+  }
+
+  /* No live connection at all — a cross rather than just omitting the dot,
+     so "definitely not reachable right now" reads at a glance the same way
+     the other two states do, instead of looking like the marker forgot to render. */
+  &--offline {
+    background: var(--app-card-bg, #fff);
+    border-color: #ef4444;
+
+    &::before {
+      content: '\2715';
+      color: #ef4444;
+      font-size: 0.5rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+  }
+}
+
+.chat__online-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: 0.4rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #22c55e;
+
+  &::before {
+    content: '';
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 50%;
+    background: #22c55e;
+  }
+
+  &--away {
+    color: #f59e0b;
+
+    &::before {
+      background: #f59e0b;
+    }
+  }
+}
+
+.chat__avatar {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  background: var(--app-brand);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.chat__avatar--guest {
+  background: var(--app-accent, var(--app-brand));
+}
+
+.chat__list-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+
+  strong { font-size: 0.88rem; }
+
+  small {
+    font-size: 0.75rem;
+    color: var(--app-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.chat__unread {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.3rem;
+  height: 1.3rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--app-brand);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.chat__check {
+  color: var(--app-brand);
+  font-size: 1rem;
+}
+
+/* ------------------------------------------------------------- the thread */
+.chat__thread {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.chat__messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.25rem 0.1rem 0.5rem;
+}
+
+.chat__msg {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: 82%;
+}
+
+.chat__msg-sender {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--app-text-muted);
+  margin-bottom: 0.15rem;
+}
+
+.chat__msg-bubble {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.9rem;
+  background: var(--app-page-bg);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat__msg-time {
+  margin-top: 0.15rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.65rem;
+  color: var(--app-text-muted);
+}
+
+.chat__seen {
+  font-size: 0.72rem;
+  color: var(--app-brand);
+}
+
+.chat__seen-text {
+  color: var(--app-brand);
+  font-weight: 600;
+}
+
+.chat__attachment {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  margin-top: 0.3rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.7rem;
+  background: var(--app-page-bg);
+  cursor: pointer;
+  max-width: 100%;
+
+  i.pi-paperclip { color: var(--app-text-muted); }
+  i.pi-download { color: var(--app-text-muted); font-size: 0.8rem; margin-left: auto; }
+
+  &:hover { border-color: var(--app-brand); }
+}
+
+.chat__attachment-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  strong {
+    font-size: 0.78rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 12rem;
+  }
+
+  small { font-size: 0.68rem; color: var(--app-text-muted); }
+}
+
+.chat__pending-attachment {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.65rem;
+  margin-top: 0.5rem;
+  border-radius: var(--app-radius);
+  background: var(--app-page-bg);
+  font-size: 0.78rem;
+
+  span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  button {
+    border: 0;
+    background: none;
+    color: var(--app-text-muted);
+    cursor: pointer;
+    display: inline-flex;
+  }
+}
+
+.chat__attachment-error {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--app-negative);
+  font-size: 0.75rem;
+}
+
+.chat__attach-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  color: var(--app-text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover { background: var(--app-page-bg); }
+}
+
+.chat__msg--mine {
+  align-self: flex-end;
+  align-items: flex-end;
+
+  .chat__msg-bubble {
+    background: var(--app-brand);
+    color: #fff;
+  }
+}
+
+.chat__composer {
+  display: flex;
+  gap: 0.5rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--app-border);
+}
+
+.chat__input {
+  flex: 1;
+}
+
+/* --------------------------------------------------------------- directory */
+.chat__directory {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 0.6rem;
+}
+
+.chat__search,
+.chat__group-title {
+  width: 100%;
+}
+
+/* styleClass lands on p-button's own inner <button>, outside this component's
+   view-encapsulation scope, so a plain scoped rule cannot reach it. */
+::ng-deep .chat__create-btn {
+  width: 100%;
+
+  .p-button { width: 100%; }
+}

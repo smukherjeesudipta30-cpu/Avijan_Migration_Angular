@@ -8,14 +8,17 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { TooltipModule } from 'primeng/tooltip';
 import { Observable } from 'rxjs';
 
 import { ApiResponse } from '../../core/models/api-response.model';
 import { ExpenseList, ExpenseListItem, ExpenseSaveRequest } from '../../core/models/expense.model';
+import { BranchListItem } from '../../core/models/master.model';
 import { AuthService } from '../../core/services/auth.service';
 import { ExpenseService } from '../../core/services/expense.service';
+import { MasterService } from '../../core/services/master.service';
 
 /**
  * The institute expense register. Replaces `Views/Expense/Index.cshtml` +
@@ -36,6 +39,7 @@ import { ExpenseService } from '../../core/services/expense.service';
     DatePickerModule,
     InputNumberModule,
     InputTextModule,
+    SelectModule,
     TableModule,
     TooltipModule
   ],
@@ -47,6 +51,7 @@ export class ExpensesComponent {
   private readonly fb = inject(FormBuilder);
   private readonly expenses = inject(ExpenseService);
   private readonly auth = inject(AuthService);
+  private readonly masters = inject(MasterService);
   private readonly messages = inject(MessageService);
   private readonly confirm = inject(ConfirmationService);
 
@@ -72,11 +77,21 @@ export class ExpensesComponent {
   readonly form = this.fb.nonNullable.group({
     details: ['', [Validators.required, Validators.maxLength(500)]],
     expenseDate: [new Date() as Date | null, [Validators.required]],
-    amount: [null as number | null, [Validators.required, Validators.min(0.01)]]
+    amount: [null as number | null, [Validators.required, Validators.min(0.01)]],
+    // Required: an expense saved without a branch is invisible to the branch
+    // report for good, and nothing later can tell where the money went.
+    branch: [null as string | null, [Validators.required]]
   });
+
+  /** Branches to choose from, for attributing the expense. */
+  readonly branches = signal<BranchListItem[]>([]);
 
   constructor() {
     this.load();
+
+    this.masters.branches().subscribe({
+      next: rows => this.branches.set(rows.filter(b => b.isActive))
+    });
   }
 
   /* -------------------------------------------------------------- list */
@@ -128,7 +143,7 @@ export class ExpensesComponent {
       this.messages.add({
         severity: 'warn',
         summary: 'Check the form',
-        detail: 'Details, date and an amount above zero are all required.',
+        detail: 'Details, branch, date and an amount above zero are all required.',
         life: 5000
       });
       return;
@@ -141,7 +156,8 @@ export class ExpensesComponent {
     const payload: ExpenseSaveRequest = {
       details: v.details.trim(),
       expenseDate: this.toIsoDate(v.expenseDate),
-      amount: v.amount ?? 0
+      amount: v.amount ?? 0,
+      branch: v.branch
     };
 
     const id = this.editingId();
@@ -181,7 +197,8 @@ export class ExpensesComponent {
     this.form.patchValue({
       details: expense.details ?? '',
       expenseDate: expense.expenseDate ? new Date(expense.expenseDate) : null,
-      amount: expense.amount
+      amount: expense.amount,
+      branch: expense.branch ?? null
     });
 
     document.getElementById('expense-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -189,7 +206,7 @@ export class ExpensesComponent {
 
   resetForm(): void {
     // The date resets to today rather than empty, the way the legacy picker opened.
-    this.form.reset({ details: '', expenseDate: new Date(), amount: null });
+    this.form.reset({ details: '', expenseDate: new Date(), amount: null, branch: null });
     this.editingId.set(null);
   }
 

@@ -1,0 +1,188 @@
+<header class="fee__header">
+  <p class="app-section-title">Fees</p>
+  <h1>Pay my fees</h1>
+</header>
+
+
+@if (loading()) {
+  <section class="app-card fee__state">
+    <i class="pi pi-spin pi-spinner"></i>
+    <p>Working out what you owe&hellip;</p>
+  </section>
+}
+
+@if (!loading() && !due()) {
+  <section class="app-card fee__state">
+    <p class="app-muted">
+      No fee record is available for your sign-in. Ask the office to check the email
+      on your registration.
+    </p>
+  </section>
+}
+
+@if (due(); as d) {
+  <!-- ------------------------------------------------------ paid -->
+  @if (paid()) {
+    <section class="app-card fee__done">
+      <i class="pi pi-check-circle"></i>
+      <h2>Payment recorded</h2>
+      <p>
+        Your fee for {{ d.feeDate | date: 'MMMM y' }} has been added to your ledger.
+        The office will confirm it against the institute's account &mdash; you do
+        not need to do anything else.
+      </p>
+      <p-button
+        label="Back to my fees"
+        icon="pi pi-refresh"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="payAgain()" />
+    </section>
+  } @else {
+
+    <!-- ------------------------------------------------- what is owed -->
+    <section class="app-card fee__amount">
+      <div class="fee__amount-head">
+        <div>
+          <h2>{{ d.feeDate | date: 'MMMM y' }}</h2>
+          <p class="app-muted">
+            {{ d.studentName }} &middot; {{ d.registrationId }}
+            @if (d.courseName) { &middot; {{ d.courseName }} }
+          </p>
+        </div>
+
+        <div class="fee__total">
+          <span>Amount to pay</span>
+          <strong>{{ d.amountPayable | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+        </div>
+      </div>
+
+      <dl class="fee__breakdown">
+        <div>
+          <dt>Monthly fee</dt>
+          <dd>{{ d.monthlyFee | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</dd>
+        </div>
+        <div [class.fee__fine]="d.lateFine > 0">
+          <dt>Late fine</dt>
+          <dd>{{ d.lateFine | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</dd>
+        </div>
+        @if (d.previousPaymentDate) {
+          <div>
+            <dt>Last paid</dt>
+            <dd>{{ d.previousPaymentDate | date: 'd MMM y' }}</dd>
+          </div>
+        }
+
+        <!-- Shown whenever the fee is already overdue, so the fine has a visible
+             reason rather than appearing as an unexplained extra amount. -->
+        @if (d.dueDate) {
+          <div [class.fee__fine]="d.lateFine > 0">
+            <dt>Was due on</dt>
+            <dd>{{ d.dueDate | date: 'd MMM y' }}</dd>
+          </div>
+        }
+      </dl>
+
+      @if (d.lateFine > 0 && d.fineExplanation) {
+        <p class="fee__note">{{ d.fineExplanation }}</p>
+      }
+    </section>
+
+    @if (!d.canPay) {
+      <section class="app-card fee__blocked">
+        <i class="pi pi-info-circle"></i>
+        <p>{{ d.reason }}</p>
+      </section>
+    } @else {
+
+      <!-- ------------------------------------------------------ the QR -->
+      <section class="app-card fee__pay">
+        <div class="fee__qr">
+          <h2>1. Scan and pay</h2>
+          <p class="app-muted">
+            Any UPI app &mdash; Paytm, PhonePe, Google Pay or your bank's app.
+          </p>
+
+          <!-- Generated for this student's exact amount, so scanning fills the
+               figure in and there is nothing to mistype. -->
+          @if (qrDataUrl(); as qr) {
+            <figure class="fee__qr-figure">
+              <img [src]="qr" alt="Scan to pay Avijan" />
+              <figcaption>
+                <span class="fee__qr-amount">
+                  {{ d.amountPayable | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}
+                </span>
+                <span class="app-muted">already filled in</span>
+              </figcaption>
+            </figure>
+          } @else {
+            <p class="fee__note fee__note--warn">
+              The payment code could not be drawn. You can still pay by entering the
+              UPI ID below in your payment app, for
+              {{ d.amountPayable | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}.
+            </p>
+          }
+
+          <p class="fee__upi">
+            UPI ID: <code>{{ d.upiId }}</code>
+          </p>
+
+          @if (upiLink(); as link) {
+            <!-- On a phone this opens the UPI app with the amount already filled
+                 in, so it cannot be mistyped. Ignored on a desktop browser. -->
+            <a class="fee__upi-link" [href]="link">Open in a UPI app on this device</a>
+          }
+
+          <p class="fee__note">
+            The amount is built into the code. If your app asks you to type it,
+            enter exactly
+            {{ d.amountPayable | currency: 'INR' : 'symbol-narrow' : '1.2-2' }} &mdash;
+            a different amount will not match your month's fee.
+          </p>
+        </div>
+
+        <div class="fee__reference">
+          <h2>2. Enter your reference</h2>
+          <p class="app-muted">
+            After paying, your app shows a UPI reference or transaction id. Type it
+            here so the office can match your payment.
+          </p>
+
+          <label for="reference">UPI reference number</label>
+          <input
+            pInputText
+            id="reference"
+            [ngModel]="reference()"
+            (ngModelChange)="reference.set($event)"
+            maxlength="64"
+            autocomplete="off"
+            placeholder="e.g. 481203557712"
+            [disabled]="submitting()" />
+
+          @if (reference() && !referenceValid()) {
+            <small class="fee__error">
+              A UPI reference is letters and digits, at least six characters.
+            </small>
+          }
+
+          @if (submitError(); as message) {
+            <p class="fee__error-box">{{ message }}</p>
+          }
+
+          <p-button
+            label="I have paid — record it"
+            icon="pi pi-check"
+            [loading]="submitting()"
+            [disabled]="!referenceValid() || submitting()"
+            (onClick)="submit()" />
+
+          <p class="fee__note fee__note--warn">
+            Only submit this after the money has actually left your account. The
+            office checks every reference against the institute's account.
+          </p>
+        </div>
+      </section>
+    }
+  }
+}
+

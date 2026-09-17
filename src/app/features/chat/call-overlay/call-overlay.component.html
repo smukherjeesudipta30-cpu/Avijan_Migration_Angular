@@ -1,0 +1,109 @@
+@if (call.status() !== 'idle' || call.errorMessage()) {
+  <div class="callov__backdrop">
+    <div class="callov__card" [class.callov__card--active]="call.status() === 'active' && call.kind() === 'video'">
+
+      @if (call.status() === 'idle' && call.errorMessage()) {
+        <!-- The call already ended (no answer, failed, mic refused) — just the
+             message lingering briefly before this whole overlay closes. -->
+        <div class="callov__ring">
+          <p class="callov__status">{{ call.errorMessage() }}</p>
+        </div>
+      }
+
+      @switch (call.status()) {
+        @case ('incoming') {
+          <div class="callov__ring">
+            <div class="callov__avatar callov__avatar--big">{{ initials(call.peerName()) }}</div>
+            <p class="callov__name">{{ call.peerName() }}</p>
+            <p class="callov__status">Incoming {{ call.kind() }} call…</p>
+
+            <div class="callov__actions">
+              <button type="button" class="callov__btn callov__btn--decline" (click)="call.declineCall()" title="Decline">
+                <i class="pi pi-phone" style="transform: rotate(135deg)"></i>
+              </button>
+              <button type="button" class="callov__btn callov__btn--accept" (click)="call.acceptCall()" title="Accept">
+                <i class="pi pi-phone"></i>
+              </button>
+            </div>
+          </div>
+        }
+
+        @case ('outgoing') {
+          <div class="callov__ring">
+            <div class="callov__avatar callov__avatar--big">{{ initials(call.peerName()) }}</div>
+            <p class="callov__name">{{ call.peerName() }}</p>
+            <p class="callov__status">Calling…</p>
+
+            <div class="callov__actions">
+              <button type="button" class="callov__btn callov__btn--decline" (click)="call.hangup()" title="Cancel">
+                <i class="pi pi-phone" style="transform: rotate(135deg)"></i>
+              </button>
+            </div>
+          </div>
+        }
+
+        @case ('connecting') {
+          <div class="callov__ring">
+            <div class="callov__avatar callov__avatar--big">{{ initials(call.peerName()) }}</div>
+            <p class="callov__name">{{ call.peerName() }}</p>
+            <p class="callov__status">Connecting…</p>
+
+            <div class="callov__actions">
+              <button type="button" class="callov__btn callov__btn--decline" (click)="call.hangup()" title="Cancel">
+                <i class="pi pi-phone" style="transform: rotate(135deg)"></i>
+              </button>
+            </div>
+          </div>
+        }
+
+        @case ('active') {
+          @if (call.kind() === 'video') {
+            <div class="callov__video-stage">
+              <video #remoteVideo class="callov__video callov__video--remote" autoplay playsinline></video>
+              <video #localVideo class="callov__video callov__video--local" autoplay playsinline muted></video>
+              <p class="callov__video-name">{{ call.peerName() }}</p>
+            </div>
+          } @else {
+            <div class="callov__ring">
+              <div class="callov__avatar callov__avatar--big">{{ initials(call.peerName()) }}</div>
+              <p class="callov__name">{{ call.peerName() }}</p>
+              <p class="callov__status">On call</p>
+              <!-- Audio still needs an element to actually play, just not shown. -->
+              <video #remoteVideo class="callov__hidden-audio" autoplay playsinline></video>
+            </div>
+          }
+
+          <div class="callov__controls">
+            <button
+              type="button"
+              class="callov__btn callov__btn--ghost"
+              [class.callov__btn--on]="call.muted()"
+              (click)="call.toggleMute()"
+              [title]="call.muted() ? 'Unmute' : 'Mute'">
+              <i class="pi" [class.pi-microphone]="!call.muted()" [class.pi-volume-off]="call.muted()"></i>
+            </button>
+
+            @if (call.kind() === 'video') {
+              <button
+                type="button"
+                class="callov__btn callov__btn--ghost"
+                [class.callov__btn--on]="call.cameraOff()"
+                (click)="call.toggleCamera()"
+                [title]="call.cameraOff() ? 'Turn camera on' : 'Turn camera off'">
+                <i class="pi" [class.pi-video]="!call.cameraOff()" [class.pi-eye-slash]="call.cameraOff()"></i>
+              </button>
+            }
+
+            <button type="button" class="callov__btn callov__btn--decline" (click)="call.hangup()" title="Hang up">
+              <i class="pi pi-phone" style="transform: rotate(135deg)"></i>
+            </button>
+          </div>
+        }
+      }
+
+      @if (call.status() !== 'idle' && call.errorMessage(); as message) {
+        <p class="callov__error">{{ message }}</p>
+      }
+    </div>
+  </div>
+}

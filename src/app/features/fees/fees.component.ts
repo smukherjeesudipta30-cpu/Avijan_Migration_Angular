@@ -2,8 +2,9 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
@@ -22,7 +23,14 @@ import {
   FeeSaveRequest,
   StudentFeeBill
 } from '../../core/models/fee.model';
+import { canWhatsApp, feeReceiptMessage, openWhatsApp } from '../../core/messaging/whatsapp';
+import {
+  moneyReceiptHtml,
+  openPendingDocumentWindow,
+  writeDocumentWindow
+} from '../../core/printing/legacy-documents';
 import { FeeService } from '../../core/services/fee.service';
+import { AdmissionDueDialogComponent } from '../../shared/admission-due/admission-due-dialog.component';
 
 /**
  * Monthly course fees — the migration of `Views/MonthlyCourseFees/Index.cshtml` and
@@ -40,14 +48,17 @@ import { FeeService } from '../../core/services/fee.service';
     FormsModule,
     ReactiveFormsModule,
     ButtonModule,
+    ConfirmDialogModule,
     DatePickerModule,
     InputNumberModule,
     InputTextModule,
     MessageModule,
     TableModule,
     TagModule,
-    TooltipModule
+    TooltipModule,
+    AdmissionDueDialogComponent
   ],
+  providers: [ConfirmationService],
   templateUrl: './fees.component.html',
   styleUrl: './fees.component.scss'
 })
@@ -55,6 +66,7 @@ export class FeesComponent {
   private readonly fb = inject(FormBuilder);
   private readonly fees = inject(FeeService);
   private readonly messages = inject(MessageService);
+  private readonly confirm = inject(ConfirmationService);
 
   readonly registrationId = signal('');
   readonly bill = signal<StudentFeeBill | null>(null);
@@ -80,7 +92,8 @@ export class FeesComponent {
     feeDate: [new Date() as Date | null, [Validators.required]],
     installmentAmount: [null as number | null, [Validators.required, Validators.min(0)]],
     teacherPercentage: [null as number | null, [Validators.required, Validators.min(0), Validators.max(100)]],
-    amountPaid: [null as number | null, [Validators.required, Validators.min(0)]]
+    amountPaid: [null as number | null, [Validators.required, Validators.min(0)]],
+    paymentMode: ['Cash' as 'Cash' | 'Bank', [Validators.required]]
   });
 
   constructor() {
@@ -89,6 +102,20 @@ export class FeesComponent {
   }
 
   /* -------------------------------------------------------------- lookup */
+  /* ------------------------------------------ collecting an admission due */
+  readonly admissionDueStudentId = signal<number | null>(null);
+  admissionDueVisible = false;
+
+  openAdmissionDue(studentId: number): void {
+    this.admissionDueStudentId.set(studentId);
+    this.admissionDueVisible = true;
+  }
+
+  /** The balance moved, so the bill on screen has to be read again. */
+  onAdmissionDueCollected(): void {
+    this.loadStudent();
+  }
+
   loadStudent(): void {
     const reg = this.registrationId().trim();
     if (!reg) return;
@@ -193,9 +220,61 @@ export class FeesComponent {
       return;
     }
 
-    this.saving.set(true);
-
     const v = this.form.getRawValue();
+    const id = this.editingPaymentId();
+
+    /* Adding a payment for a month that already has one is how the same month ends
+       up with two bills — e.g. a receptionist meaning to fix Cash to Bank, but
+       typing the correction into "Record payment" instead of clicking the pencil on
+       the existing row. That leaves both the original and the correction on the
+       ledger, doubling the amount. Confirmed here rather than blocked outright,
+       because a genuine second installment in one month is real (a part payment
+       followed by the rest) — only the accidental case needs a pause. */
+    if (id === null) {
+      const duplicate = this.paymentInSameMonth(v.feeDate);
+
+      if (duplicate) {
+        this.confirm.confirm({
+          header: 'Payment already recorded for this month',
+          message:
+            `${duplicate.billNo ?? 'A payment'} already covers ` +
+            `${v.feeDate ? this.monthLabel(v.feeDate) : 'this month'} ` +
+            `(${this.money(duplicate.installment)}, ${duplicate.paymentMode ?? 'mode not recorded'}). ` +
+            'To correct that payment — including changing cash to bank — click the ' +
+            'pencil on its row instead of Record here. Only continue if this is a ' +
+            'genuine second payment for the same month.',
+          acceptLabel: 'Record as a second payment',
+          rejectLabel: 'Cancel',
+          accept: () => this.persist(student, calc, v),
+          reject: () => {}
+        });
+        return;
+      }
+    }
+
+    this.persist(student, calc, v);
+  }
+
+  private paymentInSameMonth(feeDate: Date | null): FeePayment | null {
+    if (!feeDate) return null;
+
+    return this.payments().find(p => {
+      if (!p.feeDate) return false;
+      const d = new Date(p.feeDate);
+      return d.getFullYear() === feeDate.getFullYear() && d.getMonth() === feeDate.getMonth();
+    }) ?? null;
+  }
+
+  private monthLabel(date: Date): string {
+    return date.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+  }
+
+  private persist(
+    student: StudentFeeBill,
+    calc: FeeCalculation,
+    v: ReturnType<typeof this.form.getRawValue>
+  ): void {
+    this.saving.set(true);
 
     const payload: FeeSaveRequest = {
       registrationId: student.registrationId,
@@ -207,7 +286,8 @@ export class FeesComponent {
       totalForMonth: calc.totalForMonth,
       amountPaid: v.amountPaid!,
       oldDue: calc.oldDue,
-      newDue: calc.newDue
+      newDue: calc.newDue,
+      paymentMode: v.paymentMode
     };
 
     const id = this.editingPaymentId();
@@ -264,7 +344,8 @@ export class FeesComponent {
       feeDate: payment.feeDate ? new Date(payment.feeDate) : new Date(),
       installmentAmount: installment,
       teacherPercentage: payment.percentage ?? null,
-      amountPaid: payment.amountPaid ?? null
+      amountPaid: payment.amountPaid ?? null,
+      paymentMode: payment.paymentMode ?? 'Cash'
     });
 
     document.getElementById('fee-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -275,7 +356,8 @@ export class FeesComponent {
       feeDate: new Date(),
       installmentAmount: this.bill()?.monthlyFees ?? null,
       teacherPercentage: null,
-      amountPaid: null
+      amountPaid: null,
+      paymentMode: 'Cash'
     });
 
     this.editingPaymentId.set(null);
@@ -292,8 +374,45 @@ export class FeesComponent {
   }
 
   printReceipt(payment: FeePayment): void {
+    const win = openPendingDocumentWindow(760);
+
     this.fees.receipt(payment.id).subscribe({
-      next: receipt => this.openReceiptWindow(receipt)
+      next: receipt => this.openReceiptWindow(receipt, win),
+      error: () => win?.close()
+    });
+  }
+
+  /* ------------------------------------------------------------ whatsapp */
+
+  /** The number the receipt would go to — from the bill already on screen. */
+  studentPhone(): string | null {
+    return this.bill()?.phone ?? null;
+  }
+
+  /** Greys out the button when the stored number cannot be a WhatsApp one. */
+  canWhatsApp(phone?: string | null): boolean {
+    return canWhatsApp(phone);
+  }
+
+  /**
+   * Opens WhatsApp with the money receipt typed out to the student.
+   *
+   * The receipt is fetched rather than built from the row on screen, so the figures
+   * the student is sent are the same ones the printed receipt shows — including the
+   * amount in words and the next due date, which only the server works out.
+   */
+  whatsAppReceipt(payment: FeePayment): void {
+    this.fees.receipt(payment.id).subscribe({
+      next: receipt => {
+        if (!openWhatsApp(this.studentPhone(), feeReceiptMessage(receipt))) {
+          this.messages.add({
+            severity: 'warn',
+            summary: 'Could not open WhatsApp',
+            detail: 'Allow popups for this site, and check the mobile number on the student record.',
+            life: 6000
+          });
+        }
+      }
     });
   }
 
@@ -315,60 +434,15 @@ export class FeesComponent {
     return `${date.getFullYear()}-${month}-${day}`;
   }
 
-  /** Money receipt window — replaces MonthlyCourseFees/PrintReport.cshtml. */
-  private openReceiptWindow(receipt: FeeReceipt): void {
-    const win = window.open('', '_blank', 'width=760,height=900');
-    if (!win) {
+  /** The money receipt, in the legacy layout. */
+  private openReceiptWindow(receipt: FeeReceipt, win: Window | null = null): void {
+    if (!writeDocumentWindow(win, moneyReceiptHtml(receipt))) {
       this.messages.add({
         severity: 'warn',
         summary: 'Popup blocked',
         detail: 'Allow popups for this site to print the receipt.',
         life: 6000
       });
-      return;
     }
-
-    const date = (value?: string) =>
-      value ? new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-
-    const esc = (value?: string) =>
-      (value ?? '').replace(/[&<>"']/g, c =>
-        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);
-
-    win.document.write(`<!doctype html>
-<html><head><meta charset="utf-8"><title>Money receipt ${esc(receipt.billNo)}</title>
-<style>
-  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1f2430; margin: 32px; }
-  h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
-  .sub { color: #6b7280; font-size: 13px; margin-top: 4px; }
-  .head { border-bottom: 2px solid #6d28d9; padding-bottom: 12px; margin-bottom: 24px; }
-  table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  th, td { text-align: left; padding: 9px 4px; border-bottom: 1px solid #e4e6ef; }
-  th { width: 40%; color: #6b7280; font-weight: 600; }
-  .words { margin-top: 20px; font-size: 13px; font-style: italic; color: #384152; }
-  .due { color: #dc2626; font-weight: 600; }
-  .sign { margin-top: 64px; display: flex; justify-content: space-between; font-size: 13px; color: #6b7280; }
-  @media print { body { margin: 12mm; } }
-</style></head><body>
-  <div class="head">
-    <h1>Avijan &mdash; Money Receipt</h1>
-    <div class="sub">Bill No. ${esc(receipt.billNo)}</div>
-  </div>
-  <table>
-    <tr><th>Student name</th><td>${esc(receipt.studentName)}</td></tr>
-    <tr><th>Registration id</th><td>${esc(receipt.registrationId)}</td></tr>
-    <tr><th>Course</th><td>${esc(receipt.courseName)}</td></tr>
-    <tr><th>Fee month</th><td>${date(receipt.feeDate)}</td></tr>
-    <tr><th>Amount received</th><td>${this.money(receipt.amountPaid)}</td></tr>
-    <tr><th>Previous due</th><td>${this.money(receipt.oldDue)}</td></tr>
-    <tr><th>Balance due</th><td class="due">${this.money(receipt.newDue)}</td></tr>
-    <tr><th>Next payment due</th><td>${date(receipt.nextDueDate)}</td></tr>
-  </table>
-  <p class="words">Rupees ${esc(receipt.amountPaidInWords)} only.</p>
-  <div class="sign"><span>Student / Guardian signature</span><span>For Avijan</span></div>
-  <script>window.onload = function () { window.print(); };<\/script>
-</body></html>`);
-
-    win.document.close();
   }
 }

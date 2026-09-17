@@ -1,0 +1,850 @@
+<p-confirmDialog />
+
+<header class="ex__header">
+  <div>
+    <p class="app-section-title">Academics</p>
+    <h1>Exam papers</h1>
+    <p class="app-muted ex__lede">
+      Each examination of a course is a term carrying one theory paper and one
+      practical. Theory is sat in the student portal and marked automatically;
+      practical marks are entered here.
+    </p>
+  </div>
+
+  @if (canManagePapers()) {
+    <p-button label="New paper" icon="pi pi-plus" (onClick)="newPaper()" />
+  }
+</header>
+
+<!-- ---------------------------------------------------------------- filter -->
+<section class="app-card ex__filter">
+  <div class="ex__filter-field">
+    <label for="search">Title or subject contains</label>
+    <input
+      pInputText
+      id="search"
+      [ngModel]="search()"
+      (ngModelChange)="search.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      (keyup.enter)="applyFilter()"
+      placeholder="e.g. Tally" />
+  </div>
+
+  <div class="ex__filter-field">
+    <label for="courseFilter">Course</label>
+    <p-select
+      inputId="courseFilter"
+      [options]="courses()"
+      optionLabel="name"
+      optionValue="courseId"
+      [ngModel]="courseFilter()"
+      (ngModelChange)="courseFilter.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      [filter]="true"
+      filterBy="name"
+      [showClear]="true"
+      placeholder="All courses"
+      appendTo="body"
+      styleClass="ex__wide" />
+  </div>
+
+  <div class="ex__filter-actions">
+    <p-button label="Filter" icon="pi pi-search" [loading]="loading()" (onClick)="applyFilter()" />
+    <p-button
+      label="Clear"
+      icon="pi pi-times"
+      severity="secondary"
+      [outlined]="true"
+      (onClick)="clearFilter()" />
+  </div>
+</section>
+
+<!-- ------------------------------------------------------------------ list -->
+<section class="app-card ex__list">
+  <header class="ex__list-head">
+    <h2>Papers</h2>
+    <span class="app-muted">{{ totalCount() }} paper(s)</span>
+  </header>
+
+  <p-table
+    [value]="rows()"
+    [lazy]="true"
+    [paginator]="true"
+    [rows]="pageSize()"
+    [totalRecords]="totalCount()"
+    [loading]="loading()"
+    [rowsPerPageOptions]="[25, 50, 100]"
+    (onLazyLoad)="onLazyLoad($event)"
+    styleClass="p-datatable-sm"
+    [tableStyle]="{ 'min-width': '62rem' }"
+    currentPageReportTemplate="{first}&ndash;{last} of {totalRecords}"
+    [showCurrentPageReport]="true">
+
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Paper</th>
+        <th style="width: 12rem">Course</th>
+        <th style="width: 6rem">Type</th>
+        <th class="ex__num" style="width: 5rem">Exam #</th>
+        <th class="ex__num" style="width: 8rem">Marks</th>
+        <th class="ex__num" style="width: 6rem">Sat</th>
+        <th style="width: 8rem">Status</th>
+        <th style="width: 14rem">Actions</th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-row>
+      <tr>
+        <td>
+          <strong>{{ row.title }}</strong>
+          @if (row.subject) {
+            <div class="app-muted ex__sub">{{ row.subject }}</div>
+          }
+          @if (row.paperType === 'Theory') {
+            <div class="app-muted ex__sub">{{ row.durationMinutes }} min</div>
+          }
+        </td>
+
+        <td>{{ row.courseName || courseName(row.courseId) }}</td>
+
+        <td>
+          <p-tag
+            [value]="row.paperType"
+            [severity]="row.paperType === 'Theory' ? 'info' : 'warn'" />
+
+          @if (!row.hasCounterpart) {
+            <!-- A term is graded on both its papers, so one on its own is an
+                 examination that can never complete. -->
+            <div class="ex__sub ex__warn">
+              <i class="pi pi-exclamation-triangle"></i>
+              No {{ row.paperType === 'Theory' ? 'practical' : 'theory' }}
+            </div>
+          }
+        </td>
+
+        <td class="ex__num">{{ row.termNumber }}</td>
+
+        <td class="ex__num">
+          {{ row.totalMarks }}
+          @if (row.paperType === 'Theory') {
+            <div
+              class="ex__sub"
+              [class.ex__warn]="!marksBalance(row)"
+              [class.app-muted]="marksBalance(row)">
+              {{ row.questionCount }}q &middot; {{ row.uploadedMarks }} marks
+            </div>
+          }
+        </td>
+
+        <td class="ex__num">{{ row.attemptCount }}</td>
+
+        <td>
+          @if (row.isPublished) {
+            <p-tag value="Published" severity="success" />
+          } @else {
+            <p-tag value="Draft" severity="secondary" />
+          }
+        </td>
+
+        <td>
+          <div class="ex__actions">
+            @if (canManagePapers()) {
+              @if (row.paperType === 'Theory') {
+                <p-button
+                  icon="pi pi-list"
+                  severity="secondary"
+                  [text]="true"
+                  pTooltip="Questions"
+                  tooltipPosition="top"
+                  (onClick)="openQuestions(row)" />
+              } @else {
+                <p-button
+                  icon="pi pi-pencil"
+                  severity="warn"
+                  [text]="true"
+                  pTooltip="Enter practical marks"
+                  tooltipPosition="top"
+                  (onClick)="openPractical(row)" />
+              }
+            }
+
+            @if (canManagePapers() || row.paperType !== 'Theory') {
+              <!-- Receptionist's one job here: the Practical date, once Theory is
+                   done. A Theory sitting also issues the access code, which stays
+                   with Admin/Editor. -->
+              <p-button
+                icon="pi pi-calendar-clock"
+                severity="info"
+                [text]="true"
+                pTooltip="Sittings and access codes"
+                tooltipPosition="top"
+                (onClick)="openSchedule(row)" />
+            }
+
+            @if (canManagePapers()) {
+              <p-button
+                [icon]="row.isPublished ? 'pi pi-eye-slash' : 'pi pi-send'"
+                [severity]="row.isPublished ? 'secondary' : 'success'"
+                [text]="true"
+                [pTooltip]="row.isPublished ? 'Withdraw' : 'Publish'"
+                tooltipPosition="top"
+                (onClick)="togglePublished(row)" />
+
+              <p-button
+                icon="pi pi-cog"
+                severity="secondary"
+                [text]="true"
+                pTooltip="Edit paper"
+                tooltipPosition="top"
+                (onClick)="editPaper(row)" />
+
+              @if (canDelete()) {
+                <p-button
+                  icon="pi pi-trash"
+                  severity="danger"
+                  [text]="true"
+                  [disabled]="row.attemptCount > 0"
+                  [pTooltip]="row.attemptCount > 0 ? 'Students have sat this paper' : 'Delete'"
+                  tooltipPosition="top"
+                  (onClick)="deletePaper(row)" />
+              }
+            }
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td colspan="8" class="app-muted ex__empty">
+          No exam papers yet. Create one, upload its questions, then publish it.
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+
+  <p class="ex__note">
+    A theory paper only publishes once its uploaded question marks add up to the
+    paper's total — that way a student can never sit a paper worth less than it
+    claims. A practical carries no questions and publishes straight away.
+  </p>
+
+  <p class="ex__note ex__note--warn">
+    <strong>Practical marks for an examination are entered here</strong>, on the
+    practical paper's own mark sheet — not on the Marks screen. The Marks screen is
+    the separate legacy record that feeds a student's statement and certificate;
+    marks typed there never reach the examination portal, and the student's term
+    grade stays <em>Pending</em>. Every examination needs both its papers before a
+    student can be graded on it.
+  </p>
+</section>
+
+<!-- --------------------------------------------------------- paper dialog -->
+<p-dialog
+  [visible]="paperDialog()"
+  (visibleChange)="paperDialog.set($event)"
+  [modal]="true"
+  [style]="{ width: '46rem' }"
+  [header]="isEditing() ? 'Edit exam paper' : 'New exam paper'">
+
+  <form [formGroup]="form" (ngSubmit)="savePaper()" novalidate>
+    <div class="ex__grid">
+      <div class="ex__field ex__field--wide">
+        <label for="title">Paper title <span class="ex__req">*</span></label>
+        <input
+          pInputText
+          id="title"
+          formControlName="title"
+          maxlength="150"
+          placeholder="e.g. Tally ERP 9 — First examination (Theory)" />
+        @if (form.controls.title.touched && form.controls.title.invalid) {
+          <small class="ex__error">A title is required.</small>
+        }
+      </div>
+
+      <div class="ex__field">
+        <label for="subject">Subject</label>
+        <input pInputText id="subject" formControlName="subject" maxlength="100" />
+      </div>
+
+      <div class="ex__field">
+        <label for="courseId">Course <span class="ex__req">*</span></label>
+        <p-select
+          inputId="courseId"
+          formControlName="courseId"
+          [options]="courses()"
+          optionLabel="name"
+          optionValue="courseId"
+          [filter]="true"
+          filterBy="name"
+          placeholder="Choose a course"
+          appendTo="body"
+          styleClass="ex__wide" />
+        @if (form.controls.courseId.touched && form.controls.courseId.invalid) {
+          <small class="ex__error">Choose the course this paper examines.</small>
+        }
+      </div>
+
+      <div class="ex__field">
+        <label for="paperType">Paper type <span class="ex__req">*</span></label>
+        <p-select
+          inputId="paperType"
+          formControlName="paperType"
+          [options]="paperTypes"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+          styleClass="ex__wide" />
+      </div>
+
+      <div class="ex__field">
+        <label for="termNumber">Examination number <span class="ex__req">*</span></label>
+        <p-inputNumber inputId="termNumber" formControlName="termNumber" [min]="1" [showButtons]="true" />
+        <small class="app-muted ex__hint">
+          Pair the theory and practical of one examination under the same number.
+        </small>
+      </div>
+
+      <div class="ex__field">
+        <label for="totalMarks">Total marks <span class="ex__req">*</span></label>
+        <p-inputNumber inputId="totalMarks" formControlName="totalMarks" [min]="1" />
+        <small class="app-muted ex__hint">Anything you like — 25, 40, 50, 100.</small>
+      </div>
+
+      <div class="ex__field">
+        <label for="passMarks">Pass marks</label>
+        <p-inputNumber inputId="passMarks" formControlName="passMarks" [min]="0" />
+      </div>
+
+      @if (!isPractical()) {
+        <div class="ex__field">
+          <label for="durationMinutes">Duration (minutes) <span class="ex__req">*</span></label>
+          <p-inputNumber inputId="durationMinutes" formControlName="durationMinutes" [min]="1" />
+        </div>
+
+        <div class="ex__field">
+          <label for="opensOn">Opens on</label>
+          <p-datePicker
+            inputId="opensOn"
+            formControlName="opensOn"
+            dateFormat="dd/mm/yy"
+            [showTime]="true"
+            hourFormat="12"
+            [showIcon]="true"
+            [showClear]="true"
+            appendTo="body"
+            styleClass="ex__wide" />
+        </div>
+
+        <div class="ex__field">
+          <label for="closesOn">Closes on</label>
+          <p-datePicker
+            inputId="closesOn"
+            formControlName="closesOn"
+            dateFormat="dd/mm/yy"
+            [showTime]="true"
+            hourFormat="12"
+            [showIcon]="true"
+            [showClear]="true"
+            appendTo="body"
+            styleClass="ex__wide" />
+        </div>
+      }
+    </div>
+
+    @if (isPractical()) {
+      <p class="ex__note ex__note--inline">
+        A practical is examined in the room. It carries no questions and no clock —
+        publish it, then enter each student's mark from the paper's mark sheet.
+      </p>
+    }
+
+    <footer class="ex__dialog-actions">
+      <p-button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="paperDialog.set(false)" />
+      <p-button
+        type="submit"
+        [label]="isEditing() ? 'Update paper' : 'Create paper'"
+        icon="pi pi-save"
+        [loading]="saving()"
+        [disabled]="saving()" />
+    </footer>
+  </form>
+</p-dialog>
+
+<!-- ----------------------------------------------------- questions dialog -->
+<p-dialog
+  [visible]="questionDialog()"
+  (visibleChange)="questionDialog.set($event)"
+  [modal]="true"
+  [style]="{ width: '64rem' }"
+  [header]="'Questions — ' + (questionPaper()?.title ?? '')">
+
+  @if (questionPaper(); as paper) {
+    <div class="ex__upload">
+      <div>
+        <h3>Upload the question sheet</h3>
+        <p class="app-muted">
+          Columns: Question, Option A, Option B, Option C, Option D, Correct
+          Option, Marks. Uploading replaces whatever the paper holds now, and
+          nothing is saved unless every row is valid — so the sheet can be fixed
+          in one pass.
+        </p>
+      </div>
+
+      <div class="ex__upload-actions">
+        <p-button
+          label="Download template"
+          icon="pi pi-download"
+          severity="secondary"
+          [outlined]="true"
+          (onClick)="downloadTemplate()" />
+
+        <label class="ex__file" [class.ex__file--busy]="uploading()">
+          <i class="pi" [class.pi-upload]="!uploading()" [class.pi-spinner]="uploading()"></i>
+          {{ uploading() ? 'Uploading…' : 'Choose .xlsx' }}
+          <input
+            type="file"
+            accept=".xlsx"
+            [disabled]="uploading()"
+            (change)="onFileChosen($event)" />
+        </label>
+      </div>
+    </div>
+
+    @if (uploadResult(); as result) {
+      @if (result.errors.length) {
+        <div class="ex__errors">
+          <strong>
+            Nothing was saved. {{ result.errors.length }} problem(s) in the sheet:
+          </strong>
+          <ul>
+            @for (error of result.errors; track error) {
+              <li>{{ error }}</li>
+            }
+          </ul>
+        </div>
+      } @else if (!result.marksBalance) {
+        <div class="ex__errors ex__errors--warn">
+          The questions add up to <strong>{{ result.uploadedMarks }}</strong> marks
+          but the paper is worth <strong>{{ result.paperTotalMarks }}</strong>.
+          Adjust the sheet or the paper total — it will not publish until they match.
+        </div>
+      }
+    }
+
+    <div class="ex__tiles">
+      <div class="app-card ex__tile">
+        <span>Questions</span>
+        <strong>{{ questions().length }}</strong>
+      </div>
+      <div class="app-card ex__tile" [class.ex__tile--warn]="!marksBalance(paper)">
+        <span>Uploaded marks</span>
+        <strong>{{ paper.uploadedMarks }} / {{ paper.totalMarks }}</strong>
+      </div>
+    </div>
+
+    <p-table
+      [value]="questions()"
+      [loading]="questionsLoading()"
+      [scrollable]="true"
+      scrollHeight="26rem"
+      styleClass="p-datatable-sm"
+      [tableStyle]="{ 'min-width': '52rem' }">
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 3.5rem">#</th>
+          <th>Question</th>
+          <th>A</th>
+          <th>B</th>
+          <th>C</th>
+          <th>D</th>
+          <th style="width: 6rem">Answer</th>
+          <th class="ex__num" style="width: 5rem">Marks</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-q>
+        <tr>
+          <td>{{ q.questionNo }}</td>
+          <td>{{ q.questionText }}</td>
+          <td>{{ q.optionA }}</td>
+          <td>{{ q.optionB }}</td>
+          <td>{{ q.optionC || '&mdash;' }}</td>
+          <td>{{ q.optionD || '&mdash;' }}</td>
+          <td><p-tag [value]="q.correctOption" severity="success" /></td>
+          <td class="ex__num">{{ q.marks }}</td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="8" class="app-muted ex__empty">
+            No questions uploaded yet.
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+
+    <p class="ex__note">
+      The answer key shown here is back-office only — the student's paper is sent
+      without it, so the answers cannot be read out of the browser.
+    </p>
+  }
+</p-dialog>
+
+<!-- ------------------------------------------------------ schedule dialog -->
+<p-dialog
+  [visible]="scheduleDialog()"
+  (visibleChange)="scheduleDialog.set($event)"
+  [modal]="true"
+  [style]="{ width: '66rem' }"
+  [header]="'Sittings — ' + (schedulePaper()?.title ?? '')">
+
+  @if (schedulePaper(); as paper) {
+    <p class="app-muted ex__lede">
+      Students currently enrolled on
+      <strong>{{ paper.courseName || courseName(paper.courseId) }}</strong> &mdash;
+      anyone who has completed the course is left off, since they do not come in to
+      sit an examination. Set when each one sits this paper. A student cannot download an admit card
+      until they appear here with a date,
+      @if (paper.paperType === 'Theory') {
+        and the paper will not open until that time &mdash; and not without the
+        six-digit code below, which you read out at the desk.
+      } @else {
+        which is what the admit card prints beside the theory date.
+      }
+    </p>
+
+    <!-- Names repeat across the register, so the id is how you find one person. -->
+    <div class="ex__find">
+      <label for="scheduleSearch">Find a student</label>
+      <input
+        pInputText
+        id="scheduleSearch"
+        [ngModel]="scheduleSearch()"
+        (ngModelChange)="scheduleSearch.set($event)"
+        [ngModelOptions]="{ standalone: true }"
+        placeholder="Registration id, student or guardian name" />
+
+      @if (scheduleSearch()) {
+        <span class="app-muted ex__sub">
+          {{ visibleScheduleRows().length }} of {{ scheduleRows().length }} shown
+        </span>
+      }
+    </div>
+
+    <!-- schedule the whole batch at once -->
+    @if (canManagePapers()) {
+    <div class="ex__batch">
+      <div class="ex__batch-field">
+        <label for="batchDate">Batch date and time</label>
+        <p-datePicker
+          inputId="batchDate"
+          [ngModel]="batchDate()"
+          (ngModelChange)="batchDate.set($event)"
+          [ngModelOptions]="{ standalone: true }"
+          dateFormat="dd/mm/yy"
+          [showTime]="true"
+          hourFormat="12"
+          [showIcon]="true"
+          [showClear]="true"
+          appendTo="body"
+          styleClass="ex__wide" />
+      </div>
+
+      <div class="ex__batch-check">
+        <p-checkbox
+          inputId="batchOverwrite"
+          [binary]="true"
+          [ngModel]="batchOverwrite()"
+          (ngModelChange)="batchOverwrite.set($event)"
+          [ngModelOptions]="{ standalone: true }" />
+        <label for="batchOverwrite">
+          Move students already scheduled
+          <small class="app-muted">Admit cards already printed would be wrong.</small>
+        </label>
+      </div>
+
+      <p-button
+        label="Schedule everyone"
+        icon="pi pi-users"
+        [loading]="batchSaving()"
+        (onClick)="scheduleBatch()" />
+    </div>
+    }
+
+    <div class="ex__tiles">
+      <div class="app-card ex__tile">
+        <span>Enrolled</span>
+        <strong>{{ scheduleRows().length }}</strong>
+      </div>
+      <div class="app-card ex__tile">
+        <span>Scheduled</span>
+        <strong>{{ scheduledCount() }}</strong>
+      </div>
+
+      @if (paper.paperType === 'Theory') {
+        <div class="app-card ex__tile ex__tile--codes">
+          <span>Access codes</span>
+          <p-button
+            [label]="codesVisible() ? 'Hide codes' : 'Show codes'"
+            [icon]="codesVisible() ? 'pi pi-eye-slash' : 'pi pi-eye'"
+            severity="secondary"
+            [outlined]="true"
+            size="small"
+            (onClick)="codesVisible.set(!codesVisible())" />
+        </div>
+      }
+    </div>
+
+    <p-table
+      [value]="visibleScheduleRows()"
+      [loading]="scheduleLoading()"
+      [scrollable]="true"
+      scrollHeight="24rem"
+      [paginator]="true"
+      [rows]="25"
+      [rowsPerPageOptions]="[25, 50, 100]"
+      styleClass="p-datatable-sm"
+      [tableStyle]="{ 'min-width': '56rem' }">
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 9.5rem">Registration</th>
+          <th>Student</th>
+          <th style="width: 15rem">Sits on</th>
+          @if (paper.paperType === 'Theory') {
+            <th style="width: 8rem">Code</th>
+          }
+          <th style="width: 7rem">Status</th>
+          <th style="width: 8rem"></th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td><code class="ex__reg">{{ row.registrationId }}</code></td>
+          <td>
+            {{ row.studentName || '&mdash;' }}
+
+            @if (isDuplicateName(row)) {
+              <!-- Another student on this course answers to the same name; the
+                   registration id beside it is the only thing telling them apart. -->
+              <i
+                class="pi pi-exclamation-triangle ex__dupe"
+                pTooltip="Another student on this course has this name — check the registration id"
+                tooltipPosition="top"></i>
+            }
+
+            @if (row.isActive === false) {
+              <!-- Only ever a student kept here by an existing sitting; the sheet
+                   does not otherwise list people who have left the course.
+
+                   Tested against false, not falsy: an older API build omits the
+                   field entirely, and `!undefined` would badge every student on
+                   the sheet as inactive. -->
+              <p-tag
+                [value]="row.isComplete ? 'Course completed' : 'Not active'"
+                severity="secondary"
+                styleClass="ex__left" />
+            }
+
+            @if (row.guardianName) {
+              <div class="app-muted ex__sub">{{ row.guardianName }}</div>
+            }
+          </td>
+
+          <td>
+            <p-datePicker
+              [ngModel]="rowDate(row.registrationId)"
+              (ngModelChange)="setRowDate(row.registrationId, $event)"
+              [ngModelOptions]="{ standalone: true }"
+              dateFormat="dd/mm/yy"
+              [showTime]="true"
+              hourFormat="12"
+              [showIcon]="true"
+              [disabled]="row.hasAttempted || practicalBlocked(paper, row)"
+              appendTo="body"
+              styleClass="ex__wide" />
+
+            @if (practicalBlocked(paper, row)) {
+              <div class="app-muted ex__sub ex__warn">
+                <i class="pi pi-exclamation-triangle"></i> Theory not sat yet
+              </div>
+            }
+          </td>
+
+          @if (paper.paperType === 'Theory') {
+            <td>
+              @if (row.accessCode) {
+                @if (codesVisible()) {
+                  <code class="ex__code">{{ row.accessCode }}</code>
+                } @else {
+                  <span class="app-muted ex__sub">&bull;&bull;&bull;&bull;&bull;&bull;</span>
+                }
+              } @else {
+                <span class="app-muted ex__sub">&mdash;</span>
+              }
+            </td>
+          }
+
+          <td>
+            @if (row.submittedOn) {
+              <p-tag value="Sat" severity="info" />
+            } @else if (row.hasAttempted) {
+              <p-tag value="Open now" severity="warn" />
+            } @else if (row.scheduledOn) {
+              <p-tag value="Scheduled" severity="success" />
+            } @else {
+              <p-tag value="Not set" severity="secondary" />
+            }
+          </td>
+
+          <td>
+            <div class="ex__actions">
+              <p-button
+                icon="pi pi-check"
+                severity="success"
+                [text]="true"
+                pTooltip="Save this sitting"
+                tooltipPosition="top"
+                [disabled]="row.hasAttempted || practicalBlocked(paper, row)"
+                [loading]="savingRow() === row.registrationId"
+                (onClick)="saveRow(row)" />
+
+              @if (row.scheduledOn && paper.paperType === 'Theory' && !row.submittedOn) {
+                <p-button
+                  icon="pi pi-refresh"
+                  severity="secondary"
+                  [text]="true"
+                  pTooltip="Issue a new code"
+                  tooltipPosition="top"
+                  (onClick)="regenerateCode(row)" />
+              }
+
+              @if (row.scheduledOn && !row.hasAttempted) {
+                <p-button
+                  icon="pi pi-times"
+                  severity="danger"
+                  [text]="true"
+                  pTooltip="Withdraw the sitting"
+                  tooltipPosition="top"
+                  (onClick)="removeSchedule(row)" />
+              }
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td [attr.colspan]="paper.paperType === 'Theory' ? 6 : 5" class="app-muted ex__empty">
+            @if (scheduleSearch()) {
+              No student on this course matches &ldquo;{{ scheduleSearch() }}&rdquo;.
+            } @else {
+              No students are enrolled on this course.
+            }
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+
+    <p class="ex__note">
+      Each student has their own code &mdash; one number for the room would be one
+      number the room could pass around. A code is never sent to the student and
+      never printed on the admit card: read it out at the desk. If one is overheard,
+      issue a new one and the old stops working at once.
+    </p>
+  }
+</p-dialog>
+
+<!-- ----------------------------------------------------- practical dialog -->
+<p-dialog
+  [visible]="practicalDialog()"
+  (visibleChange)="practicalDialog.set($event)"
+  [modal]="true"
+  [style]="{ width: '52rem' }"
+  [header]="'Practical marks — ' + (practicalPaper()?.title ?? '')">
+
+  @if (practicalPaper(); as paper) {
+    <p class="app-muted ex__lede">
+      Every student on {{ paper.courseName || courseName(paper.courseId) }}. Enter a
+      mark out of {{ paper.totalMarks }} and save the row. Saving again corrects a
+      mark already entered.
+    </p>
+
+    <p-table
+      [value]="roster()"
+      [loading]="rosterLoading()"
+      [scrollable]="true"
+      scrollHeight="26rem"
+      styleClass="p-datatable-sm"
+      [tableStyle]="{ 'min-width': '44rem' }">
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 10rem">Registration</th>
+          <th>Student</th>
+          <th style="width: 10rem">Mark</th>
+          <th style="width: 11rem">Entered</th>
+          <th style="width: 6rem"></th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td>{{ row.registrationId }}</td>
+          <td>{{ row.studentName || '&mdash;' }}</td>
+          <td>
+            <p-inputNumber
+              [(ngModel)]="row.score"
+              [ngModelOptions]="{ standalone: true }"
+              [min]="0"
+              [max]="row.totalMarks"
+              [suffix]="' / ' + row.totalMarks"
+              styleClass="ex__mark" />
+          </td>
+          <td>
+            @if (row.enteredOn) {
+              <span class="app-muted ex__sub">
+                {{ row.enteredOn | date: 'd MMM y, h:mm a' }}
+                @if (row.enteredBy) { <br />by {{ row.enteredBy }} }
+              </span>
+            } @else {
+              <span class="app-muted ex__sub">Not entered</span>
+            }
+          </td>
+          <td>
+            <p-button
+              icon="pi pi-check"
+              severity="success"
+              [text]="true"
+              pTooltip="Save mark"
+              tooltipPosition="top"
+              [loading]="savingMark() === row.registrationId"
+              (onClick)="saveMark(row)" />
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="5" class="app-muted ex__empty">
+            No students are enrolled on this course.
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+
+    <p class="ex__note">
+      A student's grade for this examination appears in their portal only once both
+      its papers are in — the theory sat and this practical entered.
+    </p>
+  }
+</p-dialog>

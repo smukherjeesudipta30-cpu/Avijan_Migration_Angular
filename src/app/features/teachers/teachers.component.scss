@@ -187,3 +187,156 @@
   .tch__list-head { align-items: stretch; }
   .tch__search { width: 100%; }
 }
+
+/* ------------------------------------------ the teacher's account */
+.tch__account {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.tch__account-tile {
+  padding: 0.8rem 0.95rem;
+  border-radius: var(--app-radius);
+  background: var(--app-page-bg);
+
+  span {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--app-text-muted);
+  }
+
+  strong { display: block; margin-top: 0.25rem; font-size: 1.2rem; }
+}
+
+/* What the institute still owes, which is the number the teacher cares about. */
+.tch__account-tile--owed strong { color: var(--app-negative); }
+
+.tch__pay {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  padding: 0.95rem 1.1rem;
+  margin-bottom: 1rem;
+  border-radius: var(--app-radius);
+  background: var(--app-page-bg);
+  flex-wrap: wrap;
+}
+
+.tch__pay-field {
+  flex: 1 1 12rem;
+  min-width: 0;
+
+  label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--app-text-muted);
+  }
+}
+
+:host ::ng-deep .tch__pay .p-inputnumber,
+:host ::ng-deep .tch__pay .p-inputnumber input,
+:host ::ng-deep .tch__pay .p-datepicker { width: 100%; }
+
+.tch__paid-list {
+  margin-bottom: 1rem;
+
+  h4 { margin: 0 0 0.5rem; font-size: 0.85rem; }
+  ul { list-style: none; margin: 0; padding: 0; }
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--app-border);
+    font-size: 0.83rem;
+  }
+
+  li strong { margin-left: auto; }
+}
+
+.tch__paid-date { min-width: 7rem; }
+.tch__paid-by { font-size: 0.74rem; }
+
+.tch__paid-empty { margin: 0 0 1rem; font-size: 0.8rem; }
+
+@media (max-width: 760px) {
+  .tch__account { grid-template-columns: 1fr; }
+  .tch__pay { flex-direction: column; align-items: stretch; }
+}
+
+/* The period the account tiles describe. */
+.tch__account-period {
+  margin: 0 0 0.5rem;
+  font-size: 0.78rem;
+  color: var(--app-text-muted);
+}
+
+.tch__account-tile span em {
+  font-style: normal;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* ------------------------------------------------------- search card */
+/* Mirrors the Students master, so the two screens look for a teacher and a
+   student in the same place. */
+.tch__search-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.tch__search-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1 1 22rem;
+
+  label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #4a5163;
+  }
+
+  input {
+    width: 100%;
+  }
+}
+
+.tch__search-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tch__hint {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+  color: var(--text-color-secondary, #6b7280);
+}
+
+/* The technical-staff switch sits inline with its label, unlike the text fields. */
+.tch__field--check {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+
+  label {
+    margin: 0;
+  }
+
+  .tch__hint {
+    flex: 1 0 100%;
+  }
+}

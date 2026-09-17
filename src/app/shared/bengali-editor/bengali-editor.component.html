@@ -1,0 +1,67 @@
+<div class="bn">
+  <div class="bn__bar">
+    <button type="button"
+            class="bn__toggle"
+            [class.bn__toggle--on]="phonetic()"
+            (click)="togglePhonetic()"
+            [attr.aria-pressed]="phonetic()">
+      বাংলা
+      <span class="bn__state">{{ phonetic() ? 'on' : 'off' }}</span>
+    </button>
+
+    <span class="bn__how">
+      @if (phonetic()) {
+        Type in English letters — <code>protizOgita</code> becomes প্রতিযোগিতা
+      } @else {
+        Typing goes in as it is. Paste Bengali, or use a Bengali keyboard.
+      }
+    </span>
+
+    <button type="button" class="bn__link" (click)="paletteOpen.set(!paletteOpen())">
+      {{ paletteOpen() ? 'Hide letters' : 'Letters' }}
+    </button>
+  </div>
+
+  <textarea #box
+            [rows]="rows"
+            [attr.maxlength]="maxlength"
+            [attr.placeholder]="placeholder"
+            [value]="value()"
+            (input)="input($event)"
+            (keydown)="keydown($event)"
+            (blur)="blur($event)"></textarea>
+
+  @if (preview()) {
+    <p class="bn__preview">
+      <span class="bn__preview-label">Will become</span>
+      <span class="bn__preview-text">{{ preview() }}</span>
+      <span class="bn__preview-hint">press space to accept</span>
+    </p>
+  }
+
+  @if (paletteOpen()) {
+    <div class="bn__palette">
+      @for (group of palette; track group.title) {
+        <div class="bn__group">
+          <h4>{{ group.title }}</h4>
+          <div class="bn__keys">
+            @for (item of group.items; track item.glyph) {
+              <button type="button"
+                      class="bn__key"
+                      [title]="'Type ' + item.key"
+                      (click)="insert(item.glyph)">
+                <span class="bn__glyph">{{ item.glyph }}</span>
+                <span class="bn__roman">{{ item.key }}</span>
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      <p class="bn__note">
+        Where two consonants are sounded apart, type <code>o</code> between them —
+        <code>rajopur</code> gives রাজপুর, while <code>rajpur</code> joins them into রাজ্পুর.
+      </p>
+    </div>
+  }
+</div>

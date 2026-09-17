@@ -1,0 +1,372 @@
+<!-- ================================================================ header -->
+<header class="hm__header">
+  <div class="hm__header-inner">
+    <a class="hm__logo" href="#" (click)="$event.preventDefault(); scrollTo('hero')">
+      <img src="/images/ds-logo.svg" alt="Avijan" />
+    </a>
+
+    <nav class="hm__nav">
+      <button type="button" (click)="scrollTo('hero')">Home</button>
+      <button type="button" (click)="scrollTo('courses')">Course</button>
+      <button type="button" (click)="scrollTo('about')">About Us</button>
+      <button type="button" (click)="scrollTo('portfolio')">Portfolio</button>
+      <button type="button" (click)="scrollTo('notice')">Notice</button>
+      <button type="button" (click)="scrollTo('contact')">Contact</button>
+    </nav>
+  </div>
+</header>
+
+<!-- ================================================================== hero -->
+<section class="hm__hero" id="hero">
+  <div class="hm__hero-overlay">
+    <h1>Welcome to Avijan</h1>
+    <p>An Unit of Computer Professionals &amp; Learners</p>
+
+    @if (isSignedIn()) {
+      <a class="hm__cta" [routerLink]="landingRoute()">Go to my dashboard</a>
+    } @else {
+      <a class="hm__cta" routerLink="/login">Login</a>
+    }
+  </div>
+</section>
+
+<!-- ========================================================= owner's desk -->
+<!-- Straight under the banner and before About Us: the first thing a visitor meets
+     after the hero is a person, not a paragraph. Rendered only when a photograph is
+     configured, so the panel can be taken down from appsettings.json without
+     touching this template. -->
+@if (page()?.ownerDesk; as desk) {
+  <section class="hm__section hm__owner" id="owner">
+    <div class="hm__container">
+      <div class="hm__owner-split">
+        <figure class="hm__owner-photo">
+          <!-- Eager, and with its dimensions declared. The panel sits directly under
+               the banner now, so it is on screen almost immediately; lazy loading
+               bought nothing there and left the frame collapsed to zero height until
+               the browser got round to it. width/height reserve the space so the
+               copy beside it does not jump when the photograph arrives. -->
+          <img
+            [src]="desk.photo"
+            [alt]="desk.name || desk.designation"
+            width="640"
+            height="800"
+            decoding="async" />
+        </figure>
+
+        <div class="hm__owner-copy">
+          <p class="hm__owner-eyebrow">From the Owner&rsquo;s Desk</p>
+
+          @for (para of desk.message; track $index) {
+            <p>{{ para }}</p>
+          }
+
+          <div class="hm__owner-sign">
+            @if (desk.name) {
+              <strong>{{ desk.name }}</strong>
+            }
+            <span>{{ desk.designation }}</span>
+            @if (desk.since) {
+              <small>{{ desk.since }}</small>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+}
+
+<!-- ================================================================= about -->
+<!-- ==================================================== competition banner ==
+  Shown only while registration is actually open, so a finished event cannot go on
+  advertising itself. The portal itself decides that; here we only ask.
+-->
+@if (features.competition() && competition(); as c) {
+  @if (c.isOpen) {
+    <section class="hm__section hm__competition">
+      <div class="hm__container hm__competition-inner">
+        <div>
+          <p class="hm__competition-eyebrow">Now open for registration</p>
+          <h2 class="hm__competition-title">
+            Drawing &amp; Dance Competition {{ c.year }}
+          </h2>
+          <p class="hm__competition-bn">বসে আঁকো ও নৃত্য প্রতিযোগিতা</p>
+          <p class="hm__competition-facts">
+            @if (c.eventDate) { {{ c.eventDate | date: 'd MMMM y' }} · }
+            Drawing &#8377;{{ c.drawingFee }} · Dance &#8377;{{ c.danceFee }}
+            @if (c.venue) { <br />{{ c.venue }} }
+          </p>
+        </div>
+
+        <a class="hm__competition-go" routerLink="/competition">Register now</a>
+      </div>
+    </section>
+  }
+}
+
+<!--
+  The legacy #About is a split section: copy on the left half, about-us.jpg
+  filling the right half (css/style.css `#About:after`, width 50%).
+-->
+<section class="hm__about" id="about">
+  <div class="hm__about-split">
+    <div class="hm__about-copy">
+      <!-- The corner ribbon and scrolling admission banner from the legacy page. -->
+      <div class="hm__ribbon">30% OFF</div>
+
+      <div class="hm__admission">
+        <span>&#128227; Admission going on, join Avijan today &#128227;</span>
+      </div>
+
+      <h2>About Us</h2>
+
+      @if (page(); as p) {
+        <p>{{ p.introduction }}</p>
+      }
+
+      <p>
+        Our procedures, systems, pedagogy, faculty and infrastructure is totally
+        geared towards achieving our vision and mission. There is a high degree of
+        student participation in running the institution in its all activities along
+        with the faculty. All efforts in Avijan are directed towards supporting our
+        vision &amp; mission and decisions are guided by their contribution they are
+        likely to make towards enhancing and strengthening our vision and mission.
+        We are going to be succeed.
+      </p>
+
+      @if (page(); as p) {
+        <div class="hm__stats">
+          @for (stat of p.stats; track stat.label) {
+            <div class="hm__stat">
+              <i [class]="stat.icon"></i>
+              <strong>{{ stat.value }}</strong>
+              <span>{{ stat.label }}</span>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- The right half of the legacy About section: a full-height photograph. -->
+    <div class="hm__about-photo" role="img" aria-label="Students at Avijan"></div>
+  </div>
+</section>
+
+<!-- =============================================================== courses -->
+<section class="hm__section" id="courses">
+  <div class="hm__container">
+    <div class="hm__heading">
+      <h2>Courses</h2>
+      <p>ISO certificate will be provided after successfully completion of each course.</p>
+    </div>
+
+    @if (page(); as p) {
+      @if (p.courses.length) {
+        @if (popularCourses().length) {
+          <div class="hm__popular">
+            <h3 class="hm__popular-title">Most joined right now</h3>
+
+            <div class="hm__popular-list">
+              @for (course of popularCourses(); track course.courseId) {
+                <div class="hm__popular-row">
+                  <span class="hm__popular-name">{{ course.name }}</span>
+                  <div class="hm__popular-bar">
+                    <span [style.width.%]="enrolmentPercent(course.enrolledCount)"></span>
+                  </div>
+                  <span class="hm__popular-count">
+                    {{ course.enrolledCount }} student{{ course.enrolledCount === 1 ? '' : 's' }}
+                  </span>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        @for (group of courseGroups(); track group.group) {
+          <h3 class="hm__group-title">{{ group.group }}</h3>
+
+          <div class="hm__course-grid">
+            @for (course of group.courses; track course.courseId; let i = $index) {
+              <article class="hm__course-card">
+                <div class="hm__course-icon" [style.background]="courseColor(i)">
+                  {{ courseBadge(course.name) }}
+                </div>
+
+                <h3 class="hm__course-name">{{ course.name }}</h3>
+
+                @if (course.durationMonths) {
+                  <div class="hm__course-duration">
+                    <div class="hm__course-bar">
+                      <span [style.width.%]="durationPercent(course.durationMonths)"
+                            [style.background]="courseColor(i)"></span>
+                    </div>
+                    <span class="hm__course-months">
+                      {{ course.durationMonths }} month{{ course.durationMonths === 1 ? '' : 's' }}
+                    </span>
+                  </div>
+                }
+              </article>
+            }
+          </div>
+        }
+      } @else {
+        <p class="hm__empty">No courses listed yet.</p>
+      }
+    } @else if (loading()) {
+      <p class="hm__empty">Loading courses&hellip;</p>
+    }
+  </div>
+</section>
+
+<!-- ============================================================= portfolio -->
+<section class="hm__section hm__portfolio" id="portfolio">
+  <div class="hm__container">
+    <div class="hm__heading">
+      <h2>Portfolio</h2>
+      <p>Our Exciting Moments</p>
+    </div>
+  </div>
+
+  <!-- Continuously scrolling strip, as on the legacy page. Hovering pauses it. -->
+  <div class="hm__marquee-wrap">
+    <div class="hm__marquee">
+      @for (item of portfolioLoop(); track $index) {
+        <button
+          type="button"
+          class="hm__marquee-item"
+          (click)="openLightbox(item)"
+          [attr.aria-label]="'View ' + item.caption">
+          <img [src]="item.image" [alt]="item.caption" loading="lazy" />
+          <span class="hm__marquee-caption">{{ item.caption }}</span>
+        </button>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ notice -->
+<section class="hm__section hm__notice" id="notice">
+  <div class="hm__container">
+    <div class="hm__heading">
+      <h2>Notice</h2>
+    </div>
+
+    @if (page(); as p) {
+      @for (notice of (p.notices ?? []); track notice.id) {
+        <div class="hm__notice-row">
+          <span class="hm__notice-date">
+            {{ notice.noticeDate ? (notice.noticeDate | date: 'd MMM y') : '' }}
+          </span>
+          <span class="hm__notice-text">{{ notice.text }}</span>
+        </div>
+      } @empty {
+        <p class="hm__empty">No notices at the moment.</p>
+      }
+    }
+  </div>
+</section>
+
+<!-- =============================================================== contact -->
+<section class="hm__section hm__contact" id="contact">
+  <div class="hm__container">
+    <h3 class="hm__contact-title">Get In Touch</h3>
+
+    <div class="hm__contact-grid">
+      <!-- Never gated on the About API having answered: a visitor's one way to
+           find out how to reach the institute must not depend on that one call
+           having succeeded yet. Real data replaces the fallback the moment it
+           arrives; until then (or if it never does) this is what shows. -->
+      @let contact = page()?.contact ?? fallbackContact;
+
+      <div class="hm__address">
+        <p class="hm__add-title">Contact Details</p>
+
+        <div class="hm__c-detail">
+          <i class="pi pi-map-marker"></i>
+          <span>{{ contact.addressLine1 }}<br />{{ contact.addressLine2 }}</span>
+        </div>
+
+        <div class="hm__c-detail">
+          <i class="pi pi-phone"></i>
+          <a [href]="'tel:' + contact.phone">{{ contact.phone }}</a>
+        </div>
+
+        <div class="hm__c-detail">
+          <i class="pi pi-envelope"></i>
+          <a [href]="'mailto:' + contact.email">{{ contact.email }}</a>
+        </div>
+
+        <!-- The legacy contact block is address, phone and email only, so this
+             renders only if the institute has actually set office hours. -->
+        @if (contact.officeHours) {
+          <div class="hm__c-detail">
+            <i class="pi pi-clock"></i>
+            <span>{{ contact.officeHours }}</span>
+          </div>
+        }
+      </div>
+
+      <div class="hm__form-wrap">
+        <p class="hm__add-title">Send Us Message</p>
+
+        <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+          <div class="hm__field">
+            <label for="name">Full Name</label>
+            <input pInputText id="name" formControlName="name" autocomplete="name" />
+            @if (form.controls.name.touched && form.controls.name.invalid) {
+              <small class="hm__error">Your name is required.</small>
+            }
+          </div>
+
+          <div class="hm__field">
+            <label for="email">Email</label>
+            <input pInputText id="email" type="email" formControlName="email" autocomplete="email" />
+            @if (form.controls.email.touched && form.controls.email.invalid) {
+              <small class="hm__error">Enter a valid email address.</small>
+            }
+          </div>
+
+          <div class="hm__field">
+            <label for="phone">Contact</label>
+            <input pInputText id="phone" formControlName="phone" autocomplete="tel" />
+            @if (form.controls.phone.touched && form.controls.phone.invalid) {
+              <small class="hm__error">Enter a valid phone number.</small>
+            }
+          </div>
+
+          <div class="hm__field">
+            <label for="message">Your Message</label>
+            <textarea pTextarea id="message" rows="4" formControlName="message"></textarea>
+            @if (form.controls.message.touched && form.controls.message.invalid) {
+              <small class="hm__error">Please write a message.</small>
+            }
+          </div>
+
+          <p-button
+            type="submit"
+            label="Submit"
+            icon="pi pi-send"
+            [loading]="sending()"
+            [disabled]="sending()" />
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="hm__footer">
+  <div class="hm__container">
+    <span>&copy; {{ 2026 }} Avijan &mdash; An Unit of Computer Professionals &amp; Learners</span>
+    <a routerLink="/login">Staff &amp; student login</a>
+  </div>
+</footer>
+
+<!-- ============================================================== lightbox -->
+@if (lightbox(); as shot) {
+  <div class="hm__lightbox" (click)="closeLightbox()">
+    <button type="button" class="hm__lightbox-close" aria-label="Close">&times;</button>
+    <figure (click)="$event.stopPropagation()">
+      <img [src]="shot.image" [alt]="shot.caption" />
+      <figcaption>{{ shot.caption }}</figcaption>
+    </figure>
+  </div>
+}

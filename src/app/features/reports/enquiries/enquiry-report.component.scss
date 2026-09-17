@@ -1,0 +1,193 @@
+:host {
+  display: block;
+}
+
+.rep__header {
+  margin-bottom: 1.25rem;
+
+  h1 {
+    font-size: 1.6rem;
+    margin: 0.1rem 0 0.35rem;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+}
+
+.rep__eyebrow {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  color: var(--app-text-muted);
+}
+
+.rep__card {
+  padding: 1.15rem 1.25rem 1.35rem;
+  margin-bottom: 1.25rem;
+  min-width: 0;
+
+  h2 {
+    font-size: 1rem;
+    margin: 0 0 0.9rem;
+  }
+}
+
+.rep__card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.9rem;
+
+  h2 { margin: 0; }
+}
+
+/* ------------------------------------------------------------- filters */
+.rep__filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.9rem 1rem;
+  align-items: end;
+}
+
+.rep__field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  label {
+    margin-bottom: 0.4rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+}
+
+:host ::ng-deep .rep__select,
+:host ::ng-deep .rep__select .p-select,
+:host ::ng-deep .rep__datepicker,
+:host ::ng-deep .rep__datepicker .p-inputtext {
+  width: 100%;
+}
+
+.rep__filter-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* -------------------------------------------------------------- totals */
+.rep__totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.rep__stat {
+  padding: 1rem 1.1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  border-left: 3px solid var(--app-border);
+
+  &--good { border-left-color: var(--app-positive, #10b981); }
+  &--bad  { border-left-color: var(--app-negative); }
+}
+
+.rep__stat-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--app-text-muted);
+}
+
+.rep__stat-value {
+  font-size: 1.9rem;
+  line-height: 1.1;
+}
+
+.rep__stat-note {
+  font-size: 0.75rem;
+}
+
+/* A real button: it changes the filter rather than navigating. */
+.rep__stat-link {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.75rem;
+  color: var(--app-brand);
+  cursor: pointer;
+
+  &:hover { text-decoration: underline; }
+}
+
+/* -------------------------------------------------------------- tables */
+.rep__num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.rep__nowrap {
+  white-space: nowrap;
+}
+
+.rep__address {
+  max-width: 260px;
+  font-size: 0.82rem;
+}
+
+.rep__sub {
+  margin-top: 0.15rem;
+  font-size: 0.74rem;
+  color: var(--app-text-muted);
+}
+
+.rep__due {
+  color: var(--app-negative);
+  font-weight: 600;
+}
+
+.rep__empty {
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+/* --------------------------------------------------------------- print */
+@media print {
+  /* The filters are how the report was produced, not part of it. */
+  .rep__filters-card { display: none; }
+
+  .rep__card,
+  .rep__stat {
+    border: 1px solid #ccc;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+}
+
+/* The running follow-up history, capped so one long conversation does not make a
+   row taller than the rest of the table. The full text is on the tooltip, and
+   pre-line keeps the dated lines the server appends on separate lines. */
+.rep__remarks-col {
+  min-width: 200px;
+  max-width: 300px;
+}
+
+.rep__remarks {
+  white-space: pre-line;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  max-height: 4.2rem;
+  overflow-y: auto;
+}
+
+@media print {
+  /* On paper there is no tooltip and no scrolling, so the history prints whole. */
+  .rep__remarks { max-height: none; overflow: visible; }
+}

@@ -1,0 +1,192 @@
+:host {
+  display: block;
+}
+
+.enq__header {
+  margin-bottom: 1.25rem;
+
+  h1 {
+    font-size: 1.6rem;
+    margin: 0.1rem 0 0.35rem;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+}
+
+.enq__eyebrow {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  color: var(--app-text-muted);
+}
+
+.enq__card {
+  padding: 1.15rem 1.25rem 1.35rem;
+  margin-bottom: 1.25rem;
+  min-width: 0;
+}
+
+.enq__card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.1rem;
+
+  h2 {
+    font-size: 1rem;
+    margin: 0;
+  }
+}
+
+.enq__hint {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+}
+
+/* ----------------------------------------------------------------- form */
+.enq__form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem 1.15rem;
+  align-items: start;
+}
+
+.enq__field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  label {
+    margin-bottom: 0.4rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--app-text);
+  }
+
+  input,
+  textarea {
+    width: 100%;
+  }
+
+  &--wide {
+    grid-column: 1 / -1;
+  }
+}
+
+.enq__req {
+  color: var(--app-negative);
+}
+
+.enq__error {
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--app-negative);
+}
+
+.enq__help {
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--app-text-muted);
+}
+
+:host ::ng-deep .enq__select,
+:host ::ng-deep .enq__select .p-select,
+:host ::ng-deep .enq__datepicker,
+:host ::ng-deep .enq__datepicker .p-inputtext {
+  width: 100%;
+}
+
+.enq__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+/* ------------------------------------------------------------- register */
+.enq__filters {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.enq__search {
+  width: 190px;
+}
+
+.enq__sub {
+  margin-top: 0.15rem;
+  font-size: 0.74rem;
+  color: var(--app-text-muted);
+}
+
+.enq__phone {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover { text-decoration: underline; }
+}
+
+/* A row whose call is due carries a left edge, so a receptionist scanning the
+   register sees today's work without reading the dates. */
+.enq__row--due > td:first-child {
+  box-shadow: inset 3px 0 0 var(--app-negative);
+}
+
+.enq__due {
+  color: var(--app-negative);
+  font-weight: 600;
+}
+
+.enq__col-actions {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.enq__empty {
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+.enq__dialog-lead {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 900px) {
+  .enq__search { width: 100%; }
+
+  .enq__filters {
+    width: 100%;
+  }
+}
+
+/* The running follow-up history. Capped rather than free-flowing: a long
+   conversation would otherwise make one row taller than the rest of the table.
+   pre-line keeps the dated lines the server appends on separate lines, and the
+   full text is on the tooltip. */
+.enq__col-remarks {
+  min-width: 200px;
+  max-width: 280px;
+}
+
+.enq__remarks {
+  white-space: pre-line;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  max-height: 4.2rem;
+  overflow-y: auto;
+  color: var(--app-text);
+}

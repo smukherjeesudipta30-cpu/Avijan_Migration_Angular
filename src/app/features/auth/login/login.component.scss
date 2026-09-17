@@ -158,6 +158,18 @@
   }
 }
 
+.login__forgot {
+  display: inline-block;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--app-brand);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 .login__footer {
   display: flex;
   align-items: center;

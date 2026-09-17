@@ -1,5 +1,12 @@
 <div class="shell" [class.shell--collapsed]="!sidebarOpen()">
-  <aside class="shell__sidebar" aria-label="Main navigation">
+  <!-- Only on a phone, where the sidebar is an overlay. Tapping the dimmed page is
+       how most people expect to dismiss a drawer, and without it the only way out
+       was the hamburger. -->
+  @if (isMobile() && sidebarOpen()) {
+    <div class="shell__backdrop" (click)="closeIfMobile()" aria-hidden="true"></div>
+  }
+
+  <aside id="shell-nav" class="shell__sidebar" aria-label="Main navigation">
     <div class="shell__brand">
       <span class="shell__logo" aria-hidden="true">A</span>
       <span class="shell__brand-text">
@@ -18,7 +25,8 @@
               <a
                 class="shell__link"
                 [routerLink]="item.route"
-                routerLinkActive="shell__link--active">
+                routerLinkActive="shell__link--active"
+                (click)="closeIfMobile()">
                 <i [class]="item.icon" aria-hidden="true"></i>
                 <span>{{ item.label }}</span>
               </a>
@@ -44,11 +52,24 @@
         type="button"
         class="shell__icon-button"
         (click)="toggleSidebar()"
+        [attr.aria-expanded]="sidebarOpen()"
+        aria-controls="shell-nav"
         aria-label="Toggle navigation">
         <i class="pi pi-bars" aria-hidden="true"></i>
       </button>
 
       <div class="shell__spacer"></div>
+
+      <button
+        type="button"
+        class="shell__icon-button shell__chat-button"
+        (click)="chatUi.toggle()"
+        aria-label="Chat">
+        <i class="pi pi-comments" aria-hidden="true"></i>
+        @if (chatUi.unreadTotal() > 0) {
+          <span class="shell__chat-badge">{{ chatUi.unreadTotal() }}</span>
+        }
+      </button>
 
       <a class="shell__topbar-link" routerLink="/about">
         <i class="pi pi-external-link" aria-hidden="true"></i>
@@ -79,4 +100,7 @@
       <router-outlet />
     </main>
   </div>
+
+  <app-chat-panel />
+  <app-call-overlay />
 </div>

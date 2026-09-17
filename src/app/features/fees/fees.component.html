@@ -1,3 +1,5 @@
+<p-confirmDialog />
+
 <header class="fee__header">
   <div>
     <p class="app-section-title">Master</p>
@@ -66,7 +68,49 @@
           <dt>Outstanding due</dt>
           <dd [class.fee__due]="student.outstandingDue > 0">{{ money(student.outstandingDue) }}</dd>
         </div>
+
+        <!-- Shown only when there is one. The admission fee is settled separately
+             from the monthly ledger, but it is the same counter taking the money,
+             so it can be taken here rather than on another screen. -->
+        @if ((student.admissionDue ?? 0) > 0) {
+          <div>
+            <dt>Admission fee owing</dt>
+            <dd class="fee__due">
+              {{ money(student.admissionDue ?? 0) }}
+              <p-button
+                label="Collect"
+                icon="pi pi-indian-rupee"
+                size="small"
+                severity="warn"
+                [text]="true"
+                (onClick)="openAdmissionDue(student.studentId)" />
+            </dd>
+          </div>
+        }
+
+        <!-- The receipt is emailed to this address the moment the payment is saved.
+             Most migrated records have none, and the send is then skipped silently —
+             so it is said here, while the student is still at the counter. -->
+        <div>
+          <dt>Receipt goes to</dt>
+          <dd>
+            @if (student.personalEmail) {
+              {{ student.personalEmail }}
+            } @else {
+              <span class="fee__due">No personal email on record</span>
+            }
+          </dd>
+        </div>
       </dl>
+
+      @if (!student.personalEmail) {
+        <p class="fee__calc-note app-muted">
+          <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+          The money receipt cannot be emailed until a personal email is added on the
+          Students screen. You can still send it on WhatsApp from the payment history
+          below.
+        </p>
+      }
     </section>
 
     <!-- ------------------------------------------------ fee entry form -->
@@ -120,10 +164,35 @@
         <!-- ----------------------------------- server-calculated figures -->
         <div class="fee__calc" [class.fee__calc--busy]="calculating()">
           @if (calculation(); as calc) {
-            <div class="fee__calc-row">
-              <span>Payment is happening after</span>
-              <strong>{{ calc.daysSincePrevious }} day(s)</strong>
-            </div>
+            <!-- The gap since the student last paid, which is the question actually
+                 asked at the counter. It used to read "Payment is happening after
+                 N day(s)" showing days since JOINING — 200 for a student who had
+                 paid a fortnight earlier, which read as 200 days late.
+
+                 The fine is still judged on the institute's own rule (the average
+                 across the months owed), and the note underneath spells that out;
+                 this row is for reading, not for arithmetic. -->
+            @if (calc.daysSinceLastPayment !== null && calc.daysSinceLastPayment !== undefined) {
+              <div class="fee__calc-row">
+                <span>
+                  Days since last payment
+                  @if (calc.lastPaymentDate) {
+                    ({{ calc.lastPaymentDate | date: 'd MMM y' }})
+                  }
+                </span>
+                <strong>{{ calc.daysSinceLastPayment }} day(s)</strong>
+              </div>
+            } @else {
+              <div class="fee__calc-row">
+                <span>
+                  First payment &mdash; days since joining
+                  @if (calc.referenceDate) {
+                    ({{ calc.referenceDate | date: 'd MMM y' }})
+                  }
+                </span>
+                <strong>{{ calc.daysSincePrevious }} day(s)</strong>
+              </div>
+            }
 
             <div class="fee__calc-row">
               <span>Late fine for this month</span>
@@ -140,10 +209,26 @@
               <strong>{{ money(calc.oldDue) }}</strong>
             </div>
 
+            <!-- Only once an amount has actually been entered. With the field still
+                 empty the server is asked for "paid nothing", which came back as the
+                 whole month outstanding and was shown in red — the screen announced
+                 a debt for a payment the receptionist had not typed yet, and counted
+                 down alarmingly while they typed it. -->
             <div class="fee__calc-row fee__calc-row--total">
               <span>New due after this payment</span>
-              <strong [class.fee__due]="calc.newDue > 0">{{ money(calc.newDue) }}</strong>
+              @if (form.controls.amountPaid.value !== null) {
+                <strong [class.fee__due]="calc.newDue > 0">{{ money(calc.newDue) }}</strong>
+              } @else {
+                <strong class="app-muted">&mdash;</strong>
+              }
             </div>
+
+            @if (form.controls.amountPaid.value === null) {
+              <p class="fee__calc-note app-muted">
+                <i class="pi pi-pencil" aria-hidden="true"></i>
+                Enter the amount received to see what the student will still owe.
+              </p>
+            }
 
             <p class="fee__calc-note app-muted">
               <i class="pi pi-info-circle" aria-hidden="true"></i>
@@ -166,6 +251,21 @@
           @if (form.controls.amountPaid.touched && form.controls.amountPaid.invalid) {
             <small class="fee__error">Enter what the student actually paid.</small>
           }
+        </div>
+
+        <div class="fee__field">
+          <label>Payment mode <span class="fee__req">*</span></label>
+          <div class="fee__mode">
+            <label class="fee__mode-option">
+              <input type="radio" formControlName="paymentMode" value="Cash" />
+              Cash
+            </label>
+            <label class="fee__mode-option">
+              <input type="radio" formControlName="paymentMode" value="Bank" />
+              Bank
+            </label>
+          </div>
+          <small class="fee__hint">How it was actually received at the counter.</small>
         </div>
 
         <footer class="fee__form-actions">
@@ -210,6 +310,7 @@
           <th class="fee__num">Installment</th>
           <th class="fee__num">Fine</th>
           <th class="fee__num">Paid</th>
+          <th style="width: 5.5rem">Mode</th>
           <th class="fee__num">Old due</th>
           <th class="fee__num">New due</th>
           <th class="fee__num">Teacher %</th>
@@ -224,6 +325,13 @@
           <td class="fee__num">{{ money(payment.installment) }}</td>
           <td class="fee__num" [class.fee__due]="payment.lateFine > 0">{{ money(payment.lateFine) }}</td>
           <td class="fee__num">{{ money(payment.amountPaid) }}</td>
+          <td>
+            @if (payment.paymentMode) {
+              <p-tag [severity]="payment.paymentMode === 'Bank' ? 'info' : 'success'" [value]="payment.paymentMode" />
+            } @else {
+              <span class="app-muted">—</span>
+            }
+          </td>
           <td class="fee__num">{{ money(payment.oldDue) }}</td>
           <td class="fee__num" [class.fee__due]="payment.newDue > 0">{{ money(payment.newDue) }}</td>
           <td class="fee__num">{{ payment.percentage ?? '—' }}</td>
@@ -244,14 +352,31 @@
                 pTooltip="Print money receipt"
                 tooltipPosition="top"
                 (onClick)="printReceipt(payment)" />
+
+              <p-button
+                icon="pi pi-whatsapp"
+                severity="success"
+                [text]="true"
+                [disabled]="!canWhatsApp(studentPhone())"
+                [pTooltip]="canWhatsApp(studentPhone())
+                  ? 'Send the money receipt on WhatsApp'
+                  : 'No usable mobile number on this student'"
+                tooltipPosition="top"
+                (onClick)="whatsAppReceipt(payment)" />
             </div>
           </td>
         </tr>
       </ng-template>
 
       <ng-template pTemplate="emptymessage">
-        <tr><td colspan="9" class="app-muted fee__empty">No payments recorded for this student yet.</td></tr>
+        <tr><td colspan="10" class="app-muted fee__empty">No payments recorded for this student yet.</td></tr>
       </ng-template>
     </p-table>
   </section>
 }
+
+<!-- The same dialog the student's own screen uses. -->
+<app-admission-due-dialog
+  [studentId]="admissionDueStudentId()"
+  [(visible)]="admissionDueVisible"
+  (collected)="onAdmissionDueCollected()" />

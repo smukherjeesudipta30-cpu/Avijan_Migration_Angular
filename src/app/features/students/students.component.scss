@@ -131,6 +131,20 @@
   color: var(--app-negative);
 }
 
+.stu__mode {
+  display: flex;
+  gap: 1rem;
+  padding: 0.4rem 0;
+}
+
+.stu__mode-option {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
 .stu__error {
   display: block;
   margin-top: 0.28rem;
@@ -362,4 +376,48 @@
   .stu__form-head {
     flex-direction: column;
   }
+}
+
+/* ------------------------------------------------------- portal sign-in */
+.stu__legend-note {
+  margin: 0 0 1rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  max-width: 70ch;
+}
+
+.stu__login {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 1rem;
+  align-items: end;
+}
+
+.stu__login-action {
+  padding-bottom: 0.1rem;
+}
+
+/* The password is deliberately readable — the office passes it to the student. */
+#avijanLoginPassword {
+  font-family: 'Cascadia Mono', Consolas, monospace;
+  letter-spacing: 0.03em;
+}
+
+.stu__hint {
+  display: block;
+  margin-top: 0.28rem;
+  font-size: 0.74rem;
+}
+
+@media (max-width: 860px) {
+  .stu__login {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+}
+
+/* The "will be left owing" hint under "Paying now" — a warning, not a note. */
+.stu__hint--due {
+  color: var(--app-negative);
+  font-weight: 600;
 }

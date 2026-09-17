@@ -141,6 +141,10 @@
 .shell__icon-button {
   display: grid;
   place-items: center;
+  /* The topbar is a flex row; without this the button is the item that gives way
+     when the account chip and links compete for a narrow screen, and the tap
+     target ends up narrower than it is tall. */
+  flex: none;
   width: 36px;
   height: 36px;
   border: 1px solid var(--app-border);
@@ -150,6 +154,28 @@
   cursor: pointer;
 
   &:hover { background: var(--app-page-bg); }
+}
+
+.shell__chat-button {
+  position: relative;
+}
+
+.shell__chat-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--app-negative);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .shell__topbar-link {
@@ -205,24 +231,72 @@
   min-width: 0;
 }
 
+/* Dims the page behind the drawer and catches the tap that dismisses it. Only
+   rendered on a phone, where the sidebar is an overlay - see the template. */
+.shell__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  background: rgba(15, 18, 26, 0.55);
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* The breakpoint below MUST stay in step with ShellComponent.MobileQuery. This is
+   where the sidebar stops being a column and becomes an overlay; the component
+   decides whether it starts open using the same 900px. */
 @media (max-width: 900px) {
-  .shell {
-    grid-template-columns: 0 1fr;
+  /* ONE column, not "0 1fr".
+     -------------------------
+     Below this width the sidebar is position:fixed, which takes it out of the grid
+     flow - so .shell__main becomes the FIRST grid item and lands in the first
+     track. With "0 1fr" that track is zero wide, so the whole page was being
+     squeezed into its own padding (32px on a 375px screen) while the 1fr track sat
+     empty behind the drawer. Every page was affected; it was hidden by the drawer
+     covering the screen on load.
+
+     .shell--collapsed is listed too because it sets the columns at the same
+     specificity and must not win here. */
+  .shell,
+  .shell--collapsed {
+    grid-template-columns: 1fr;
   }
 
   .shell__sidebar {
     position: fixed;
     z-index: 40;
-    width: var(--app-shell-width);
+    width: min(var(--app-shell-width), 82vw);
     transform: translateX(-100%);
+
+    /* A drawer that is merely slid off-screen still takes keyboard focus and can
+       swallow an edge tap, so it is taken out of play entirely while closed. The
+       delay lets the slide finish before it disappears. */
+    visibility: hidden;
+    transition: transform 0.2s ease, visibility 0s linear 0.2s;
   }
 
   .shell:not(.shell--collapsed) .shell__sidebar {
     transform: translateX(0);
+    visibility: visible;
     box-shadow: 0 0 40px rgba(0, 0, 0, 0.35);
+    transition: transform 0.2s ease, visibility 0s;
   }
 
   .shell__account-text { display: none; }
   .shell__topbar-link span { display: none; }
   .shell__content { padding: 1rem; }
+}
+
+/* Comfortable touch targets. The 36px icon button and the 0.55rem menu rows were
+   sized for a mouse; 44px is the usual minimum for a finger. */
+@media (max-width: 900px) and (pointer: coarse) {
+  .shell__icon-button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .shell__link {
+    padding: 0.7rem 0.75rem;
+  }
 }

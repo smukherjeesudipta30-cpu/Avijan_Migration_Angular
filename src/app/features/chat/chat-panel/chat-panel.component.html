@@ -1,0 +1,298 @@
+<p-drawer
+  [visible]="chatUi.open()"
+  (visibleChange)="chatUi.open.set($event)"
+  position="right"
+  [style]="{ width: 'min(26rem, 100vw)' }"
+  styleClass="chat-drawer">
+
+  <ng-template pTemplate="header">
+    <div class="chat__header">
+      @if (view() !== 'list') {
+        <button type="button" class="chat__back" (click)="showList()" aria-label="Back to conversations">
+          <i class="pi pi-arrow-left" aria-hidden="true"></i>
+        </button>
+      }
+
+      @switch (view()) {
+        @case ('thread') {
+          <span class="chat__header-title">
+            <strong>
+              {{ threadTitle() }}
+              @if (threadOnline()) {
+                <span class="chat__online-label" [class.chat__online-label--away]="threadAway()">
+                  {{ threadAway() ? 'Away' : 'Online' }}
+                </span>
+              }
+            </strong>
+            <small>{{ threadSubtitle() }}</small>
+          </span>
+
+          @if (threadIsDirect()) {
+            <span class="chat__call-actions">
+              <button type="button" class="chat__call-btn" (click)="startAudioCall()" title="Voice call">
+                <i class="pi pi-phone" aria-hidden="true"></i>
+              </button>
+              <button type="button" class="chat__call-btn" (click)="startVideoCall()" title="Video call">
+                <i class="pi pi-video" aria-hidden="true"></i>
+              </button>
+            </span>
+          }
+        }
+        @case ('new-direct') {
+          <span class="chat__header-title"><strong>New chat</strong></span>
+        }
+        @case ('new-group') {
+          <span class="chat__header-title"><strong>New group</strong></span>
+        }
+        @default {
+          <span class="chat__header-title"><strong>Chat</strong></span>
+        }
+      }
+    </div>
+  </ng-template>
+
+  <div class="chat">
+    <!-- ------------------------------------------------------- the list -->
+    @if (view() === 'list') {
+      @if (isStaff()) {
+        <div class="chat__tabs">
+          <button
+            type="button"
+            class="chat__tab"
+            [class.chat__tab--active]="tab() === 'mine'"
+            (click)="selectTab('mine')">
+            My chats
+          </button>
+          <button
+            type="button"
+            class="chat__tab"
+            [class.chat__tab--active]="tab() === 'guest'"
+            (click)="selectTab('guest')">
+            Guest inbox
+            @if (guestUnreadCount() > 0) {
+              <span class="chat__tab-badge">{{ guestUnreadCount() }}</span>
+            }
+          </button>
+        </div>
+      }
+
+      @if (tab() === 'mine') {
+        <div class="chat__new-actions">
+          <button type="button" class="chat__new-btn" (click)="openNewDirect()">
+            <i class="pi pi-user-plus" aria-hidden="true"></i> New chat
+          </button>
+          <button type="button" class="chat__new-btn" (click)="openNewGroup()">
+            <i class="pi pi-users" aria-hidden="true"></i> New group
+          </button>
+        </div>
+
+        @if (loadingConversations()) {
+          <p class="chat__empty">Loading…</p>
+        } @else if (conversations().length === 0) {
+          <p class="chat__empty">No conversations yet. Start one above.</p>
+        } @else {
+          <ul class="chat__list">
+            @for (c of conversations(); track c.id) {
+              <li class="chat__list-item" (click)="openConversation(c.id)">
+                <span class="chat__avatar-wrap">
+                  <span class="chat__avatar">{{ initials(conversationTitle(c)) }}</span>
+                  @if (c.type === 'Direct') {
+                    <span class="chat__presence-dot" [ngClass]="'chat__presence-dot--' + conversationPresence(c)"></span>
+                  }
+                </span>
+                <span class="chat__list-text">
+                  <strong>{{ conversationTitle(c) }}</strong>
+                  <small>{{ c.lastMessagePreview || 'No messages yet' }}</small>
+                </span>
+                @if (c.unreadCount > 0) {
+                  <span class="chat__unread">{{ c.unreadCount }}</span>
+                }
+              </li>
+            }
+          </ul>
+        }
+      } @else {
+        @if (guestConversations().length === 0) {
+          <p class="chat__empty">No guest messages.</p>
+        } @else {
+          <ul class="chat__list">
+            @for (c of guestConversations(); track c.id) {
+              <li class="chat__list-item" (click)="openConversation(c.id)">
+                <span class="chat__avatar chat__avatar--guest">{{ initials(conversationTitle(c)) }}</span>
+                <span class="chat__list-text">
+                  <strong>{{ conversationTitle(c) }}</strong>
+                  <small>{{ c.lastMessagePreview || 'No messages yet' }}</small>
+                </span>
+                @if (c.unreadCount > 0) {
+                  <span class="chat__unread">{{ c.unreadCount }}</span>
+                }
+              </li>
+            }
+          </ul>
+        }
+      }
+    }
+
+    <!-- ----------------------------------------------------- the thread -->
+    @if (view() === 'thread') {
+      <div class="chat__thread">
+        <div class="chat__messages">
+          @if (loadingMessages()) {
+            <p class="chat__empty">Loading…</p>
+          } @else if (messages().length === 0) {
+            <p class="chat__empty">No messages yet — say hello.</p>
+          } @else {
+            @for (m of messages(); track m.id) {
+              <div class="chat__msg" [class.chat__msg--mine]="m.isMine">
+                @if (!m.isMine) {
+                  <span class="chat__msg-sender">{{ m.senderDisplayName }}</span>
+                }
+                @if (m.body) {
+                  <span class="chat__msg-bubble">{{ m.body }}</span>
+                }
+                @if (m.attachmentFileName) {
+                  <button type="button" class="chat__attachment" (click)="downloadAttachment(m)">
+                    <i class="pi pi-paperclip" aria-hidden="true"></i>
+                    <span class="chat__attachment-text">
+                      <strong>{{ m.attachmentFileName }}</strong>
+                      <small>{{ formatAttachmentSize(m.attachmentSize) }}</small>
+                    </span>
+                    <i class="pi pi-download" aria-hidden="true"></i>
+                  </button>
+                }
+                <span class="chat__msg-time">
+                  {{ m.sentOn | date: 'shortTime' }}
+                  @if (m.isMine && m.isSeen) {
+                    <i class="pi pi-check-circle chat__seen" aria-hidden="true"></i>
+                    <span class="chat__seen-text">Seen</span>
+                  }
+                </span>
+              </div>
+            }
+          }
+        </div>
+
+        @if (pendingAttachment(); as pending) {
+          <div class="chat__pending-attachment">
+            <i class="pi pi-paperclip" aria-hidden="true"></i>
+            <span>{{ pending.fileName }}</span>
+            <button type="button" (click)="clearPendingAttachment()" aria-label="Remove attachment">
+              <i class="pi pi-times" aria-hidden="true"></i>
+            </button>
+          </div>
+        }
+
+        @if (attachmentError(); as error) {
+          <small class="chat__attachment-error">{{ error }}</small>
+        }
+
+        <div class="chat__composer">
+          <label class="chat__attach-btn" pTooltip="Attach a file" tooltipPosition="top">
+            <i class="pi pi-paperclip" aria-hidden="true"></i>
+            <input type="file" (change)="onFileSelected($event)" hidden />
+          </label>
+
+          <input
+            pInputText
+            class="chat__input"
+            placeholder="Type a message…"
+            [ngModel]="messageInput()"
+            (ngModelChange)="messageInput.set($event)"
+            [ngModelOptions]="{ standalone: true }"
+            (keyup.enter)="sendMessage()"
+            [disabled]="sending()" />
+          <p-button
+            icon="pi pi-send"
+            [disabled]="(!messageInput().trim() && !pendingAttachment()) || sending()"
+            [loading]="sending()"
+            (onClick)="sendMessage()" />
+        </div>
+      </div>
+    }
+
+    <!-- --------------------------------------------------- new direct chat -->
+    @if (view() === 'new-direct') {
+      <div class="chat__directory">
+        <input
+          pInputText
+          class="chat__search"
+          placeholder="Search people…"
+          [ngModel]="directorySearch()"
+          (ngModelChange)="directorySearch.set($event)"
+          [ngModelOptions]="{ standalone: true }" />
+
+        @if (directoryLoading()) {
+          <p class="chat__empty">Loading…</p>
+        } @else if (filteredDirectory().length === 0) {
+          <p class="chat__empty">No one matches.</p>
+        } @else {
+          <ul class="chat__list">
+            @for (d of filteredDirectory(); track d.email) {
+              <li class="chat__list-item" (click)="pickDirectPerson(d)">
+                <span class="chat__avatar-wrap">
+                  <span class="chat__avatar">{{ initials(d.displayName) }}</span>
+                  <span class="chat__presence-dot" [ngClass]="'chat__presence-dot--' + presenceStatus(d.email)"></span>
+                </span>
+                <span class="chat__list-text">
+                  <strong>{{ d.displayName }}</strong>
+                  <small>{{ d.role }}</small>
+                </span>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    }
+
+    <!-- -------------------------------------------------------- new group -->
+    @if (view() === 'new-group') {
+      <div class="chat__directory">
+        <input
+          pInputText
+          class="chat__group-title"
+          placeholder="Group name"
+          [ngModel]="groupTitle()"
+          (ngModelChange)="groupTitle.set($event)"
+          [ngModelOptions]="{ standalone: true }" />
+
+        <input
+          pInputText
+          class="chat__search"
+          placeholder="Search people…"
+          [ngModel]="directorySearch()"
+          (ngModelChange)="directorySearch.set($event)"
+          [ngModelOptions]="{ standalone: true }" />
+
+        @if (directoryLoading()) {
+          <p class="chat__empty">Loading…</p>
+        } @else {
+          <ul class="chat__list">
+            @for (d of groupCandidates(); track d.email) {
+              <li
+                class="chat__list-item chat__list-item--checkable"
+                [class.chat__list-item--checked]="isGroupMemberSelected(d.email)"
+                (click)="toggleGroupMember(d.email)">
+                <span class="chat__avatar">{{ initials(d.displayName) }}</span>
+                <span class="chat__list-text">
+                  <strong>{{ d.displayName }}</strong>
+                  <small>{{ d.role }}</small>
+                </span>
+                @if (isGroupMemberSelected(d.email)) {
+                  <i class="pi pi-check chat__check" aria-hidden="true"></i>
+                }
+              </li>
+            }
+          </ul>
+        }
+
+        <p-button
+          label="Create group"
+          icon="pi pi-users"
+          styleClass="chat__create-btn"
+          [disabled]="!groupTitle().trim() || groupSelectedEmails().length === 0 || startingChat()"
+          [loading]="startingChat()"
+          (onClick)="createGroup()" />
+      </div>
+    }
+  </div>
+</p-drawer>

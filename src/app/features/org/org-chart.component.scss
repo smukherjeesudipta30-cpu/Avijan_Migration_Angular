@@ -1,0 +1,148 @@
+.org-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+
+  &__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+
+    h2 {
+      margin: 0;
+      font-size: 1.15rem;
+    }
+  }
+
+  &__branches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+  }
+
+  &__branch {
+    border: 1px solid var(--surface-border, #d8dee9);
+    background: transparent;
+    border-radius: 999px;
+    padding: .25rem .8rem;
+    font-size: .8rem;
+    cursor: pointer;
+
+    &.is-on {
+      background: var(--primary-color, #2f6fed);
+      border-color: var(--primary-color, #2f6fed);
+      color: #fff;
+    }
+  }
+
+  &__note {
+    margin: 0;
+    color: var(--text-color-secondary, #6b7280);
+    font-size: .9rem;
+  }
+
+  /* Each level is its own row, centred, so the shape of the hierarchy reads at a
+     glance without drawing connector lines that would fight the wrapping. */
+  &__level {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: .75rem;
+
+    /* Everything below the top row sits under a short stem, which is enough to
+       read as "these hang from the row above". */
+    & + & {
+      position: relative;
+      padding-top: 1.1rem;
+
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 50%;
+        width: 1px;
+        height: .9rem;
+        background: var(--surface-border, #d8dee9);
+      }
+    }
+  }
+}
+
+.org-card {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  min-width: 13.5rem;
+  max-width: 17rem;
+  padding: .65rem .8rem;
+  border: 1px solid var(--surface-border, #d8dee9);
+  border-radius: .6rem;
+  background: var(--surface-card, #fff);
+
+  &--auto {
+    /* Drawn from the staff register rather than placed by hand. Deliberately not
+       labelled on screen — the distinction matters to the administrator, not to a
+       student reading the chart. */
+    border-style: dashed;
+  }
+
+  &__photo {
+    flex: 0 0 auto;
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 50%;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    background: var(--surface-200, #eef1f6);
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  &__initials {
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--text-color-secondary, #6b7280);
+  }
+
+  &__body {
+    min-width: 0;
+  }
+
+  &__name {
+    margin: 0;
+    font-size: .92rem;
+    font-weight: 600;
+  }
+
+  &__role {
+    margin: .1rem 0 0;
+    font-size: .8rem;
+    color: var(--primary-color, #2f6fed);
+  }
+
+  &__qual,
+  &__meta {
+    margin: .1rem 0 0;
+    font-size: .74rem;
+    color: var(--text-color-secondary, #6b7280);
+  }
+
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .1rem .5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .org-card {
+    min-width: 100%;
+  }
+}

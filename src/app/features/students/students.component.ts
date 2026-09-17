@@ -17,17 +17,29 @@ import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
 import { TooltipModule } from 'primeng/tooltip';
 
-import { ApiResponse } from '../../core/models/api-response.model';
-import { Observable } from 'rxjs';
+import { Observable, debounceTime, distinctUntilChanged } from 'rxjs';
 
+import { ApiResponse } from '../../core/models/api-response.model';
 import {
   BranchLookup,
   CourseLookup,
   StudentCreated,
   StudentListItem,
   StudentSaveRequest,
+  SuggestedLogin,
   TeacherLookup
 } from '../../core/models/student.model';
+import { AdmissionDueDialogComponent } from '../../shared/admission-due/admission-due-dialog.component';
+import { resizeImageToLimit } from '../../core/images/image-resize';
+import { admissionReceiptMessage, canWhatsApp, openWhatsApp } from '../../core/messaging/whatsapp';
+import {
+  admissionReceiptHtml,
+  certificateHtml,
+  openPendingDocumentWindow,
+  writeDocumentWindow
+} from '../../core/printing/legacy-documents';
+import { AuthService } from '../../core/services/auth.service';
+import { ReportService } from '../../core/services/report.service';
 import { StudentService } from '../../core/services/student.service';
 
 type StatusFilter = 'active' | 'inactive' | 'all';
@@ -56,7 +68,8 @@ type StatusFilter = 'active' | 'inactive' | 'all';
     TableModule,
     TagModule,
     TextareaModule,
-    TooltipModule
+    TooltipModule,
+    AdmissionDueDialogComponent
   ],
   providers: [ConfirmationService],
   templateUrl: './students.component.html',
@@ -65,8 +78,15 @@ type StatusFilter = 'active' | 'inactive' | 'all';
 export class StudentsComponent implements OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly students = inject(StudentService);
+  private readonly reports = inject(ReportService);
   private readonly messages = inject(MessageService);
   private readonly confirm = inject(ConfirmationService);
+  private readonly auth = inject(AuthService);
+
+  /* Deactivating is the administrator's alone — the server enforces it too. The
+     receptionist works this screen all day, and a button that always answers
+     "you do not have permission" reads as the page being broken for them. */
+  readonly canDeactivate = computed(() => this.auth.hasAnyRole(['Admin']));
 
   /* ------------------------------------------------------------- state */
   readonly rows = signal<StudentListItem[]>([]);
@@ -127,6 +147,19 @@ export class StudentsComponent implements OnDestroy {
   /** Upper bound for the date-of-birth picker. */
   readonly today = new Date();
 
+  /**
+   * True once "paying now" has been typed over by hand, after which it stops
+   * following the admission fee.
+   */
+  private readonly admissionPaidEdited = signal(false);
+
+  /** What the form is about to leave owing, for the hint under the field. */
+  readonly admissionDueNow = signal(0);
+
+  /* ------------------------------------------ collecting an admission due */
+  readonly admissionDueStudentId = signal<number | null>(null);
+  admissionDueVisible = false;
+
   /* -------------------------------------------------------------- form */
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(100)]],
@@ -134,24 +167,45 @@ export class StudentsComponent implements OnDestroy {
     phone: ['', [Validators.required, Validators.pattern(/^[0-9]{10}$/)]],
     address: ['', [Validators.required]],
     email: ['', [Validators.required, Validators.email]],
-    personalEmail: [''],
+    /* Required for a new admission - the welcome message goes here - but not
+       when editing, because 932 of the 953 migrated students have none and
+       must still be editable. applyPersonalEmailRule() switches it. */
+    personalEmail: ['', [Validators.email]],
+
+    /* Issued automatically from the name. Editable, but pre-filled. */
+    avijanLoginEmail: [''],
+    avijanLoginPassword: [''],
+
     dateOfBirth: [null as Date | null, [Validators.required]],
     dateOfJoining: [null as Date | null, [Validators.required]],
     monthlyFees: [null as number | null, [Validators.required, Validators.min(0)]],
     admissionFees: [null as number | null, [Validators.required, Validators.min(0)]],
+    /* What is actually being handed over now. Tracks the fee unless the counter
+       changes it, so the ordinary paid-in-full admission needs no extra thought. */
+    admissionFeesPaid: [null as number | null, [Validators.min(0)]],
+    admissionPaymentMode: ['Cash' as 'Cash' | 'Bank', [Validators.required]],
     courseId: [null as number | null, [Validators.required]],
     duration: [{ value: null as number | null, disabled: true }],
     teacherCount: [1 as number, [Validators.required]],
     primaryTeacherId: [null as number | null, [Validators.required]],
     secondTeacherId: [null as number | null],
     thirdTeacherId: [null as number | null],
-    branchId: [null as number | null],
+    branchId: [null as number | null, [Validators.required]],
     isActive: [true],
     isComplete: [false]
   });
 
   /** How many teacher dropdowns are shown — the legacy `changeme()` behaviour. */
   readonly teacherCount = signal(1);
+
+  /* ------------------------------------------------------- portal sign-in */
+
+  /**
+   * Set once the operator types in either sign-in box, which stops the name from
+   * overwriting what they entered.
+   */
+  readonly loginEdited = signal(false);
+  readonly loginSuggesting = signal(false);
 
   constructor() {
     this.students.courses().subscribe({
@@ -179,6 +233,42 @@ export class StudentsComponent implements OnDestroy {
         this.refreshNextRegistration();
       }
     });
+
+    /* "Paying now" follows the admission fee until somebody types over it. The
+       common admission is paid in full, and making the counter fill in the same
+       number twice would be the sort of friction that gets it typed wrong. Once
+       edited by hand it stops following, so a deliberate part payment is not
+       silently reset by a later correction to the fee. */
+    this.form.controls.admissionFees.valueChanges.subscribe(fee => {
+      if (!this.isEditing() && !this.admissionPaidEdited()) {
+        this.form.controls.admissionFeesPaid.setValue(fee, { emitEvent: false });
+      }
+
+      this.syncAdmissionPaid();
+    });
+
+    this.form.controls.admissionFeesPaid.valueChanges.subscribe(paid => {
+      const fee = this.form.controls.admissionFees.value ?? 0;
+
+      // Back to the full fee counts as "not a part payment" again, so the field
+      // resumes following rather than sticking at whatever was typed.
+      this.admissionPaidEdited.set(paid !== null && paid !== fee);
+
+      this.syncAdmissionPaid();
+    });
+
+    // The portal sign-in is derived from the student's name, so it follows what is
+    // typed — but only while registering, and only until someone edits it by hand.
+    // Re-deriving it for an existing student would change a login already in use.
+    this.form.controls.name.valueChanges
+      .pipe(debounceTime(400), distinctUntilChanged())
+      .subscribe(name => {
+        if (this.isEditing() || this.loginEdited()) {
+          return;
+        }
+
+        this.refreshSuggestedLogin(name);
+      });
 
     // Keep the required-ness of slots 2 and 3 in step with the chosen count, and
     // clear any value that is no longer used.
@@ -314,12 +404,29 @@ export class StudentsComponent implements OnDestroy {
           severity: 'success',
           summary: id === null ? 'Student registered' : 'Student updated',
           detail: created
-            ? `Registration id ${created.registrationId} assigned.`
+            ? `Registration id ${created.registrationId} assigned. You can now attach a photo below.`
             : response.message ?? 'Saved.',
           life: 6000
         });
 
-        this.resetForm();
+        if (created) {
+          /* The photo endpoint is keyed by registration id, which does not exist
+             until this save returns it — so a brand-new registration used to
+             have to be saved, closed, found again in the list and reopened
+             before a photo could be attached at all. Dropping straight into
+             editing this same, just-created record instead keeps the form
+             open with everything already typed, and reveals the photo
+             fieldset (gated on isEditing()) immediately. */
+          this.editingId.set(created.id);
+          this.editingRegistrationId.set(created.registrationId);
+          this.editingBillNo.set(created.billNo);
+          this.loginEdited.set(true);
+          this.photoError.set(null);
+          this.clearEditingPhoto();
+        } else {
+          this.resetForm();
+        }
+
         this.refreshNextRegistration();
         this.load();
       },
@@ -343,6 +450,10 @@ export class StudentsComponent implements OnDestroy {
 
   edit(student: StudentListItem): void {
     this.editingId.set(student.id);
+    this.applyPersonalEmailRule();
+    this.applyBranchRule();
+    // An existing student keeps the login they were issued; do not re-derive it.
+    this.loginEdited.set(true);
     this.editingRegistrationId.set(student.registrationId ?? null);
     this.editingBillNo.set(student.billNo ?? null);
 
@@ -356,10 +467,13 @@ export class StudentsComponent implements OnDestroy {
       phone: student.phone ?? '',
       address: student.address ?? '',
       email: student.email ?? '',
+      personalEmail: student.personalEmail ?? '',
       dateOfBirth: this.toDate(student.dateOfBirth),
       dateOfJoining: this.toDate(student.dateOfJoining),
       monthlyFees: student.monthlyFees ?? null,
       admissionFees: student.admissionFees ?? null,
+      admissionFeesPaid: student.admissionFeesPaid ?? student.admissionFees ?? null,
+      admissionPaymentMode: student.admissionPaymentMode ?? 'Cash',
       courseId: student.courseId ?? null,
       teacherCount: count,
       primaryTeacherId: student.primaryTeacherId ?? null,
@@ -390,10 +504,14 @@ export class StudentsComponent implements OnDestroy {
       address: '',
       email: '',
       personalEmail: '',
+      avijanLoginEmail: '',
+      avijanLoginPassword: '',
       dateOfBirth: null,
       dateOfJoining: null,
       monthlyFees: null,
       admissionFees: null,
+      admissionFeesPaid: null,
+      admissionPaymentMode: 'Cash',
       courseId: null,
       teacherCount: 1,
       primaryTeacherId: null,
@@ -407,6 +525,9 @@ export class StudentsComponent implements OnDestroy {
     this.form.controls.duration.setValue(null);
     this.teacherCount.set(1);
     this.editingId.set(null);
+    this.applyPersonalEmailRule();
+    this.applyBranchRule();
+    this.loginEdited.set(false);
     this.editingRegistrationId.set(null);
     this.editingBillNo.set(null);
     this.clearEditingPhoto();
@@ -456,11 +577,138 @@ export class StudentsComponent implements OnDestroy {
     });
   }
 
-  printReceipt(student: StudentListItem): void {
+  /** Greys out the button when the stored number cannot be a WhatsApp one. */
+  canWhatsApp(phone?: string | null): boolean {
+    return canWhatsApp(phone);
+  }
+
+  /**
+   * Opens WhatsApp with the admission receipt typed out to the student.
+   *
+   * The receipt is fetched first rather than assembled from the row: the figures a
+   * student is sent must be the same ones the printed receipt shows, and only the
+   * server knows the amount in words and the next due date.
+   */
+  whatsAppReceipt(student: StudentListItem): void {
     this.students.receipt(student.id).subscribe({
-      next: receipt => this.openReceiptWindow(receipt),
+      next: receipt => {
+        if (!openWhatsApp(student.phone, admissionReceiptMessage(receipt))) {
+          this.messages.add({
+            severity: 'warn',
+            summary: 'Could not open WhatsApp',
+            detail: 'Allow popups for this site, and check the mobile number on the record.',
+            life: 6000
+          });
+        }
+      },
       error: () => {
         /* interceptor toasts */
+      }
+    });
+  }
+
+  /** Opens the shared dialog for whatever is left owing on this admission fee. */
+  openAdmissionDue(student: StudentListItem): void {
+    this.admissionDueStudentId.set(student.id);
+    this.admissionDueVisible = true;
+  }
+
+  /** Same dialog, opened from the edit form rather than a row. */
+  openAdmissionDueById(studentId: number): void {
+    this.admissionDueStudentId.set(studentId);
+    this.admissionDueVisible = true;
+  }
+
+  /** The balance moved, so the row's figures and its button have to follow. */
+  onAdmissionDueCollected(): void {
+    this.load();
+
+    /* If the student being edited is the one just collected against, the received
+       figure on the form is stale too. Set without emitting: a collection is not
+       the user typing a correction, so it must not mark the field as hand-edited. */
+    const id = this.editingId();
+    if (id !== null && id === this.admissionDueStudentId()) {
+      this.students.admissionDue(id).subscribe({
+        next: d => {
+          this.form.controls.admissionFeesPaid.setValue(d.admissionFeesPaid, { emitEvent: false });
+          this.syncAdmissionPaid();
+        }
+      });
+    }
+  }
+
+  printReceipt(student: StudentListItem): void {
+    const win = openPendingDocumentWindow(900, 950);
+
+    this.students.receipt(student.id).subscribe({
+      next: receipt => {
+        if (!writeDocumentWindow(win, admissionReceiptHtml(receipt))) {
+          this.messages.add({
+            severity: 'warn',
+            summary: 'Popup blocked',
+            detail: 'Allow popups for this site to print the receipt.',
+            life: 6000
+          });
+        }
+      },
+      error: () => {
+        win?.close();
+        /* interceptor toasts */
+      }
+    });
+  }
+
+  readonly certificateLoading = signal<number | null>(null);
+
+  /**
+   * The office's version of the student portal's Download Certificate button —
+   * for a student standing at the counter, not signed in themselves. Only shown
+   * once the course is marked complete; the server refuses it either way, this
+   * just saves the round trip to find that out.
+   */
+  issueCertificate(student: StudentListItem): void {
+    if (!student.registrationId) return;
+
+    this.certificateLoading.set(student.id);
+
+    const win = openPendingDocumentWindow(1180);
+
+    this.reports.issueCertificateFor(student.registrationId).subscribe({
+      next: certificate => {
+        this.certificateLoading.set(null);
+
+        if (certificate.isDuplicate) {
+          this.messages.add({
+            severity: 'info',
+            summary: `Duplicate copy — no. ${certificate.issueNo}`,
+            detail:
+              `${certificate.issueNo - 1} ${certificate.issueNo === 2 ? 'copy has' : 'copies have'} ` +
+              `already been taken of this certificate. This one is marked DUPLICATE COPY.`,
+            life: 9000
+          });
+        }
+
+        if (!writeDocumentWindow(win, certificateHtml(certificate))) {
+          this.messages.add({
+            severity: 'warn',
+            summary: 'Popup blocked',
+            detail: 'Allow popups for this site to print the certificate.',
+            life: 6000
+          });
+        }
+      },
+      error: (error: unknown) => {
+        this.certificateLoading.set(null);
+        win?.close();
+
+        const body = error instanceof HttpErrorResponse ? (error.error as ApiResponse<unknown> | null) : null;
+
+        this.messages.add({
+          severity: 'error',
+          summary: 'Certificate not issued',
+          detail: body?.message ?? 'The certificate could not be issued.',
+          life: 8000
+        });
       }
     });
   }
@@ -556,10 +804,13 @@ export class StudentsComponent implements OnDestroy {
       phone: student.phone ?? '',
       address: student.address ?? '',
       email: student.email ?? '',
+      personalEmail: student.personalEmail ?? '',
       dateOfBirth: this.toDate(student.dateOfBirth),
       dateOfJoining: new Date(),
       monthlyFees: student.monthlyFees ?? null,
       admissionFees: student.admissionFees ?? null,
+      admissionFeesPaid: student.admissionFees ?? null,
+      admissionPaymentMode: 'Cash',
       courseId: student.courseId ?? null,
       teacherCount: count,
       primaryTeacherId: student.primaryTeacherId ?? null,
@@ -589,7 +840,7 @@ export class StudentsComponent implements OnDestroy {
    * like the legacy `Home/SaveFiles`, so a photo can only be attached once the
    * student has a number — i.e. after the record is saved.
    */
-  onPhotoSelected(event: Event): void {
+  async onPhotoSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
 
@@ -609,16 +860,40 @@ export class StudentsComponent implements OnDestroy {
       return;
     }
 
+    input.value = '';
+
+    /* A real phone-camera photo is routinely 2-8 MB — comfortably over the
+       512 KB the server accepts — so most genuine uploads would otherwise
+       bounce off the size check with nothing the person could do about it
+       short of finding a separate compression tool first. Resized down to
+       the limit here instead, automatically, before it ever reaches that
+       check. GIFs pass through untouched (see resizeImageToLimit) and still
+       hit the plain error below if they are themselves too large. */
+    let upload = file;
     if (file.size > this.maxPhotoBytes) {
+      this.photoUploading.set(true);
+      try {
+        upload = await resizeImageToLimit(file, this.maxPhotoBytes);
+      } catch {
+        // Resizing failed for some reason (a corrupt file, an unsupported
+        // browser API) — fall through to the size check below, which will
+        // report it clearly rather than upload silently failing.
+      }
+    }
+
+    if (upload.size > this.maxPhotoBytes) {
+      this.photoUploading.set(false);
       this.photoError.set(
-        `Image must be ${this.maxPhotoBytes / 1024} KB or smaller (this one is ${Math.round(file.size / 1024)} KB).`);
-      input.value = '';
+        upload === file
+          ? `Image must be ${this.maxPhotoBytes / 1024} KB or smaller (this one is ${Math.round(file.size / 1024)} KB).`
+          : `Even after reducing it, this image is still ${Math.round(upload.size / 1024)} KB — ` +
+            `please try a smaller or simpler photo.`);
       return;
     }
 
     this.photoUploading.set(true);
 
-    this.students.uploadPhoto(registrationId, file).subscribe({
+    this.students.uploadPhoto(registrationId, upload).subscribe({
       next: () => {
         this.photoUploading.set(false);
         input.value = '';
@@ -704,11 +979,22 @@ export class StudentsComponent implements OnDestroy {
       address: v.address.trim(),
       phone: v.phone.trim(),
       email: v.email.trim(),
-      personalEmail: v.personalEmail?.trim() || null,
+      /* Editing sends the field as it stands -- an empty box is an explicit
+         clear, never null. Null tells the server "not sent, keep what is there",
+         which is the guard against the wipe this form used to cause. */
+      personalEmail: this.isEditing() ? (v.personalEmail?.trim() ?? '') : (v.personalEmail?.trim() || null),
+      avijanLoginEmail: v.avijanLoginEmail?.trim() || null,
+      avijanLoginPassword: v.avijanLoginPassword?.trim() || null,
       dateOfBirth: this.toIsoDate(v.dateOfBirth),
       dateOfJoining: this.toIsoDate(v.dateOfJoining),
       monthlyFees: v.monthlyFees,
       admissionFees: v.admissionFees,
+      /* Registering: null when it equals the fee, so the server books an ordinary
+         paid-in-full admission. Editing: always sent -- it is the received figure
+         being corrected, and the server adjusts the admission receipt to match. */
+      admissionFeesPaid:
+        !this.isEditing() && v.admissionFeesPaid === v.admissionFees ? null : v.admissionFeesPaid,
+      admissionPaymentMode: v.admissionPaymentMode,
       courseId: v.courseId,
       teacherCount: Number(v.teacherCount),
       primaryTeacherId: v.primaryTeacherId,
@@ -737,6 +1023,75 @@ export class StudentsComponent implements OnDestroy {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
 
+  /**
+   * Fills the sign-in boxes with what the server would issue for this name.
+   *
+   * The legacy form built the address and password in the browser; asking the
+   * server means the uniqueness check runs against the database, so two students
+   * with the same name get distinct logins instead of a duplicate account.
+   */
+  private refreshSuggestedLogin(name: string | null | undefined): void {
+    const trimmed = (name ?? '').trim();
+
+    if (!trimmed) {
+      this.form.patchValue(
+        { avijanLoginEmail: '', avijanLoginPassword: '' },
+        { emitEvent: false });
+      return;
+    }
+
+    this.loginSuggesting.set(true);
+
+    this.students.suggestLogin(trimmed, this.editingId()).subscribe({
+      next: (login: SuggestedLogin) => {
+        this.form.patchValue(
+          { avijanLoginEmail: login.email, avijanLoginPassword: login.password },
+          { emitEvent: false });
+
+        this.loginSuggesting.set(false);
+      },
+      error: () => this.loginSuggesting.set(false)
+    });
+  }
+
+  /** Re-derives the sign-in from the name, discarding any manual edit. */
+  regenerateLogin(): void {
+    this.loginEdited.set(false);
+    this.refreshSuggestedLogin(this.form.controls.name.value);
+  }
+
+  /** Called from the two sign-in inputs, so typing in them stops auto-fill. */
+  markLoginEdited(): void {
+    this.loginEdited.set(true);
+  }
+
+  /**
+   * Keeps the "will be left owing" hint and the upper bound on "paying now" in
+   * step with the two figures. The bound is applied here rather than as a fixed
+   * validator because what counts as too much depends on the fee beside it.
+   */
+  private syncAdmissionPaid(): void {
+    const fee = this.form.controls.admissionFees.value ?? 0;
+    const paid = this.form.controls.admissionFeesPaid.value;
+    const control = this.form.controls.admissionFeesPaid;
+
+    const effective = paid ?? fee;
+    const due = fee - effective;
+    this.admissionDueNow.set(due > 0 ? due : 0);
+
+    const overpaid = paid !== null && paid > fee;
+    const already = control.hasError('max');
+
+    // Touched only when it actually changes: setErrors re-runs form status and
+    // would otherwise loop through this same subscription.
+    if (overpaid && !already) {
+      control.setErrors({ ...(control.errors ?? {}), max: true });
+    } else if (!overpaid && already) {
+      const { max, ...rest } = control.errors ?? {};
+      control.setErrors(Object.keys(rest).length > 0 ? rest : null);
+    }
+  }
+
   private refreshNextRegistration(): void {
     this.students.nextRegistrationNo(this.form.controls.branchId.value).subscribe({
       next: next => {
@@ -750,69 +1105,37 @@ export class StudentsComponent implements OnDestroy {
     });
   }
 
-  /** Opens the admission receipt in a print window (replaces PrintReport.cshtml). */
-  private openReceiptWindow(receipt: {
-    name?: string;
-    registrationId?: string;
-    billNo?: string;
-    courseName?: string;
-    admissionFees?: number;
-    admissionFeesInWords: string;
-    dateOfJoining?: string;
-    nextDueDate?: string;
-  }): void {
-    const win = window.open('', '_blank', 'width=760,height=900');
-    if (!win) {
-      this.messages.add({
-        severity: 'warn',
-        summary: 'Popup blocked',
-        detail: 'Allow popups for this site to print the receipt.',
-        life: 6000
-      });
-      return;
-    }
+  /**
+   * Personal email is mandatory for a new admission and optional when editing.
+   *
+   * The server enforces the same split (POST requires it, PUT does not). It has
+   * to be a split: 932 of the 953 migrated students carry no personal email,
+   * 219 of them still active, so a blanket rule would lock those records.
+   */
+  private applyPersonalEmailRule(): void {
+    const control = this.form.controls.personalEmail;
 
-    const money = (value?: number) =>
-      new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value ?? 0);
+    control.setValidators(
+      this.isEditing()
+        ? [Validators.email]
+        : [Validators.required, Validators.email]
+    );
 
-    const date = (value?: string) =>
-      value ? new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+    control.updateValueAndValidity({ emitEvent: false });
+  }
 
-    const esc = (value?: string) =>
-      (value ?? '').replace(/[&<>"']/g, c =>
-        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);
+  /**
+   * Branch is required for a new admission - its code goes into the registration
+   * id, and the branch reports only add up when nothing is unattributed.
+   *
+   * Editing is left alone on purpose. Students admitted before this rule are all
+   * recorded against Rajpur, and a stricter rule on edit would turn an unrelated
+   * correction, like fixing a phone number, into a branch decision.
+   */
+  private applyBranchRule(): void {
+    const control = this.form.controls.branchId;
 
-    win.document.write(`<!doctype html>
-<html><head><meta charset="utf-8"><title>Admission receipt ${esc(receipt.registrationId)}</title>
-<style>
-  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1f2430; margin: 32px; }
-  h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
-  .sub { color: #6b7280; font-size: 13px; margin-top: 4px; }
-  .head { border-bottom: 2px solid #6d28d9; padding-bottom: 12px; margin-bottom: 24px; }
-  table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  th, td { text-align: left; padding: 9px 4px; border-bottom: 1px solid #e4e6ef; }
-  th { width: 40%; color: #6b7280; font-weight: 600; }
-  .words { margin-top: 20px; font-size: 13px; font-style: italic; color: #384152; }
-  .sign { margin-top: 64px; display: flex; justify-content: space-between; font-size: 13px; color: #6b7280; }
-  @media print { body { margin: 12mm; } }
-</style></head><body>
-  <div class="head">
-    <h1>Avijan &mdash; Admission Receipt</h1>
-    <div class="sub">Bill No. ${esc(receipt.billNo)}</div>
-  </div>
-  <table>
-    <tr><th>Student name</th><td>${esc(receipt.name)}</td></tr>
-    <tr><th>Registration id</th><td>${esc(receipt.registrationId)}</td></tr>
-    <tr><th>Course</th><td>${esc(receipt.courseName)}</td></tr>
-    <tr><th>Date of joining</th><td>${date(receipt.dateOfJoining)}</td></tr>
-    <tr><th>Admission fees</th><td>${money(receipt.admissionFees)}</td></tr>
-    <tr><th>Next payment due</th><td>${date(receipt.nextDueDate)}</td></tr>
-  </table>
-  <p class="words">Rupees ${esc(receipt.admissionFeesInWords)} only.</p>
-  <div class="sign"><span>Student / Guardian signature</span><span>For Avijan</span></div>
-  <script>window.onload = function () { window.print(); };<\/script>
-</body></html>`);
-
-    win.document.close();
+    control.setValidators(this.isEditing() ? [] : [Validators.required]);
+    control.updateValueAndValidity({ emitEvent: false });
   }
 }

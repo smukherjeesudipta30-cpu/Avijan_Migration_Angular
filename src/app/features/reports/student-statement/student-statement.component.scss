@@ -162,3 +162,9 @@
     align-items: stretch;
   }
 }
+
+/* The student's own hierarchy sits above the profile card on the page they land
+   on, so it needs its own gap beneath. */
+.stm__org {
+  margin-bottom: 1.25rem;
+}

@@ -144,6 +144,54 @@
   span { font-size: 0.8rem; }
 }
 
+.usr__role-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: 0.7rem;
+  margin-bottom: 1.15rem;
+}
+
+.usr__role-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid #e0e3ec;
+  border-radius: 10px;
+  background: #fafbff;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  transition: border-color .15s ease, background .15s ease, transform .1s ease;
+
+  &:hover {
+    border-color: #2f6fed;
+    transform: translateY(-1px);
+  }
+
+  &--active {
+    background: #2f6fed;
+    border-color: #2f6fed;
+
+    .usr__role-tile-count,
+    .usr__role-tile-label { color: #fff; }
+  }
+}
+
+.usr__role-tile-count {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #1c2a3a;
+  line-height: 1.1;
+}
+
+.usr__role-tile-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #5b6b84;
+}
+
 .usr__cell-sub {
   display: block;
   font-size: 0.73rem;

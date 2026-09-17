@@ -121,6 +121,32 @@
         </div>
 
         <div class="stu__field">
+          <label for="personalEmail">
+            Personal email
+            @if (!isEditing()) { <span class="stu__req">*</span> }
+          </label>
+          <input pInputText id="personalEmail" type="email" formControlName="personalEmail" />
+          @if (form.controls.personalEmail.touched && form.controls.personalEmail.invalid) {
+            <small class="stu__error">
+              @if (form.controls.personalEmail.hasError('required')) {
+                Personal email is required for a new admission.
+              } @else {
+                Enter a valid email address.
+              }
+            </small>
+          } @else {
+            <small class="app-muted stu__hint">
+              @if (isEditing()) {
+                The student's own address, if different.
+              } @else {
+                The welcome message goes here, so it must be the student's own
+                address &mdash; not the &#64;avijan.in one the institute issues.
+              }
+            </small>
+          }
+        </div>
+
+        <div class="stu__field">
           <label for="dateOfBirth">Date of birth <span class="stu__req">*</span></label>
           <p-datePicker
             inputId="dateOfBirth"
@@ -252,6 +278,64 @@
           }
         </div>
 
+        <!-- Registering: what is being handed over now. Editing: what was recorded
+             as received, editable so a wrong figure typed at admission can be put
+             right (250 entered when 750 was taken). Correcting a past figure is a
+             different act from taking new money today -- that stays on Collect. -->
+        <div class="stu__field">
+          <label for="admissionFeesPaid">{{ isEditing() ? 'Admission fee received' : 'Paying now' }}</label>
+            <p-inputNumber
+              inputId="admissionFeesPaid"
+              formControlName="admissionFeesPaid"
+              mode="currency"
+              currency="INR"
+              locale="en-IN"
+              [min]="0"
+              [maxFractionDigits]="2" />
+
+            @if (form.controls.admissionFeesPaid.touched && form.controls.admissionFeesPaid.hasError('max')) {
+              <small class="stu__error">Cannot be more than the admission fee.</small>
+            } @else if (admissionDueNow() > 0) {
+              <small class="stu__hint stu__hint--due">
+                {{ admissionDueNow() | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}
+                @if (isEditing()) { still owing. } @else { will be left as an admission due, collectable later. }
+              </small>
+            } @else if (isEditing()) {
+              <small class="stu__hint">Paid in full. Change this only to correct a figure recorded wrongly.</small>
+            } @else {
+              <small class="stu__hint">Paid in full. Change this only if part of the fee is being left owing.</small>
+            }
+
+            <!-- Taking NEW money against a balance is a receipt, not a correction,
+                 so it goes through Collect rather than by editing the number above.
+                 Always reachable while editing: with nothing owing it is the
+                 receipt history -- every instalment, its date, and Cash or Bank. -->
+            @if (isEditing() && editingId(); as id) {
+              <p-button
+                [label]="admissionDueNow() > 0 ? 'Collect the balance' : 'View receipts'"
+                [icon]="admissionDueNow() > 0 ? 'pi pi-indian-rupee' : 'pi pi-list'"
+                size="small"
+                [severity]="admissionDueNow() > 0 ? 'warn' : 'secondary'"
+                [text]="true"
+                styleClass="stu__collect"
+                (onClick)="openAdmissionDueById(id)" />
+            }
+          </div>
+
+        <div class="stu__field">
+          <label>Admission payment mode <span class="stu__req">*</span></label>
+          <div class="stu__mode">
+            <label class="stu__mode-option">
+              <input type="radio" formControlName="admissionPaymentMode" value="Cash" />
+              Cash
+            </label>
+            <label class="stu__mode-option">
+              <input type="radio" formControlName="admissionPaymentMode" value="Bank" />
+              Bank
+            </label>
+          </div>
+        </div>
+
         <div class="stu__field">
           <label for="monthlyFees">Monthly fees <span class="stu__req">*</span></label>
           <p-inputNumber
@@ -282,7 +366,12 @@
         </div>
 
         <div class="stu__field">
-          <label for="branchId">Branch</label>
+          <label for="branchId">
+            Branch
+            @if (!isEditing()) {
+              <span class="stu__req">*</span>
+            }
+          </label>
           <p-select
             inputId="branchId"
             formControlName="branchId"
@@ -290,12 +379,16 @@
             optionLabel="name"
             optionValue="branchId"
             placeholder="--Select Branch--"
-            [showClear]="true"
+            [showClear]="isEditing()"
             appendTo="body"
             styleClass="stu__select" />
+          @if (form.controls.branchId.touched && form.controls.branchId.invalid) {
+            <small class="stu__error">Please select a branch.</small>
+          }
           <small class="stu__help">
             The branch code becomes part of the registration id — Rajpur gives
-            <code>AVI/Raj/…</code>. Leave blank for the older <code>AVI/…</code> format.
+            <code>AVI/Raj/…</code>. Required for a new admission; students
+            registered earlier are all recorded against Rajpur.
           </small>
         </div>
 
@@ -309,6 +402,59 @@
             <p-checkbox formControlName="isComplete" [binary]="true" inputId="isComplete" />
             <span>Is Complete</span>
           </label>
+        </div>
+      </fieldset>
+
+      <!-- ------------------------------------------------- portal sign-in -->
+      <fieldset class="stu__fieldset">
+        <legend>Avijan portal sign-in</legend>
+
+        <p class="app-muted stu__legend-note">
+          @if (isEditing()) {
+            The sign-in this student was issued. Changing it here updates their
+            record; to change only the password, use the key icon on the Users page.
+          } @else {
+            Generated from the student's name and issued automatically when the
+            student is saved, along with their account on the Users page. Edit
+            either box to override.
+          }
+        </p>
+
+        <div class="stu__login">
+          <div class="stu__field">
+            <label for="avijanLoginEmail">Login email</label>
+            <input
+              pInputText
+              id="avijanLoginEmail"
+              type="email"
+              formControlName="avijanLoginEmail"
+              (input)="markLoginEdited()"
+              placeholder="generated from the name" />
+          </div>
+
+          <div class="stu__field">
+            <label for="avijanLoginPassword">Password</label>
+            <!-- Shown in clear: the office reads this back to the student. -->
+            <input
+              pInputText
+              id="avijanLoginPassword"
+              formControlName="avijanLoginPassword"
+              (input)="markLoginEdited()"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="generated from the name" />
+          </div>
+
+          <div class="stu__login-action">
+            <p-button
+              type="button"
+              label="Regenerate"
+              icon="pi pi-refresh"
+              severity="secondary"
+              [outlined]="true"
+              [loading]="loginSuggesting()"
+              (onClick)="regenerateLogin()" />
+          </div>
         </div>
       </fieldset>
 
@@ -501,6 +647,16 @@
               tooltipPosition="top"
               (onClick)="edit(student)" />
 
+            @if ((student.admissionDue ?? 0) > 0) {
+              <p-button
+                icon="pi pi-indian-rupee"
+                severity="warn"
+                [text]="true"
+                [pTooltip]="'Admission fee still owing — collect'"
+                tooltipPosition="top"
+                (onClick)="openAdmissionDue(student)" />
+            }
+
             <p-button
               icon="pi pi-print"
               severity="secondary"
@@ -509,14 +665,40 @@
               tooltipPosition="top"
               (onClick)="printReceipt(student)" />
 
-            @if (student.isActive) {
+            <!-- Only offered once the course is marked complete — the server
+                 refuses it either way, this just saves the round trip. -->
+            @if (student.isComplete) {
               <p-button
-                icon="pi pi-ban"
-                severity="danger"
+                icon="pi pi-verified"
+                severity="success"
                 [text]="true"
-                pTooltip="Deactivate"
+                [loading]="certificateLoading() === student.id"
+                pTooltip="Issue completion certificate"
                 tooltipPosition="top"
-                (onClick)="deactivate(student)" />
+                (onClick)="issueCertificate(student)" />
+            }
+
+            <p-button
+              icon="pi pi-whatsapp"
+              severity="success"
+              [text]="true"
+              [disabled]="!canWhatsApp(student.phone)"
+              [pTooltip]="canWhatsApp(student.phone)
+                ? 'Send the admission receipt on WhatsApp'
+                : 'No usable mobile number on this record'"
+              tooltipPosition="top"
+              (onClick)="whatsAppReceipt(student)" />
+
+            @if (student.isActive) {
+              @if (canDeactivate()) {
+                <p-button
+                  icon="pi pi-ban"
+                  severity="danger"
+                  [text]="true"
+                  pTooltip="Deactivate"
+                  tooltipPosition="top"
+                  (onClick)="deactivate(student)" />
+              }
             } @else {
               <p-button
                 icon="pi pi-check-circle"
@@ -608,3 +790,10 @@
     </ng-template>
   </p-table>
 </p-dialog>
+
+<!-- Collecting what is left owing on an admission fee. Shared with the fees
+     counter, which does the same job from the other side of the desk. -->
+<app-admission-due-dialog
+  [studentId]="admissionDueStudentId()"
+  [(visible)]="admissionDueVisible"
+  (collected)="onAdmissionDueCollected()" />

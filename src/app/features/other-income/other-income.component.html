@@ -1,0 +1,275 @@
+<p-confirmDialog />
+
+<header class="oi__header">
+  <div>
+    <p class="app-section-title">Finance</p>
+    <h1>Other income</h1>
+  </div>
+</header>
+
+<!-- ------------------------------------------------------------- entry form -->
+<section class="app-card oi__form" id="oi-form">
+  <header class="oi__form-head">
+    <div>
+      <h2>{{ isEditing() ? 'Edit income entry' : 'Record other income' }}</h2>
+      <p class="app-muted">
+        Anything the institute earns that is not a student fee or admission fee.
+        Everything recorded here appears as &ldquo;Other income&rdquo; in the income
+        report, branch-wise and month-wise.
+      </p>
+    </div>
+  </header>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="oi__grid">
+      <div class="oi__field oi__field--details">
+        <label for="purpose">Purpose <span class="oi__req">*</span></label>
+        <input
+          pInputText
+          id="purpose"
+          formControlName="purpose"
+          maxlength="200"
+          placeholder="e.g. Certificate reprint, Book sale, Room rent" />
+        @if (form.controls.purpose.touched && form.controls.purpose.invalid) {
+          <small class="oi__error">Say what the income was for.</small>
+        }
+      </div>
+
+      <div class="oi__field">
+        <label for="incomeDate">Date received <span class="oi__req">*</span></label>
+        <p-datePicker
+          inputId="incomeDate"
+          formControlName="incomeDate"
+          dateFormat="dd/mm/yy"
+          [showIcon]="true"
+          [maxDate]="today"
+          appendTo="body"
+          styleClass="oi__picker" />
+        @if (form.controls.incomeDate.touched && form.controls.incomeDate.invalid) {
+          <small class="oi__error">Date received is required.</small>
+        }
+      </div>
+
+      <div class="oi__field">
+        <label for="amount">Amount <span class="oi__req">*</span></label>
+        <p-inputNumber
+          inputId="amount"
+          formControlName="amount"
+          mode="currency"
+          currency="INR"
+          locale="en-IN"
+          [min]="0"
+          [maxFractionDigits]="2" />
+        @if (form.controls.amount.touched && form.controls.amount.invalid) {
+          <small class="oi__error">Enter an amount greater than zero.</small>
+        }
+      </div>
+
+      <div class="oi__field">
+        <label for="branch">Branch <span class="oi__req">*</span></label>
+        <p-select
+          inputId="branch"
+          formControlName="branch"
+          [options]="branches()"
+          optionLabel="name"
+          optionValue="name"
+          placeholder="Choose a branch"
+          appendTo="body"
+          styleClass="oi__picker" />
+        @if (form.controls.branch.touched && form.controls.branch.invalid) {
+          <small class="oi__error">Choose the branch that earned this.</small>
+        } @else if (branches().length === 0) {
+          <small class="oi__error">
+            No active branch is on record. Add one on the Branches screen before
+            recording income.
+          </small>
+        }
+      </div>
+    </div>
+
+    <footer class="oi__form-actions">
+      <p-button
+        type="submit"
+        [label]="isEditing() ? 'Update entry' : 'Save entry'"
+        [icon]="isEditing() ? 'pi pi-save' : 'pi pi-plus'"
+        [loading]="saving()"
+        [disabled]="saving()" />
+
+      <p-button
+        type="button"
+        [label]="isEditing() ? 'Cancel' : 'Reset'"
+        icon="pi pi-refresh"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="resetForm()" />
+    </footer>
+  </form>
+</section>
+
+<!-- ---------------------------------------------------------------- filter -->
+<section class="app-card oi__filter">
+  <div class="oi__filter-field">
+    <label for="from">From</label>
+    <p-datePicker
+      inputId="from"
+      [ngModel]="from()"
+      (ngModelChange)="from.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      dateFormat="dd/mm/yy"
+      [showIcon]="true"
+      [showClear]="true"
+      appendTo="body"
+      styleClass="oi__picker" />
+  </div>
+
+  <div class="oi__filter-field">
+    <label for="to">To</label>
+    <p-datePicker
+      inputId="to"
+      [ngModel]="to()"
+      (ngModelChange)="to.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      dateFormat="dd/mm/yy"
+      [showIcon]="true"
+      [showClear]="true"
+      appendTo="body"
+      styleClass="oi__picker" />
+  </div>
+
+  <div class="oi__filter-field">
+    <label for="branchFilter">Branch</label>
+    <p-select
+      inputId="branchFilter"
+      [ngModel]="branchFilter()"
+      (ngModelChange)="branchFilter.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      [options]="branches()"
+      optionLabel="name"
+      optionValue="name"
+      placeholder="All branches"
+      [showClear]="true"
+      appendTo="body"
+      styleClass="oi__picker" />
+  </div>
+
+  <div class="oi__filter-field">
+    <label for="search">Purpose contains</label>
+    <input
+      pInputText
+      id="search"
+      [ngModel]="search()"
+      (ngModelChange)="search.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      (keyup.enter)="applyFilter()"
+      placeholder="e.g. Certificate" />
+  </div>
+
+  <div class="oi__filter-actions">
+    <p-button label="Filter" icon="pi pi-search" [loading]="loading()" (onClick)="applyFilter()" />
+    <p-button
+      label="Clear"
+      icon="pi pi-times"
+      severity="secondary"
+      [outlined]="true"
+      (onClick)="clearFilter()" />
+  </div>
+</section>
+
+@if (data(); as d) {
+  <div class="oi__tiles">
+    <div class="app-card oi__tile">
+      <span>Entries</span>
+      <strong>{{ d.summary.entryCount }}</strong>
+    </div>
+
+    <div class="app-card oi__tile oi__tile--positive">
+      <span>Total received</span>
+      <strong>{{ money(d.summary.totalAmount) }}</strong>
+      <small class="app-muted">
+        @if (d.summary.from || d.summary.to || branchFilter()) {
+          Filtered range
+        } @else {
+          All time
+        }
+      </small>
+    </div>
+  </div>
+
+  <section class="app-card oi__list">
+    <header class="oi__list-head">
+      <h2>Other income register</h2>
+      <span class="app-muted">{{ d.rows.totalCount }} entries</span>
+    </header>
+
+    <p-table
+      [value]="d.rows.items"
+      [lazy]="true"
+      [paginator]="true"
+      [rows]="pageSize()"
+      [totalRecords]="d.rows.totalCount"
+      [loading]="loading()"
+      [rowsPerPageOptions]="[25, 50, 100]"
+      (onLazyLoad)="onLazyLoad($event)"
+      styleClass="p-datatable-sm"
+      [tableStyle]="{ 'min-width': '46rem' }"
+      currentPageReportTemplate="{first}&ndash;{last} of {totalRecords}"
+      [showCurrentPageReport]="true">
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 10rem">Date</th>
+          <th>Purpose</th>
+          <th style="width: 11rem">Branch</th>
+          <th class="oi__num" style="width: 10rem">Amount</th>
+          <th style="width: 7rem">Actions</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-row>
+        <tr [class.oi__row--editing]="editingId() === row.incomeId">
+          <td>{{ row.incomeDate ? (row.incomeDate | date: 'd MMM y') : '&mdash;' }}</td>
+          <td>{{ row.purpose || '&mdash;' }}</td>
+          <td>{{ row.branch || '&mdash;' }}</td>
+          <td class="oi__num">{{ money(row.amount) }}</td>
+          <td>
+            <div class="oi__actions">
+              <p-button
+                icon="pi pi-pencil"
+                severity="secondary"
+                [text]="true"
+                pTooltip="Edit"
+                tooltipPosition="top"
+                (onClick)="edit(row)" />
+
+              @if (canDelete()) {
+                <p-button
+                  icon="pi pi-trash"
+                  severity="danger"
+                  [text]="true"
+                  pTooltip="Delete"
+                  tooltipPosition="top"
+                  (onClick)="remove(row)" />
+              }
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="5" class="app-muted oi__empty">
+            No other income recorded for this filter.
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+
+    <p class="oi__note">
+      The total above covers every entry the filter selects, not just the page on
+      screen. Entries carried over by the migration were assigned to Rajpur.
+      @if (!canDelete()) {
+        Deleting an entry is restricted to administrators.
+      }
+    </p>
+  </section>
+}

@@ -1,0 +1,234 @@
+:host { display: block; }
+
+.fee__header {
+  margin-bottom: 1.25rem;
+
+  h1 { margin-top: 0.25rem; font-size: 1.5rem; }
+}
+
+.fee__state {
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+
+  i { font-size: 1.6rem; color: var(--app-text-muted); }
+  p { margin: 0.75rem 0 0; }
+}
+
+/* ------------------------------------------------------- what is owed */
+.fee__amount {
+  padding: 1.25rem 1.35rem;
+  margin-bottom: 1.25rem;
+}
+
+.fee__amount-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--app-border);
+  flex-wrap: wrap;
+
+  h2 { margin: 0; font-size: 1.15rem; }
+  p { margin: 0.25rem 0 0; font-size: 0.82rem; }
+}
+
+.fee__total {
+  text-align: right;
+
+  span {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--app-text-muted);
+  }
+
+  strong {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 1.9rem;
+    letter-spacing: -0.02em;
+    color: var(--app-brand);
+  }
+}
+
+.fee__breakdown {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.9rem;
+  margin: 0;
+
+  dt {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--app-text-muted);
+  }
+
+  dd { margin: 0.2rem 0 0; font-size: 1rem; }
+}
+
+.fee__fine dd { color: var(--app-negative); font-weight: 600; }
+
+/* ----------------------------------------------------------- the pay -->
+   Two numbered steps side by side: pay, then tell us the reference. */
+.fee__pay {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.75rem;
+  padding: 1.35rem 1.5rem 1.5rem;
+
+  h2 { margin: 0; font-size: 1.02rem; }
+  > div > p { margin: 0.35rem 0 0; font-size: 0.82rem; line-height: 1.5; }
+}
+
+.fee__qr {
+  text-align: center;
+  padding-right: 1.5rem;
+  border-right: 1px solid var(--app-border);
+
+  img {
+    display: block;
+    width: 100%;
+    max-width: 15rem;
+    height: auto;
+    margin: 1.1rem auto 0.85rem;
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius);
+    background: #fff;
+  }
+}
+
+.fee__upi {
+  margin: 0;
+  font-size: 0.82rem;
+
+  code {
+    font-family: 'Cascadia Mono', Consolas, monospace;
+    font-size: 0.85rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 5px;
+    background: var(--app-page-bg);
+  }
+}
+
+.fee__upi-link {
+  display: inline-block;
+  margin-top: 0.6rem;
+  font-size: 0.8rem;
+}
+
+/* ------------------------------------------------------- the reference */
+.fee__reference {
+  label {
+    display: block;
+    margin: 1.1rem 0 0.32rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  input {
+    width: 100%;
+    font-family: 'Cascadia Mono', Consolas, monospace;
+    letter-spacing: 0.06em;
+  }
+}
+
+.fee__error {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--app-negative);
+}
+
+.fee__error-box {
+  margin: 0.85rem 0 0;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--app-radius);
+  border-left: 3px solid var(--app-negative);
+  background: color-mix(in srgb, var(--app-negative) 8%, transparent);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+/* --------------------------------------------------------------- notes */
+.fee__note {
+  margin: 0.85rem 0 0;
+  padding: 0.55rem 0.8rem;
+  border-radius: var(--app-radius);
+  background: var(--app-page-bg);
+  border-left: 3px solid var(--app-accent);
+  font-size: 0.77rem;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.fee__note--warn { border-left-color: var(--app-negative); }
+
+.fee__blocked {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1.1rem 1.25rem;
+
+  i { font-size: 1.1rem; color: var(--app-accent); padding-top: 0.1rem; }
+  p { margin: 0; font-size: 0.88rem; line-height: 1.55; }
+}
+
+/* ---------------------------------------------------------------- done */
+.fee__done {
+  padding: 2.5rem 2rem 2rem;
+  text-align: center;
+
+  i { font-size: 2.2rem; color: var(--app-positive, #16a34a); }
+  h2 { margin: 0.8rem 0 0.4rem; font-size: 1.25rem; }
+  p { max-width: 46ch; margin: 0 auto 1.4rem; font-size: 0.88rem; line-height: 1.6; }
+}
+
+@media (max-width: 860px) {
+  .fee__pay { grid-template-columns: 1fr; }
+
+  .fee__qr {
+    padding-right: 0;
+    padding-bottom: 1.5rem;
+    border-right: 0;
+    border-bottom: 1px solid var(--app-border);
+  }
+}
+
+/* The generated payment code, with the amount stated under it so the student
+   can check what they are about to send before they scan. */
+.fee__qr-figure {
+  margin: 1.1rem 0 0.9rem;
+
+  img {
+    display: block;
+    width: 100%;
+    max-width: 14rem;
+    height: auto;
+    margin: 0 auto;
+    padding: 0.65rem;
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius);
+    background: #fff;
+  }
+
+  figcaption {
+    margin-top: 0.6rem;
+    font-size: 0.78rem;
+    line-height: 1.4;
+  }
+}
+
+.fee__qr-amount {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--app-brand);
+}
+

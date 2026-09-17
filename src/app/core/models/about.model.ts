@@ -8,6 +8,9 @@ export interface AboutCourse {
   courseId: number;
   name: string;
   durationMonths?: number;
+
+  /** Active students currently on this course — real enrolment, not an estimate. */
+  enrolledCount: number;
 }
 
 export interface ContactDetails {
@@ -18,6 +21,26 @@ export interface ContactDetails {
   officeHours: string;
 }
 
+export interface AboutNotice {
+  id: number;
+  text?: string;
+  noticeDate?: string;
+}
+
+/** One row of the weekly class routine. Served by the API; no longer shown on
+ * the front page, which dropped its Show Timing panel. */
+export interface RoutineRow {
+  id: number;
+  name?: string;
+  sunday?: string;
+  monday?: string;
+  tuesday?: string;
+  wednesday?: string;
+  thursday?: string;
+  friday?: string;
+  saturday?: string;
+}
+
 export interface AboutPage {
   instituteName: string;
   tagline: string;
@@ -26,6 +49,23 @@ export interface AboutPage {
   stats: AboutStat[];
   courses: AboutCourse[];
   contact: ContactDetails;
+  /* Optional because a client cannot assume the server's shape: an API build
+     older than these fields simply omits them. */
+  notices?: AboutNotice[];
+  routine?: RoutineRow[];
+
+  /** Absent when no owner photograph is configured; the section is then not shown. */
+  ownerDesk?: OwnerDesk;
+}
+
+/** "From the Owner's Desk" — edited in appsettings.json, not in this code. */
+export interface OwnerDesk {
+  name: string;
+  designation: string;
+  /** Path under the site root, e.g. images/owner.jpg */
+  photo: string;
+  message: string[];
+  since: string;
 }
 
 export interface ContactRequest {

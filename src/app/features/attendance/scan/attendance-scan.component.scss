@@ -1,0 +1,125 @@
+/* A phone at the door, often in sunlight: large type, high contrast, one column. */
+:host {
+  display: block;
+  min-height: 100vh;
+  background: #0a283c;
+}
+
+.scan {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+}
+
+.scan__card {
+  width: 100%;
+  max-width: 26rem;
+  background: #fff;
+  border-radius: 18px;
+  padding: 1.75rem 1.5rem 1.25rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  text-align: center;
+}
+
+.scan__logo {
+  width: 150px;
+  height: auto;
+  margin-bottom: 1.25rem;
+}
+
+.scan__state {
+  i {
+    font-size: 2.75rem;
+    color: #1b5e8c;
+  }
+
+  h1 {
+    margin: 0.75rem 0 0.5rem;
+    font-size: 1.5rem;
+    color: #0a283c;
+  }
+
+  p {
+    margin: 0 0 0.75rem;
+    color: #4a5163;
+    line-height: 1.6;
+  }
+}
+
+.scan__state--good i { color: #0f7b5f; }
+.scan__state--bad  i { color: #c0392b; }
+
+.scan__who {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0a283c !important;
+  margin-bottom: 1rem !important;
+}
+
+.scan__facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+  text-align: left;
+
+  > div {
+    background: #f3f6f9;
+    border-radius: 10px;
+    padding: 0.6rem 0.75rem;
+  }
+
+  dt {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6b7280;
+  }
+
+  dd {
+    margin: 0.15rem 0 0;
+    font-weight: 700;
+    color: #0a283c;
+  }
+}
+
+.scan__note {
+  font-size: 0.95rem;
+}
+
+/* The one thing that costs somebody a day if they miss it. */
+.scan__reminder {
+  background: #fff6e5;
+  border: 1px solid #e0a93b;
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.88rem;
+  color: #8a6100 !important;
+  margin: 0 !important;
+}
+
+.scan__link {
+  display: inline-block;
+  margin-top: 1.25rem;
+  font-size: 0.85rem;
+  color: #1b5e8c;
+}
+
+/* Six digits, typed on a phone at the door. */
+.scan__code {
+  width: 100%;
+  max-width: 11rem;
+  font-size: 1.7rem;
+  letter-spacing: 0.4em;
+  text-align: center;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.scan__code-error {
+  color: #c0392b !important;
+  font-weight: 600;
+  margin-top: 0.75rem !important;
+}

@@ -26,6 +26,22 @@
   </div>
 
   <div class="rpt__field">
+    <label for="branch">Branch</label>
+    <p-select
+      inputId="branch"
+      [options]="branches()"
+      optionLabel="name"
+      optionValue="name"
+      [ngModel]="branch()"
+      (ngModelChange)="branch.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      [showClear]="true"
+      placeholder="All branches"
+      appendTo="body"
+      styleClass="rpt__select" />
+  </div>
+
+  <div class="rpt__field">
     <label for="from">From</label>
     <p-datePicker
       inputId="from"
@@ -83,7 +99,7 @@
     <div class="app-card rpt__tile rpt__tile--negative">
       <span>Total outstanding</span>
       <strong>{{ r.totalOutstanding | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
-      <small class="app-muted">Carried on each student's last payment</small>
+      <small class="app-muted">Fees due + late fine</small>
     </div>
 
     <div class="app-card rpt__tile">
@@ -113,7 +129,7 @@
       [rowsPerPageOptions]="[25, 50, 100]"
       (onLazyLoad)="onLazyLoad($event)"
       styleClass="p-datatable-sm"
-      [tableStyle]="{ 'min-width': '58rem' }"
+      [tableStyle]="{ 'min-width': '78rem' }"
       currentPageReportTemplate="{first}–{last} of {totalRecords}"
       [showCurrentPageReport]="true">
 
@@ -123,6 +139,13 @@
           <th style="width: 9rem">Phone</th>
           <th style="width: 9rem">Joined</th>
           <th style="width: 10rem">Last payment</th>
+
+          <!-- The outstanding total broken into what it is made of, so the office
+               can see WHY a figure is what it is rather than being asked to trust
+               one number. -->
+          <th class="rpt__num" style="width: 6rem">Months due</th>
+          <th class="rpt__num" style="width: 9rem">Monthly fees</th>
+          <th class="rpt__num" style="width: 8rem">Late fine</th>
           <th class="rpt__num" style="width: 9rem">Outstanding</th>
         </tr>
       </ng-template>
@@ -145,14 +168,43 @@
             }
           </td>
           <td class="rpt__num">
-            {{ row.outstandingDue | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}
+            @if (row.monthsUnpaid > 0) {
+              {{ row.monthsUnpaid }}
+            } @else {
+              <span class="app-muted">—</span>
+            }
+          </td>
+
+          <td class="rpt__num">
+            {{ (row.monthsUnpaid * row.monthlyFee) | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}
+            @if (row.monthsUnpaid > 0) {
+              <small class="app-muted rpt__cell-sub">
+                {{ row.monthsUnpaid }} &times; {{ row.monthlyFee | currency: 'INR' : 'symbol-narrow' : '1.0-0' }}
+              </small>
+            }
+          </td>
+
+          <td class="rpt__num">
+            {{ row.lateFine | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}
+          </td>
+
+          <td class="rpt__num">
+            <strong>{{ row.outstandingDue | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+
+            <!-- Only when there is a balance left over from the last payment, which
+                 is unusual and would otherwise make the row appear not to add up. -->
+            @if (row.carriedDue > 0) {
+              <small class="app-muted rpt__cell-sub">
+                incl. {{ row.carriedDue | currency: 'INR' : 'symbol-narrow' : '1.2-2' }} carried
+              </small>
+            }
           </td>
         </tr>
       </ng-template>
 
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="5" class="app-muted rpt__empty">
+          <td colspan="8" class="app-muted rpt__empty">
             Everyone on this course paid in this range.
           </td>
         </tr>
