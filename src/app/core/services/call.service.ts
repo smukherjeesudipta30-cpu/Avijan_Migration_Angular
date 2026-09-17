@@ -435,12 +435,12 @@ export class CallService implements OnDestroy {
     this.peerName.set(null);
     this.muted.set(false);
     this.cameraOff.set(false);
+    this.speakerOn.set(false);
+    this.stopDurationTimer();
     this.isCaller = false;
     this.conversationId = null;
     this.connectedAt = null;
     this.wasConnected = false;
-    this.speakerOn.set(false);
-    this.stopDurationTimer();
 
     // A message set right before ending (no answer, connection failed, mic
     // permission refused) needs a moment on screen — the overlay stays up

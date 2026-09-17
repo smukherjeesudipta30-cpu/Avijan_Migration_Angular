@@ -84,15 +84,6 @@
               <i class="pi" [class.pi-microphone]="!call.muted()" [class.pi-volume-off]="call.muted()"></i>
             </button>
 
-            <button
-              type="button"
-              class="callov__btn callov__btn--ghost"
-              [class.callov__btn--on]="call.speakerOn()"
-              (click)="call.toggleSpeaker()"
-              [title]="call.speakerOn() ? 'Switch to earpiece' : 'Switch to speaker'">
-              <i class="pi" [class.pi-volume-up]="call.speakerOn()" [class.pi-volume-down]="!call.speakerOn()"></i>
-            </button>
-
             @if (call.kind() === 'video') {
               <button
                 type="button"
@@ -103,6 +94,15 @@
                 <i class="pi" [class.pi-video]="!call.cameraOff()" [class.pi-eye-slash]="call.cameraOff()"></i>
               </button>
             }
+
+            <button
+              type="button"
+              class="callov__btn callov__btn--ghost"
+              [class.callov__btn--on]="call.speakerOn()"
+              (click)="call.toggleSpeaker()"
+              [title]="call.speakerOn() ? 'Switch to earpiece' : 'Switch to speaker'">
+              <i class="pi" [class.pi-volume-up]="call.speakerOn()" [class.pi-volume-down]="!call.speakerOn()"></i>
+            </button>
 
             <button type="button" class="callov__btn callov__btn--decline" (click)="call.hangup()" title="Hang up">
               <i class="pi pi-phone" style="transform: rotate(135deg)"></i>

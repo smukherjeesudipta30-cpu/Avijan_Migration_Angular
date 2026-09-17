@@ -98,6 +98,7 @@ export class AuthService {
     }
   }
 
+  /** True when the user holds any of the given roles — a user can hold several. */
   /**
    * True when the user holds any of the given roles — a user can hold several.
    * SuperAdmin passes regardless of what was asked for, mirroring the API's
