@@ -98,9 +98,15 @@ export class AuthService {
     }
   }
 
-  /** True when the user holds any of the given roles — a user can hold several. */
+  /**
+   * True when the user holds any of the given roles — a user can hold several.
+   * SuperAdmin passes regardless of what was asked for, mirroring the API's
+   * global SuperAdminAuthorizationHandler, so a route/screen guarded for e.g.
+   * "Admin,Editor" doesn't also need "SuperAdmin" spelled out everywhere.
+   */
   hasAnyRole(roles: UserRole[]): boolean {
     const held = this.currentUser()?.roles ?? [];
+    if (held.includes('SuperAdmin')) return true;
     return held.some(role => roles.includes(role));
   }
 

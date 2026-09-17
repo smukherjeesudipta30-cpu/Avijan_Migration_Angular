@@ -142,6 +142,19 @@
   font-size: 0.78rem;
 }
 
+.callov__video-duration {
+  position: absolute;
+  right: 0.75rem;
+  top: 0.75rem;
+  margin: 0;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .callov__hidden-audio {
   display: none;
 }

@@ -62,12 +62,13 @@
               <video #remoteVideo class="callov__video callov__video--remote" autoplay playsinline></video>
               <video #localVideo class="callov__video callov__video--local" autoplay playsinline muted></video>
               <p class="callov__video-name">{{ call.peerName() }}</p>
+              <p class="callov__video-duration">{{ formatDuration(call.durationSeconds()) }}</p>
             </div>
           } @else {
             <div class="callov__ring">
               <div class="callov__avatar callov__avatar--big">{{ initials(call.peerName()) }}</div>
               <p class="callov__name">{{ call.peerName() }}</p>
-              <p class="callov__status">On call</p>
+              <p class="callov__status">{{ formatDuration(call.durationSeconds()) }}</p>
               <!-- Audio still needs an element to actually play, just not shown. -->
               <video #remoteVideo class="callov__hidden-audio" autoplay playsinline></video>
             </div>
@@ -81,6 +82,15 @@
               (click)="call.toggleMute()"
               [title]="call.muted() ? 'Unmute' : 'Mute'">
               <i class="pi" [class.pi-microphone]="!call.muted()" [class.pi-volume-off]="call.muted()"></i>
+            </button>
+
+            <button
+              type="button"
+              class="callov__btn callov__btn--ghost"
+              [class.callov__btn--on]="call.speakerOn()"
+              (click)="call.toggleSpeaker()"
+              [title]="call.speakerOn() ? 'Switch to earpiece' : 'Switch to speaker'">
+              <i class="pi" [class.pi-volume-up]="call.speakerOn()" [class.pi-volume-down]="!call.speakerOn()"></i>
             </button>
 
             @if (call.kind() === 'video') {

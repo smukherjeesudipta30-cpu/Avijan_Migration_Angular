@@ -67,11 +67,16 @@ export class ShellComponent {
       return [];
     }
 
+    // SuperAdmin sees every screen in the drawer, not just what any one role's
+    // item list happens to name — the same "above every role check" stance as
+    // AuthService.hasAnyRole and the API's SuperAdminAuthorizationHandler.
+    const isSuperAdmin = held.includes('SuperAdmin');
+
     return MENU
       .map(section => ({
         ...section,
         items: section.items.filter(item =>
-          item.roles.some(role => held.includes(role))
+          (isSuperAdmin || item.roles.some(role => held.includes(role)))
           // An entry tied to an optional feature stays hidden until it is switched
           // on server-side, so a half-finished feature never appears in the menu.
           && (!item.feature || this.features[item.feature]()))

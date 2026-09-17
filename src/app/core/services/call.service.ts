@@ -112,6 +112,24 @@ export class CallService implements OnDestroy {
   readonly cameraOff = signal(false);
   readonly errorMessage = signal<string | null>(null);
 
+  /**
+   * Android WebView defaults call audio to the earpiece. Actually switching
+   * the physical route needs `setSinkId` on the element the remote audio
+   * plays through — the component owns that element (see call-overlay's
+   * hidden audio tag), so it registers it here via {@link registerAudioSink}
+   * rather than this service reaching into the DOM itself. Best-effort: on a
+   * browser/WebView build without output-device selection, the toggle still
+   * flips visually but the OS keeps routing audio wherever it already was —
+   * the same "don't let a missing platform capability break the call" stance
+   * the rest of this service takes with mic/camera permission failures.
+   */
+  readonly speakerOn = signal(false);
+  private audioSinkEl: HTMLMediaElement | null = null;
+
+  /** Ticks once a second while a call is active; null the rest of the time. */
+  readonly durationSeconds = signal(0);
+  private durationTimer: ReturnType<typeof setInterval> | null = null;
+
   constructor() {
     effect(() => {
       const status = this.status();
@@ -253,6 +271,34 @@ export class CallService implements OnDestroy {
     this.cameraOff.set(next);
   }
 
+  /** Called once by call-overlay with the element remote audio actually plays through. */
+  registerAudioSink(el: HTMLMediaElement | null): void {
+    this.audioSinkEl = el;
+  }
+
+  async toggleSpeaker(): Promise<void> {
+    const next = !this.speakerOn();
+    this.speakerOn.set(next);
+    await this.applyAudioSink(next);
+  }
+
+  private async applyAudioSink(speaker: boolean): Promise<void> {
+    const el = this.audioSinkEl as (HTMLMediaElement & { setSinkId?: (id: string) => Promise<void> }) | null;
+    if (!el?.setSinkId || !navigator.mediaDevices?.enumerateDevices) return;
+
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const outputs = devices.filter(d => d.kind === 'audiooutput');
+      const match = outputs.find(d => speaker
+        ? /speaker/i.test(d.label)
+        : /earpiece|receiver|default/i.test(d.label));
+      await el.setSinkId(match?.deviceId ?? '');
+    } catch {
+      // No output-device selection on this platform — the toggle state still
+      // reflects the user's intent even though nothing could be applied.
+    }
+  }
+
   /* -------------------------------------------------------- WebRTC internals */
 
   private async ensureLocalMedia(): Promise<MediaStream> {
@@ -291,6 +337,8 @@ export class CallService implements OnDestroy {
         if (!this.wasConnected) {
           this.wasConnected = true;
           this.connectedAt = Date.now();
+          this.startDurationTimer();
+          void this.applyAudioSink(this.speakerOn());
         }
       }
       if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
@@ -391,6 +439,8 @@ export class CallService implements OnDestroy {
     this.conversationId = null;
     this.connectedAt = null;
     this.wasConnected = false;
+    this.speakerOn.set(false);
+    this.stopDurationTimer();
 
     // A message set right before ending (no answer, connection failed, mic
     // permission refused) needs a moment on screen — the overlay stays up
@@ -426,6 +476,20 @@ export class CallService implements OnDestroy {
   private clearRingTimer(): void {
     if (this.ringTimer) clearTimeout(this.ringTimer);
     this.ringTimer = null;
+  }
+
+  private startDurationTimer(): void {
+    this.stopDurationTimer();
+    this.durationSeconds.set(0);
+    this.durationTimer = setInterval(() => {
+      this.durationSeconds.set(Math.max(0, Math.round((Date.now() - (this.connectedAt ?? Date.now())) / 1000)));
+    }, 1000);
+  }
+
+  private stopDurationTimer(): void {
+    if (this.durationTimer) clearInterval(this.durationTimer);
+    this.durationTimer = null;
+    this.durationSeconds.set(0);
   }
 
   private teardown(): void {

@@ -1,0 +1,149 @@
+<header class="rlv__header">
+  <div>
+    <p class="app-section-title">Reports</p>
+    <h1>Receptionist leave &amp; deduction</h1>
+    <p class="app-muted rlv__lede">
+      Leave taken against entitlement, by how many shifts/week each receptionist is
+      rostered for. Admin can set a deduction once leave runs over; Editor can see it.
+    </p>
+  </div>
+
+  <p-button
+    label="Export CSV"
+    icon="pi pi-download"
+    severity="secondary"
+    [outlined]="true"
+    [disabled]="!data()?.rows?.length"
+    (onClick)="exportCsv()" />
+</header>
+
+<section class="app-card rlv__filter">
+  <div class="rlv__field">
+    <label for="period">Period</label>
+    <p-select
+      inputId="period"
+      [options]="periodOptions"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="periodType()"
+      (ngModelChange)="periodType.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      appendTo="body"
+      styleClass="rlv__wide" />
+  </div>
+
+  <div class="rlv__field">
+    <label for="date">In</label>
+    <p-datePicker
+      inputId="date"
+      [ngModel]="date()"
+      (ngModelChange)="date.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      dateFormat="dd/mm/yy"
+      [showIcon]="true"
+      appendTo="body"
+      styleClass="rlv__wide" />
+  </div>
+
+  <div class="rlv__field">
+    <label for="branch">Branch</label>
+    <p-select
+      inputId="branch"
+      [options]="branchOptions()"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="branch()"
+      (ngModelChange)="branch.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+      [showClear]="true"
+      placeholder="All branches"
+      appendTo="body"
+      styleClass="rlv__wide" />
+  </div>
+
+  <p-button label="Apply" icon="pi pi-search" [loading]="loading()" (onClick)="load()" />
+</section>
+
+@if (data(); as d) {
+  <section class="app-card rlv__section">
+    <header class="rlv__section-head">
+      <h2>{{ d.periodType }} period</h2>
+      <span class="app-muted">
+        {{ d.periodStart | date: 'd MMM y' }} &ndash; {{ d.periodEnd | date: 'd MMM y' }}
+        &middot; {{ d.rows.length }} receptionist(s)
+      </span>
+    </header>
+
+    <p-table [value]="d.rows" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '58rem' }">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Receptionist</th>
+          <th>Branch</th>
+          <th class="rlv__num">Shifts/week</th>
+          <th class="rlv__num">Entitlement (days)</th>
+          <th class="rlv__num">Leave taken (days)</th>
+          <th class="rlv__num">Deduction %</th>
+          <th class="rlv__center">Applied</th>
+          <th></th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-row>
+        <tr [class.rlv__row--over]="row.exceedsEntitlement">
+          <td><strong>{{ row.receptionistName }}</strong></td>
+          <td>{{ row.branch || '—' }}</td>
+          <td class="rlv__num">{{ row.shiftsPerWeek }}</td>
+          <td class="rlv__num">{{ row.entitlementDays }}</td>
+          <td class="rlv__num">
+            {{ row.takenDays }}
+            @if (row.exceedsEntitlement) {
+              <span class="rlv__badge" title="Leave taken exceeds entitlement">Over</span>
+            }
+          </td>
+          <td class="rlv__num">
+            <p-inputNumber
+              [ngModel]="draftPercent(row)"
+              (ngModelChange)="setDraftPercent(row, $event)"
+              [ngModelOptions]="{ standalone: true }"
+              [min]="0"
+              [max]="100"
+              suffix="%"
+              [disabled]="!canEdit()"
+              inputStyleClass="rlv__percent-input" />
+          </td>
+          <td class="rlv__center">
+            <p-checkbox
+              [ngModel]="draftApplied(row)"
+              (ngModelChange)="setDraftApplied(row, $event)"
+              [ngModelOptions]="{ standalone: true }"
+              [binary]="true"
+              [disabled]="!canEdit()" />
+          </td>
+          <td>
+            @if (canEdit()) {
+              <p-button
+                label="Save"
+                size="small"
+                severity="secondary"
+                [outlined]="true"
+                [loading]="saving() === row.receptionistId"
+                (onClick)="save(row)" />
+            }
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="8" class="app-muted rlv__empty">
+            No receptionist has an active rota for this period.
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </section>
+} @else if (!loading()) {
+  <section class="app-card rlv__section">
+    <p class="app-muted rlv__empty">No report yet. Choose a period and apply.</p>
+  </section>
+}

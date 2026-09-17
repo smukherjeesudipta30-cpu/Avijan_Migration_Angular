@@ -30,7 +30,17 @@ export class CallOverlayComponent {
     effect(() => {
       const el = this.remoteVideo()?.nativeElement;
       if (el) el.srcObject = this.call.remoteStream();
+      // Whichever element remote audio actually plays through (the visible
+      // video tag, or the hidden one used for audio-only calls) is also the
+      // one setSinkId has to target for the speaker/earpiece toggle.
+      this.call.registerAudioSink(el ?? null);
     });
+  }
+
+  formatDuration(totalSeconds: number): string {
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }
 
   initials(name: string | null): string {

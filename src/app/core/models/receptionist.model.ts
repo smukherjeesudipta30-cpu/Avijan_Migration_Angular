@@ -85,3 +85,38 @@ export interface ReceptionistReport {
   branches: string[];
   generatedOn: string;
 }
+
+/* ============================================== leave & salary deduction */
+
+export type LeavePeriodType = 'Weekly' | 'Monthly' | 'Yearly';
+
+export interface ReceptionistLeaveReportLine {
+  receptionistId: number;
+  receptionistName: string;
+  branch?: string;
+  shiftsPerWeek: number;
+  entitlementDays: number;
+  takenDays: number;
+  exceedsEntitlement: boolean;
+  deductionPercent: number;
+  applied: boolean;
+  notes?: string;
+}
+
+export interface ReceptionistLeaveReport {
+  periodType: LeavePeriodType;
+  periodStart: string;
+  periodEnd: string;
+  rows: ReceptionistLeaveReportLine[];
+  generatedOn: string;
+}
+
+export interface ReceptionistLeaveDeductionRequest {
+  receptionistId: number;
+  periodType: LeavePeriodType;
+  /** Any date inside the period; the server normalises it to the period start. */
+  periodStart: string;
+  deductionPercent: number;
+  applied: boolean;
+  notes: string | null;
+}

@@ -5,6 +5,9 @@ import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
 import {
+  LeavePeriodType,
+  ReceptionistLeaveDeductionRequest,
+  ReceptionistLeaveReport,
   ReceptionistListItem,
   ReceptionistPayment,
   ReceptionistPaymentRequest,
@@ -94,5 +97,24 @@ export class ReceptionistService {
         params: this.params({ from, to, branch })
       })
       .pipe(map(r => r.data));
+  }
+
+  /* ------------------------------------------------------ leave & deduction */
+
+  leaveReport(
+    periodType: LeavePeriodType,
+    date: string,
+    branch?: string | null
+  ): Observable<ReceptionistLeaveReport> {
+    return this.http
+      .get<ApiResponse<ReceptionistLeaveReport>>(`${this.base}/leave-report`, {
+        params: this.params({ periodType, date, branch })
+      })
+      .pipe(map(r => r.data));
+  }
+
+  /** Sets the deduction percentage/applied flag for one receptionist's period. Administrator only. */
+  setLeaveDeduction(request: ReceptionistLeaveDeductionRequest): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.base}/leave-deduction`, request);
   }
 }
