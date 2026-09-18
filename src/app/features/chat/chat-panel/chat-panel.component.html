@@ -18,9 +18,14 @@
           <span class="chat__header-title">
             <strong>
               {{ threadTitle() }}
-              @if (threadOnline()) {
-                <span class="chat__online-label" [class.chat__online-label--away]="threadAway()">
-                  {{ threadAway() ? 'Away' : 'Online' }}
+              @if (threadIsDirect() && threadStatusLabel()) {
+                <span
+                  class="chat__online-label"
+                  [class.chat__online-label--away]="threadStatusLabel() === 'Away'"
+                  [class.chat__online-label--incall]="threadInCall()"
+                  [class.chat__online-label--typing]="threadTyping()"
+                  [class.chat__online-label--offline]="!threadOnline() && !threadTyping()">
+                  {{ threadStatusLabel() }}
                 </span>
               }
             </strong>
@@ -197,7 +202,7 @@
             class="chat__input"
             placeholder="Type a message…"
             [ngModel]="messageInput()"
-            (ngModelChange)="messageInput.set($event)"
+            (ngModelChange)="messageInput.set($event); notifyTyping()"
             [ngModelOptions]="{ standalone: true }"
             (keyup.enter)="sendMessage()"
             [disabled]="sending()" />

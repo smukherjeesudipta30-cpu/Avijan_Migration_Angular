@@ -186,6 +186,11 @@
     background: #f59e0b;
   }
 
+  /* On a call right now — a distinct blue so "busy" reads apart from online/away. */
+  &--incall {
+    background: #6366f1;
+  }
+
   /* No live connection at all — a cross rather than just omitting the dot,
      so "definitely not reachable right now" reads at a glance the same way
      the other two states do, instead of looking like the marker forgot to render. */
@@ -227,6 +232,34 @@
       background: #f59e0b;
     }
   }
+
+  /* On a call — matches the blue in-call dot. */
+  &--incall {
+    color: #6366f1;
+
+    &::before {
+      background: #6366f1;
+    }
+  }
+
+  /* Typing — same green as online, but the label reads "typing…"; the dot pulses. */
+  &--typing::before {
+    animation: chat-typing-pulse 1s ease-in-out infinite;
+  }
+
+  /* Offline: a muted "last seen …" line, no coloured dot. */
+  &--offline {
+    color: var(--app-text-muted);
+
+    &::before {
+      background: var(--app-text-muted);
+    }
+  }
+}
+
+@keyframes chat-typing-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 
 .chat__avatar {

@@ -138,6 +138,69 @@ export class ChatPanelComponent {
     return this.chat.isAway(other?.email);
   });
 
+  /** Same "Direct only" rule — whether the other person is on a call right now. */
+  readonly threadInCall = computed(() => {
+    const c = this.activeConversation();
+    if (!c || c.type !== 'Direct') return false;
+
+    const me = this.auth.user()?.email;
+    const other = c.participants.find(p => p.email !== me);
+    return this.chat.isInCall(other?.email);
+  });
+
+  /** Set to a conversation id while the other side is typing there; lapses on its own. */
+  readonly typingConversationId = signal<number | null>(null);
+  private typingClearTimer: ReturnType<typeof setTimeout> | null = null;
+
+  readonly threadTyping = computed(() =>
+    this.threadIsDirect() && this.typingConversationId() === this.activeConversationId());
+
+  /** ISO last-seen for the other person, shown only when they are offline. */
+  readonly threadLastSeen = computed(() => {
+    const c = this.activeConversation();
+    if (!c || c.type !== 'Direct') return null;
+
+    const me = this.auth.user()?.email;
+    const other = c.participants.find(p => p.email !== me);
+    if (this.chat.isOnline(other?.email)) return null;
+    return this.chat.lastSeen(other?.email);
+  });
+
+  /** The single status line under a direct thread's name, in order of what's most useful to show. */
+  readonly threadStatusLabel = computed<string>(() => {
+    if (!this.threadIsDirect()) return '';
+    if (this.threadTyping()) return 'typing…';
+    if (this.threadInCall()) return 'In call';
+    if (this.threadOnline()) return this.threadAway() ? 'Away' : 'Online';
+
+    const seen = this.threadLastSeen();
+    return seen ? `last seen ${this.formatLastSeen(seen)}` : 'Offline';
+  });
+
+  private formatLastSeen(iso: string): string {
+    const then = new Date(iso);
+    const mins = Math.floor((Date.now() - then.getTime()) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins} min ago`;
+
+    const sameDay = then.toDateString() === new Date().toDateString();
+    const time = then.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return sameDay ? `today at ${time}` : `${then.toLocaleDateString()} ${time}`;
+  }
+
+  /** Called as the viewer types, to tell the other end. Throttled so it is not one call per keystroke. */
+  private lastTypingSentAt = 0;
+  notifyTyping(): void {
+    const other = this.threadOther();
+    const conversationId = this.activeConversationId();
+    if (!other || conversationId === null) return;
+
+    const now = Date.now();
+    if (now - this.lastTypingSentAt < 2500) return;
+    this.lastTypingSentAt = now;
+    this.chat.sendTyping(other.email, conversationId);
+  }
+
   readonly threadIsDirect = computed(() => this.activeConversation()?.type === 'Direct');
 
   private threadOther(): { email: string; name: string } | null {
@@ -208,6 +271,20 @@ export class ChatPanelComponent {
 
       this.messages.update(list =>
         list.map(m => (m.isMine && m.id <= read.lastReadMessageId ? { ...m, isSeen: true } : m)));
+    });
+
+    this.chat.onTyping.pipe(takeUntilDestroyed(destroyRef)).subscribe(({ fromEmail, conversationId }) => {
+      // Only the thread currently open, and only the other person — never echo
+      // the viewer's own typing back at them.
+      if (conversationId !== this.activeConversationId()) return;
+      const me = this.auth.user()?.email;
+      if (fromEmail === me) return;
+
+      this.typingConversationId.set(conversationId);
+      if (this.typingClearTimer) clearTimeout(this.typingClearTimer);
+      // A typing ping has no matching "stopped"; it simply lapses if none
+      // arrives within a few seconds, which every keystroke renews.
+      this.typingClearTimer = setTimeout(() => this.typingConversationId.set(null), 4000);
     });
 
     this.chat.onGuestInboxChanged.pipe(takeUntilDestroyed(destroyRef)).subscribe(() => {
@@ -400,6 +477,9 @@ export class ChatPanelComponent {
     this.chat.directory().subscribe({
       next: rows => {
         this.directory.set(rows);
+        // Seed last-seen so an offline contact reads "last seen …" straight
+        // away, before any live presence event has had to arrive.
+        this.chat.seedLastSeen(rows);
         this.directoryLoading.set(false);
       },
       error: () => this.directoryLoading.set(false)
@@ -465,12 +545,12 @@ export class ChatPanelComponent {
     return c.lastMessageOn;
   }
 
-  presenceStatus(email: string | null | undefined): 'online' | 'away' | 'offline' {
+  presenceStatus(email: string | null | undefined): 'online' | 'away' | 'incall' | 'offline' {
     return this.chat.presenceStatus(email);
   }
 
   /** Presence only means anything for a Direct chat — a Group or a Guest thread has no single "them". */
-  conversationPresence(c: ChatConversationSummary): 'online' | 'away' | 'offline' {
+  conversationPresence(c: ChatConversationSummary): 'online' | 'away' | 'incall' | 'offline' {
     if (c.type !== 'Direct') return 'offline';
     const me = this.auth.user()?.email;
     const other = c.participants.find(p => p.email !== me);

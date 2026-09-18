@@ -71,6 +71,17 @@ export class ChatService {
   /** Always a subset of {@link onlineEmails} — connected, but idle or on a hidden tab. */
   readonly awayEmails = signal<ReadonlySet<string>>(new Set());
 
+  /** Always a subset of {@link onlineEmails} — currently on a call, so worth not interrupting. */
+  readonly inCallEmails = signal<ReadonlySet<string>>(new Set());
+
+  /** Email → when that person was last seen (ISO string), for offline contacts. */
+  readonly lastSeenByEmail = signal<ReadonlyMap<string, string>>(new Map());
+
+  private readonly typing$ = new Subject<{ fromEmail: string; conversationId: number }>();
+
+  /** Fires when the other side of a conversation is typing. */
+  readonly onTyping: Observable<{ fromEmail: string; conversationId: number }> = this.typing$.asObservable();
+
   /** How long with no activity, or with the tab hidden, before this browser reports itself away. */
   private static readonly AWAY_AFTER_MS = 2 * 60 * 1000;
 
@@ -131,9 +142,9 @@ export class ChatService {
       this.callEnded$.next({ fromEmail, callId });
     });
 
-    // 'online' | 'away' | 'offline' — a plain online/offline bool stopped being
-    // enough once away became a third state rather than a variant of online.
-    connection.on('PresenceChanged', (email: string, status: 'online' | 'away' | 'offline') => {
+    // 'online' | 'away' | 'incall' | 'offline'. Away and incall are courtesy
+    // states on top of online; offline drops the connection entirely.
+    connection.on('PresenceChanged', (email: string, status: 'online' | 'away' | 'incall' | 'offline', lastSeenOn?: string | null) => {
       this.onlineEmails.update(current => {
         const next = new Set(current);
         if (status === 'offline') next.delete(email); else next.add(email);
@@ -145,6 +156,24 @@ export class ChatService {
         if (status === 'away') next.add(email); else next.delete(email);
         return next;
       });
+
+      this.inCallEmails.update(current => {
+        const next = new Set(current);
+        if (status === 'incall') next.add(email); else next.delete(email);
+        return next;
+      });
+
+      if (status === 'offline' && lastSeenOn) {
+        this.lastSeenByEmail.update(current => {
+          const next = new Map(current);
+          next.set(email, lastSeenOn);
+          return next;
+        });
+      }
+    });
+
+    connection.on('Typing', (fromEmail: string, conversationId: number) => {
+      this.typing$.next({ fromEmail, conversationId });
     });
 
     // A fresh connection has missed whatever presence changes happened before
@@ -280,6 +309,7 @@ export class ChatService {
         next: response => {
           this.onlineEmails.set(new Set(response.data.onlineEmails));
           this.awayEmails.set(new Set(response.data.awayEmails));
+          this.inCallEmails.set(new Set(response.data.inCallEmails ?? []));
         },
         error: () => { /* presence is a courtesy; nothing to recover here */ }
       });
@@ -294,9 +324,43 @@ export class ChatService {
     return !!email && this.awayEmails().has(email);
   }
 
-  presenceStatus(email: string | null | undefined): 'online' | 'away' | 'offline' {
+  /** Only meaningful alongside {@link isOnline} — someone offline is never "in call". */
+  isInCall(email: string | null | undefined): boolean {
+    return !!email && this.inCallEmails().has(email);
+  }
+
+  /** When this person was last seen, ISO string, for an offline contact — null if never recorded. */
+  lastSeen(email: string | null | undefined): string | null {
+    return (email && this.lastSeenByEmail().get(email)) || null;
+  }
+
+  presenceStatus(email: string | null | undefined): 'online' | 'away' | 'incall' | 'offline' {
     if (!this.isOnline(email)) return 'offline';
+    // In-call wins over away: "busy on a call" is the more useful thing to show
+    // someone deciding whether to interrupt than "idle".
+    if (this.isInCall(email)) return 'incall';
     return this.isAway(email) ? 'away' : 'online';
+  }
+
+  /** Seeds last-seen times from directory entries, so an offline contact reads "last seen …" before any live event. */
+  seedLastSeen(entries: { email: string; lastSeenOn?: string }[]): void {
+    this.lastSeenByEmail.update(current => {
+      const next = new Map(current);
+      for (const e of entries) {
+        if (e.lastSeenOn && !next.has(e.email)) next.set(e.email, e.lastSeenOn);
+      }
+      return next;
+    });
+  }
+
+  /** Tells the other end of a direct chat that this user is typing. Best-effort. */
+  sendTyping(targetEmail: string, conversationId: number): void {
+    this.connection?.invoke('Typing', targetEmail, conversationId).catch(() => {});
+  }
+
+  /** Broadcasts to everyone whether this user is on a call, so a third party sees them as busy. */
+  setCallStatus(inCall: boolean): void {
+    this.connection?.invoke('SetCallStatus', inCall).catch(() => {});
   }
 
   disconnect(): void {
@@ -304,6 +368,7 @@ export class ChatService {
     this.connection = null;
     this.onlineEmails.set(new Set());
     this.awayEmails.set(new Set());
+    this.inCallEmails.set(new Set());
     this.activityCleanup?.();
     this.activityCleanup = null;
     this.localAway = false;

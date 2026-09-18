@@ -352,6 +352,8 @@ export class CallService implements OnDestroy {
           this.connectedAt = Date.now();
           this.startDurationTimer();
           void this.applyAudioSink(this.speakerOn());
+          // Let everyone's presence show this person as busy for the call's life.
+          this.chat.setCallStatus(true);
         }
       }
       if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
@@ -439,6 +441,10 @@ export class CallService implements OnDestroy {
 
   private endLocally(): void {
     this.logCallOutcome();
+
+    // Clear the busy state whether or not the call ever connected, so a missed
+    // or declined call never leaves someone stuck showing as "in call".
+    this.chat.setCallStatus(false);
 
     this.clearRingTimer();
     this.teardown();

@@ -5,6 +5,8 @@ export interface ChatDirectoryEntry {
   email: string;
   displayName: string;
   role: string;
+  /** When they were last seen on chat (ISO). Seeds "last seen …" before any live update arrives. */
+  lastSeenOn?: string;
 }
 
 export interface ChatMessage {
@@ -69,6 +71,7 @@ export interface GuestStarted {
 export interface ChatPresenceSnapshot {
   onlineEmails: string[];
   awayEmails: string[];
+  inCallEmails: string[];
 }
 
 export type CallKind = 'audio' | 'video';
