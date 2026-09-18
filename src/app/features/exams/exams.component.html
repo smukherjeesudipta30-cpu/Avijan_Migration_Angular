@@ -157,6 +157,16 @@
                   pTooltip="Questions"
                   tooltipPosition="top"
                   (onClick)="openQuestions(row)" />
+                <!-- Offline theory is written on paper and marked by hand here,
+                     the same sheet a practical uses. Only offline-scheduled
+                     students appear on it. -->
+                <p-button
+                  icon="pi pi-pencil"
+                  severity="warn"
+                  [text]="true"
+                  pTooltip="Enter offline theory marks"
+                  tooltipPosition="top"
+                  (onClick)="openPractical(row)" />
               } @else {
                 <p-button
                   icon="pi pi-pencil"
@@ -620,6 +630,7 @@
           <th>Student</th>
           <th style="width: 15rem">Sits on</th>
           @if (paper.paperType === 'Theory') {
+            <th style="width: 9rem">Mode</th>
             <th style="width: 8rem">Code</th>
           }
           <th style="width: 7rem">Status</th>
@@ -682,12 +693,26 @@
 
           @if (paper.paperType === 'Theory') {
             <td>
+              <p-select
+                [options]="scheduleModes"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="rowMode(row.registrationId)"
+                (ngModelChange)="setRowMode(row.registrationId, $event)"
+                [ngModelOptions]="{ standalone: true }"
+                [disabled]="row.hasAttempted"
+                appendTo="body"
+                styleClass="ex__wide" />
+            </td>
+            <td>
               @if (row.accessCode) {
                 @if (codesVisible()) {
                   <code class="ex__code">{{ row.accessCode }}</code>
                 } @else {
                   <span class="app-muted ex__sub">&bull;&bull;&bull;&bull;&bull;&bull;</span>
                 }
+              } @else if (rowMode(row.registrationId) === 'Offline') {
+                <span class="app-muted ex__sub" pTooltip="Offline papers are marked by hand, no code">on paper</span>
               } @else {
                 <span class="app-muted ex__sub">&mdash;</span>
               }

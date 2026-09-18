@@ -124,12 +124,17 @@ export interface ExamScheduleRow {
    * date cannot be set for them until then.
    */
   theorySubmittedOn?: string;
+
+  /** How the theory paper is sat — 'Online' or 'Offline'. Always 'Online' for a practical. */
+  mode: 'Online' | 'Offline';
 }
 
 export interface ExamScheduleSaveRequest {
   examId: number;
   registrationId: string;
   scheduledOn: string;
+  /** 'Online' (app) or 'Offline' (paper, hand-marked). Read only for a theory paper. */
+  mode: 'Online' | 'Offline';
 }
 
 export interface ExamScheduleBulkRequest {

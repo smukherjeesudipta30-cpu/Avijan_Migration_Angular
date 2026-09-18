@@ -32,18 +32,46 @@
       styleClass="rlv__wide" />
   </div>
 
-  <div class="rlv__field">
-    <label for="date">In</label>
-    <p-datePicker
-      inputId="date"
-      [ngModel]="date()"
-      (ngModelChange)="date.set($event)"
-      [ngModelOptions]="{ standalone: true }"
-      dateFormat="dd/mm/yy"
-      [showIcon]="true"
-      appendTo="body"
-      styleClass="rlv__wide" />
-  </div>
+  @if (!isCustom()) {
+    <div class="rlv__field">
+      <label for="date">In</label>
+      <p-datePicker
+        inputId="date"
+        [ngModel]="date()"
+        (ngModelChange)="date.set($event)"
+        [ngModelOptions]="{ standalone: true }"
+        dateFormat="dd/mm/yy"
+        [showIcon]="true"
+        appendTo="body"
+        styleClass="rlv__wide" />
+    </div>
+  } @else {
+    <div class="rlv__field">
+      <label for="from">From</label>
+      <p-datePicker
+        inputId="from"
+        [ngModel]="from()"
+        (ngModelChange)="from.set($event)"
+        [ngModelOptions]="{ standalone: true }"
+        dateFormat="dd/mm/yy"
+        [showIcon]="true"
+        appendTo="body"
+        styleClass="rlv__wide" />
+    </div>
+
+    <div class="rlv__field">
+      <label for="to">To</label>
+      <p-datePicker
+        inputId="to"
+        [ngModel]="to()"
+        (ngModelChange)="to.set($event)"
+        [ngModelOptions]="{ standalone: true }"
+        dateFormat="dd/mm/yy"
+        [showIcon]="true"
+        appendTo="body"
+        styleClass="rlv__wide" />
+    </div>
+  }
 
   <div class="rlv__field">
     <label for="branch">Branch</label>

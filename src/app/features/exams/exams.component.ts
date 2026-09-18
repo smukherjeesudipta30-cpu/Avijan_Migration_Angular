@@ -98,6 +98,11 @@ export class ExamsComponent {
     { label: 'Practical (marks entered here)', value: 'Practical' }
   ];
 
+  readonly scheduleModes: { label: string; value: 'Online' | 'Offline' }[] = [
+    { label: 'Online', value: 'Online' },
+    { label: 'Offline', value: 'Offline' }
+  ];
+
   /* ------------------------------------------------------ paper dialog */
   readonly paperDialog = signal(false);
   readonly editingId = signal<number | null>(null);
@@ -136,6 +141,9 @@ export class ExamsComponent {
 
   /** Working date per student, keyed by registration id. */
   readonly rowDates = signal<Record<string, Date | null>>({});
+
+  /** Working Online/Offline choice per student, keyed by registration id (theory only). */
+  readonly rowModes = signal<Record<string, 'Online' | 'Offline'>>({});
 
   /** The batch date at the head of the dialog. */
   readonly batchDate = signal<Date | null>(null);
@@ -459,10 +467,13 @@ export class ExamsComponent {
         this.scheduleRows.set(rows);
 
         const dates: Record<string, Date | null> = {};
+        const modes: Record<string, 'Online' | 'Offline'> = {};
         for (const row of rows) {
           dates[row.registrationId] = row.scheduledOn ? new Date(row.scheduledOn) : null;
+          modes[row.registrationId] = row.mode ?? 'Online';
         }
         this.rowDates.set(dates);
+        this.rowModes.set(modes);
 
         this.scheduleLoading.set(false);
       },
@@ -472,6 +483,14 @@ export class ExamsComponent {
 
   setRowDate(registrationId: string, value: Date | null): void {
     this.rowDates.update(current => ({ ...current, [registrationId]: value }));
+  }
+
+  setRowMode(registrationId: string, value: 'Online' | 'Offline'): void {
+    this.rowModes.update(current => ({ ...current, [registrationId]: value }));
+  }
+
+  rowMode(registrationId: string): 'Online' | 'Offline' {
+    return this.rowModes()[registrationId] ?? 'Online';
   }
 
   rowDate(registrationId: string): Date | null {
@@ -500,7 +519,8 @@ export class ExamsComponent {
       .saveSchedule({
         examId: paper.examId,
         registrationId: row.registrationId,
-        scheduledOn: this.toIsoLocal(when)
+        scheduledOn: this.toIsoLocal(when),
+        mode: paper.paperType === 'Theory' ? this.rowMode(row.registrationId) : 'Online'
       })
       .subscribe({
         next: response => {

@@ -33,8 +33,15 @@ class RingtonePlayer {
       const ctx = this.ctx;
       if (!ctx) return;
 
+      // A browser (and far more aggressively an Android WebView) suspends the
+      // AudioContext after the first tone or when focus is lost, which left the
+      // ring falling silent after a second or two while the call was still
+      // ringing. Re-resuming before every burst keeps it going; resume() on a
+      // running context is a no-op.
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
       const gain = ctx.createGain();
-      gain.gain.value = 0.05;
+      gain.gain.value = 0.09;
       gain.connect(ctx.destination);
 
       const now = ctx.currentTime;
@@ -48,8 +55,9 @@ class RingtonePlayer {
       }
     };
 
+    this.ctx.resume().catch(() => {});
     burst();
-    this.timer = setInterval(burst, 3000);
+    this.timer = setInterval(burst, 2000);
   }
 
   stop(): void {

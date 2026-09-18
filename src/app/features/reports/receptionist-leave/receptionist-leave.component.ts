@@ -20,7 +20,8 @@ import { downloadCsv, reportFileName } from '../report-utils';
 const PERIOD_OPTIONS: { label: string; value: LeavePeriodType }[] = [
   { label: 'Weekly', value: 'Weekly' },
   { label: 'Monthly', value: 'Monthly' },
-  { label: 'Yearly', value: 'Yearly' }
+  { label: 'Yearly', value: 'Yearly' },
+  { label: 'Custom range', value: 'Custom' }
 ];
 
 /**
@@ -65,6 +66,10 @@ export class ReceptionistLeaveComponent {
   readonly branch = signal<string | null>(null);
   readonly periodType = signal<LeavePeriodType>('Monthly');
   readonly date = signal<Date>(new Date());
+  readonly from = signal<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  readonly to = signal<Date>(new Date());
+
+  readonly isCustom = computed(() => this.periodType() === 'Custom');
 
   /** Only an Admin decides whether pay is actually docked; SuperAdmin passes every role check. */
   readonly canEdit = computed(() => this.auth.hasAnyRole(['Admin']));
@@ -85,7 +90,12 @@ export class ReceptionistLeaveComponent {
     this.loading.set(true);
 
     this.service
-      .leaveReport(this.periodType(), this.toIsoDate(this.date()), this.branch())
+      .leaveReport(
+        this.periodType(),
+        this.toIsoDate(this.date()),
+        this.branch(),
+        this.isCustom() ? this.toIsoDate(this.from()) : null,
+        this.isCustom() ? this.toIsoDate(this.to()) : null)
       .subscribe({
         next: report => {
           this.data.set(report);

@@ -88,7 +88,7 @@ export interface ReceptionistReport {
 
 /* ============================================== leave & salary deduction */
 
-export type LeavePeriodType = 'Weekly' | 'Monthly' | 'Yearly';
+export type LeavePeriodType = 'Weekly' | 'Monthly' | 'Yearly' | 'Custom';
 
 export interface ReceptionistLeaveReportLine {
   receptionistId: number;

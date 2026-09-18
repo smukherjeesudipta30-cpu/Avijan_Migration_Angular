@@ -104,11 +104,13 @@ export class ReceptionistService {
   leaveReport(
     periodType: LeavePeriodType,
     date: string,
-    branch?: string | null
+    branch?: string | null,
+    from?: string | null,
+    to?: string | null
   ): Observable<ReceptionistLeaveReport> {
     return this.http
       .get<ApiResponse<ReceptionistLeaveReport>>(`${this.base}/leave-report`, {
-        params: this.params({ periodType, date, branch })
+        params: this.params({ periodType, date, branch, from, to })
       })
       .pipe(map(r => r.data));
   }
