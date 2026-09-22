@@ -43,8 +43,6 @@ export interface ReceptionistPaymentRequest {
   paidOn: string | null;
   /** The standard monthly pay — changes only when deliberately changed here. */
   amount: number;
-  /** Extra-shift bonus for the month, kept apart so it never inflates next month's base rate. */
-  extraShiftBonus: number;
   notes: string | null;
 }
 
@@ -129,17 +127,24 @@ export interface ReceptionistLeaveDeductionRequest {
 
 export interface ExtraShiftDay {
   date: string;
-  absentReceptionistName: string;
+  otherReceptionistName: string;
   branch?: string;
 }
 
-/** A suggested bonus for covering a colleague's shift — reviewed and saved by an Admin, never applied on its own. */
+/**
+ * A net transfer for one receptionist's upcoming payment — computed by the
+ * server alone, never entered or edited. A day they covered a colleague adds
+ * one shift at their own rate; a day a colleague covered THEM deducts one,
+ * since they did not work it. `netBonus` can be negative.
+ */
 export interface ExtraShiftBonus {
   receptionistId: number;
   perShiftRate: number;
   lastMonthShifts: number;
   lastMonthAmount: number;
-  coveredShiftCount: number;
-  suggestedBonus: number;
-  days: ExtraShiftDay[];
+  coveredForOthersCount: number;
+  coveredByOthersCount: number;
+  netBonus: number;
+  coveredForOthers: ExtraShiftDay[];
+  coveredByOthers: ExtraShiftDay[];
 }

@@ -254,14 +254,6 @@ export const routes: Routes = [
             .then(m => m.ReceptionistReportComponent)
       },
       {
-        path: 'reports/receptionist-leave',
-        title: 'Receptionist leave & deduction · Avijan',
-        canActivate: [roleGuard('Admin', 'Editor')],
-        loadComponent: () =>
-          import('./features/reports/receptionist-leave/receptionist-leave.component')
-            .then(m => m.ReceptionistLeaveComponent)
-      },
-      {
         path: 'reports/branch',
         title: 'Branch performance · Avijan',
         canActivate: [roleGuard('Admin', 'Editor')],

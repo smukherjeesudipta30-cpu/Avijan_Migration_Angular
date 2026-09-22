@@ -73,7 +73,6 @@ export const MENU: MenuSection[] = [
       { label: 'Enquiry Follow-up', icon: 'pi pi-phone', route: '/reports/enquiries', roles: ['Admin', 'Editor', 'Receptionist'] },
       { label: 'Branch Performance', icon: 'pi pi-building', route: '/reports/branch', roles: ['Admin', 'Editor'] },
       { label: 'Receptionist Pay', icon: 'pi pi-user', route: '/reports/receptionists', roles: ['Admin', 'Editor'] },
-      { label: 'Receptionist Leave & Deduction', icon: 'pi pi-calendar-minus', route: '/reports/receptionist-leave', roles: ['Admin', 'Editor'] },
       { label: 'New Admissions', icon: 'pi pi-user-plus', route: '/reports/admissions', roles: ['Admin', 'Editor'] },
       { label: 'Outstanding Dues', icon: 'pi pi-exclamation-circle', route: '/reports/dues', roles: ['Admin', 'Editor', 'Receptionist'] },
       { label: 'Pending Payments', icon: 'pi pi-wallet', route: '/reports/pending-payments', roles: ['Admin', 'Receptionist'] },

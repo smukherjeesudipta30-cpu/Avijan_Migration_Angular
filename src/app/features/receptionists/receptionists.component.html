@@ -268,25 +268,22 @@
         </div>
 
         @if (bonusSuggestion(); as bonus) {
+          <!-- Computed by the server, not entered here — a receipt of the net
+               transfer that will be applied automatically, not a field anyone
+               fills in. Can be negative: a day someone else covered for this
+               person deducts as much as a day they covered for someone else adds. -->
           <div class="rec__pay-field rec__pay-field--bonus">
-            <label for="payBonus">
-              Extra-shift bonus
-              @if (bonus.coveredShiftCount > 0) {
-                <span class="app-muted" [pTooltip]="bonusTooltip(bonus)">
-                  ({{ bonus.coveredShiftCount }} shift(s) at {{ money(bonus.perShiftRate) }} each — review before saving)
+            <label>Extra-shift adjustment</label>
+            <div class="rec__pay-bonus-readout" [pTooltip]="bonusTooltip(bonus)">
+              @if (bonus.netBonus !== 0) {
+                <strong [class.rec__pay-bonus--negative]="bonus.netBonus < 0">{{ money(bonus.netBonus) }}</strong>
+                <span class="app-muted">
+                  ({{ bonus.coveredForOthersCount }} covered / {{ bonus.coveredByOthersCount }} was covered, at {{ money(bonus.perShiftRate) }} per shift)
                 </span>
+              } @else {
+                <span class="app-muted">None this month</span>
               }
-            </label>
-            <p-inputNumber
-              inputId="payBonus"
-              [ngModel]="payBonus()"
-              (ngModelChange)="payBonus.set($event)"
-              [ngModelOptions]="{ standalone: true }"
-              mode="currency"
-              currency="INR"
-              locale="en-IN"
-              [min]="0"
-              [maxFractionDigits]="2" />
+            </div>
           </div>
         } @else if (bonusLoading()) {
           <div class="rec__pay-field"><span class="app-muted">Checking for covered shifts…</span></div>
