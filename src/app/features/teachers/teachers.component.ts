@@ -339,8 +339,8 @@ export class TeachersComponent {
 
   /* ------------------------------ payments made to the teacher */
 
-  /** Only an administrator may pay a teacher. */
-  readonly canPay = computed(() => this.auth.hasAnyRole(['Admin']));
+  /** Receptionist or Admin may pay a teacher, same as recording a fee payment. */
+  readonly canPay = computed(() => this.auth.hasAnyRole(['Admin', 'Receptionist']));
 
   readonly account = signal<TeacherAccount | null>(null);
   readonly payments = signal<TeacherPayment[]>([]);
