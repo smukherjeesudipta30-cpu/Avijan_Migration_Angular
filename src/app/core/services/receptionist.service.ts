@@ -10,6 +10,7 @@ import {
   ReceptionistLeaveDeductionRequest,
   ReceptionistLeaveReport,
   ReceptionistListItem,
+  ReceptionistMonthlyPayRequest,
   ReceptionistPayment,
   ReceptionistPaymentRequest,
   ReceptionistReport,
@@ -64,6 +65,12 @@ export class ReceptionistService {
 
   delete(id: number): Observable<ApiResponse<boolean>> {
     return this.http.delete<ApiResponse<boolean>>(`${this.base}/${id}`);
+  }
+
+  /** Sets the current standard monthly pay on the fees master screen. Administrator only. */
+  updateMonthlyPay(id: number, monthlyPay: number): Observable<ApiResponse<boolean>> {
+    const request: ReceptionistMonthlyPayRequest = { monthlyPay };
+    return this.http.put<ApiResponse<boolean>>(`${this.base}/${id}/monthly-pay`, request);
   }
 
   /* ----------------------------------------------------------- payments */

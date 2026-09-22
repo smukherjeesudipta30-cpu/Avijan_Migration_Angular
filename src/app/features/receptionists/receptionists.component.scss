@@ -107,6 +107,19 @@
 
 .rec__actions { display: flex; gap: 0.1rem; }
 
+.rec__fee-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+:host ::ng-deep .rec__fee-input {
+  width: 8rem;
+
+  input { text-align: right; }
+}
+
 .rec__empty {
   padding: 1.75rem 0.5rem;
   text-align: center;

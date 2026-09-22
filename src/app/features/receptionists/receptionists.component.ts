@@ -266,6 +266,41 @@ export class ReceptionistsComponent {
     });
   }
 
+  /**
+   * The fees master field: the receptionist's own row is the editable input
+   * (bound in the template), so all this holds is which row is mid-save, to
+   * disable that row's input and show the spinner while the request is out.
+   */
+  readonly savingMonthlyPayId = signal<number | null>(null);
+
+  saveMonthlyPay(person: ReceptionistListItem): void {
+    const value = person.monthlyPay ?? 0;
+    if (value < 0) return;
+
+    this.savingMonthlyPayId.set(person.id);
+
+    this.service.updateMonthlyPay(person.id, value).subscribe({
+      next: () => {
+        this.savingMonthlyPayId.set(null);
+        this.messages.add({
+          severity: 'success',
+          summary: 'Monthly pay updated',
+          detail: `${this.money(value)} for ${person.name}.`,
+          life: 3000
+        });
+      },
+      error: () => {
+        this.savingMonthlyPayId.set(null);
+        this.messages.add({
+          severity: 'error',
+          summary: 'Could not save',
+          detail: 'The monthly pay was not updated. Try again.',
+          life: 5000
+        });
+      }
+    });
+  }
+
   /* ------------------------------------------------------------ payments */
   readonly payVisible = signal(false);
   readonly payFor = signal<ReceptionistListItem | null>(null);
@@ -302,7 +337,9 @@ export class ReceptionistsComponent {
     this.payments.set([]);
     this.payMonth.set(new Date());
     this.payDate.set(new Date());
-    this.payAmount.set(null);
+    // The fees master figure is the default; loadPayments() below falls back
+    // to last month's actual amount only when no master figure is set yet.
+    this.payAmount.set(person.monthlyPay > 0 ? person.monthlyPay : null);
     this.bonusSuggestion.set(null);
     this.payNotes.set('');
     this.loadPayments();
@@ -315,10 +352,12 @@ export class ReceptionistsComponent {
     const parts: string[] = [];
 
     if (bonus.coveredForOthers.length) {
-      parts.push('Covered for: ' + bonus.coveredForOthers.map(d => `${d.otherReceptionistName} on ${fmt(d.date)}`).join(', '));
+      parts.push('Covered for: ' + bonus.coveredForOthers
+        .map(d => `${d.otherReceptionistName} on ${fmt(d.date)} (${d.hours}h, ${this.money(d.amount)})`).join(', '));
     }
     if (bonus.coveredByOthers.length) {
-      parts.push('Covered by: ' + bonus.coveredByOthers.map(d => `${d.otherReceptionistName} on ${fmt(d.date)}`).join(', '));
+      parts.push('Covered by: ' + bonus.coveredByOthers
+        .map(d => `${d.otherReceptionistName} on ${fmt(d.date)} (${d.hours}h, ${this.money(d.amount)})`).join(', '));
     }
 
     return parts.join(' · ');
@@ -355,6 +394,13 @@ export class ReceptionistsComponent {
       next: rows => {
         this.payments.set(rows);
         this.paymentsLoading.set(false);
+
+        // Default to last month's own pay — the "payment structure" only
+        // changes when the Admin deliberately types a different figure here;
+        // left alone, the same amount simply carries forward.
+        if (this.payAmount() === null && rows.length > 0) {
+          this.payAmount.set(rows[0].amount);
+        }
       },
       error: () => this.paymentsLoading.set(false)
     });

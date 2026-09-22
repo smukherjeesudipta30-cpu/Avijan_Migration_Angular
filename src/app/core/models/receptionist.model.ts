@@ -14,10 +14,20 @@ export interface ReceptionistListItem {
   branch?: string;
   isActive: boolean;
 
+  /**
+   * The current standard monthly pay, set on the fees master screen — the
+   * default a new month's payment starts from, not a payment itself.
+   */
+  monthlyPay: number;
+
   /** How many months have been paid, and the total. */
   paymentCount: number;
   totalPaid: number;
   lastPaidMonth?: string;
+}
+
+export interface ReceptionistMonthlyPayRequest {
+  monthlyPay: number;
 }
 
 export interface ReceptionistSaveRequest {
@@ -129,19 +139,25 @@ export interface ExtraShiftDay {
   date: string;
   otherReceptionistName: string;
   branch?: string;
+  /** Actual duration of that day's shift, from Staff Rota's shift definitions. */
+  hours: number;
+  /** Valued at this receptionist's own hourly rate — see {@link ExtraShiftBonus.hourlyRate}. */
+  amount: number;
 }
 
 /**
  * A net transfer for one receptionist's upcoming payment — computed by the
  * server alone, never entered or edited. A day they covered a colleague adds
- * one shift at their own rate; a day a colleague covered THEM deducts one,
- * since they did not work it. `netBonus` can be negative.
+ * that day's actual rostered hours at their own hourly rate; a day a
+ * colleague covered THEM deducts their own hours for that day, since they
+ * did not work it. `netBonus` can be negative.
  */
 export interface ExtraShiftBonus {
   receptionistId: number;
-  perShiftRate: number;
-  lastMonthShifts: number;
-  lastMonthAmount: number;
+  hourlyRate: number;
+  lastCycleHours: number;
+  /** The receptionist's standard monthly pay (fees master) the hourly rate was computed from. */
+  standardPay: number;
   coveredForOthersCount: number;
   coveredByOthersCount: number;
   netBonus: number;
