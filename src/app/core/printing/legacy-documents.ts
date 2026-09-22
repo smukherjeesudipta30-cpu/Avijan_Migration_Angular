@@ -451,26 +451,7 @@ export function certificateHtml(c: StudentCertificate): string {
     color: #111;
   }
 
-  /* Duplicate marking. Sits over the artwork, angled and semi-transparent, so
-     it cannot be mistaken for part of the design and cannot be cropped off
-     without taking the certificate body with it. */
-  .dup-watermark {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(-28deg);
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 96px;
-    font-weight: bold;
-    letter-spacing: 12px;
-    color: rgba(190, 30, 45, 0.22);
-    border: 6px solid rgba(190, 30, 45, 0.22);
-    padding: 10px 34px;
-    white-space: nowrap;
-    pointer-events: none;
-  }
-
-  /* The copy number, stated plainly rather than only implied by the mark. */
+  /* The copy number, stated plainly in the corner — no watermark over the artwork. */
   .dup-stamp {
     position: absolute;
     top: 18px;
@@ -515,7 +496,6 @@ export function certificateHtml(c: StudentCertificate): string {
     </div>
 
     ${c.isDuplicate ? `
-    <div class="dup-watermark">DUPLICATE COPY</div>
     <div class="dup-stamp">
       DUPLICATE COPY &mdash; No. ${c.issueNo}
       <span>Copy ${c.issueNo} of ${c.issueNo} issued to date</span>
@@ -718,16 +698,6 @@ export function admitCardHtml(card: AdmitCard): string {
     text-align: center;
   }
 
-  .cut {
-    width: 950px;
-    margin: 26px auto;
-    border-top: 2px dashed #666;
-    text-align: center;
-    color: #666;
-    font-size: 13px;
-  }
-  .cut span { position: relative; top: -10px; background: #f5f5f5; padding: 0 10px; }
-
   .print-btn {
     display: block;
     width: 200px;
@@ -747,12 +717,9 @@ export function admitCardHtml(card: AdmitCard): string {
     body { background: #fff; padding: 0; }
     .print-btn { display: none; }
     .admit-card { box-shadow: none; }
-    .cut span { background: #fff; }
   }
 </style></head>
 <body>
-  ${body}
-  <div class="cut"><span>&#9986; cut here</span></div>
   ${body}
   <button class="print-btn" onclick="window.print()">Print / Save PDF</button>
 </body></html>`;
