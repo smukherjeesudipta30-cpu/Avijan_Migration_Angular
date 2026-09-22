@@ -57,6 +57,11 @@ export class FeeService {
     return this.http.put<ApiResponse<boolean>>(`${this.base}/payments/${id}`, request);
   }
 
+  /** Removes a payment entered by mistake or duplicated — Receptionist or Admin. */
+  delete(id: number): Observable<ApiResponse<boolean>> {
+    return this.http.delete<ApiResponse<boolean>>(`${this.base}/payments/${id}`);
+  }
+
   receipt(id: number): Observable<FeeReceipt> {
     return this.http
       .get<ApiResponse<FeeReceipt>>(`${this.base}/payments/${id}/receipt`)

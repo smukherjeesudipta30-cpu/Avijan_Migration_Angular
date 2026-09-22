@@ -363,6 +363,16 @@
                   : 'No usable mobile number on this student'"
                 tooltipPosition="top"
                 (onClick)="whatsAppReceipt(payment)" />
+
+              @if (canDeletePayment()) {
+                <p-button
+                  icon="pi pi-trash"
+                  severity="danger"
+                  [text]="true"
+                  pTooltip="Remove this payment"
+                  tooltipPosition="top"
+                  (onClick)="removePayment(payment)" />
+              }
             </div>
           </td>
         </tr>

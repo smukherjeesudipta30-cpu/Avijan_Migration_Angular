@@ -29,6 +29,7 @@ import {
   openPendingDocumentWindow,
   writeDocumentWindow
 } from '../../core/printing/legacy-documents';
+import { AuthService } from '../../core/services/auth.service';
 import { FeeService } from '../../core/services/fee.service';
 import { AdmissionDueDialogComponent } from '../../shared/admission-due/admission-due-dialog.component';
 
@@ -67,6 +68,10 @@ export class FeesComponent {
   private readonly fees = inject(FeeService);
   private readonly messages = inject(MessageService);
   private readonly confirm = inject(ConfirmationService);
+  private readonly auth = inject(AuthService);
+
+  /** Whoever can enter or correct a fee payment can also delete a mistaken one — Receptionist or Admin. */
+  readonly canDeletePayment = computed(() => this.auth.hasAnyRole(['Admin', 'Receptionist']));
 
   readonly registrationId = signal('');
   readonly bill = signal<StudentFeeBill | null>(null);
@@ -349,6 +354,31 @@ export class FeesComponent {
     });
 
     document.getElementById('fee-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /** Removes a payment entered by mistake or duplicated — see {@link canDeletePayment}. */
+  removePayment(payment: FeePayment): void {
+    this.confirm.confirm({
+      header: 'Remove payment',
+      message:
+        `Remove the ${payment.billNo ?? 'unbilled'} payment of ` +
+        `${payment.installment ?? 0} recorded on ` +
+        `${payment.feeDate ? new Date(payment.feeDate).toLocaleDateString('en-IN') : 'an unknown date'}? ` +
+        "This cannot be undone, and the student's due recalculates from what remains.",
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Remove',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.fees.delete(payment.id).subscribe({
+          next: () => {
+            this.messages.add({ severity: 'success', summary: 'Payment removed', life: 4000 });
+            if (this.editingPaymentId() === payment.id) this.resetForm();
+            this.loadPayments();
+          }
+        });
+      }
+    });
   }
 
   resetForm(): void {
