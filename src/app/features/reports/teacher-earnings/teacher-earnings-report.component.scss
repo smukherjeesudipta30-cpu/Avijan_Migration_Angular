@@ -58,6 +58,17 @@
   input { width: 1.1rem; height: 1.1rem; }
 }
 
+.rpt__payroll-cycle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+}
+
+:host ::ng-deep .rpt__payroll-cycle-input { width: 5.5rem; }
+
 .rpt__payroll-readonly {
   margin: 0;
   font-size: 0.9rem;

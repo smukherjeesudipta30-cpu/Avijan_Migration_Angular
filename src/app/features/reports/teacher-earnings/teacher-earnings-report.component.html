@@ -25,11 +25,34 @@
           Last changed {{ ps.modifiedOn | date: 'd MMM y, h:mm a' }}{{ ps.modifiedBy ? ' by ' + ps.modifiedBy : '' }}.
         }
       </small>
+
+      <div class="rpt__payroll-cycle">
+        <label for="payCycleStartDay">Receptionist pay cycle starts on the</label>
+        <p-inputNumber
+          inputId="payCycleStartDay"
+          [ngModel]="payCycleStartDayDraft() ?? ps.payCycleStartDay"
+          (ngModelChange)="payCycleStartDayDraft.set($event)"
+          [ngModelOptions]="{ standalone: true }"
+          [min]="1"
+          [max]="28"
+          [showButtons]="true"
+          [disabled]="savingPayrollSettings()"
+          styleClass="rpt__payroll-cycle-input" />
+        <span class="app-muted">of each month (currently the {{ ps.payCycleStartDay }}th to the {{ ps.payCycleStartDay }}th)</span>
+        <p-button
+          label="Save"
+          size="small"
+          severity="secondary"
+          [outlined]="true"
+          [loading]="savingPayrollSettings()"
+          [disabled]="payCycleStartDayDraft() === null"
+          (onClick)="savePayCycleStartDay()" />
+      </div>
     } @else {
       <p class="app-muted rpt__payroll-readonly">
         Missed-scan-out deduction is currently
         <strong>{{ ps.missedScanOutDeductionEnabled ? 'ON' : 'OFF' }}</strong>
-        — set by the admin.
+        — set by the admin. Receptionist pay cycle runs the {{ ps.payCycleStartDay }}th to the {{ ps.payCycleStartDay }}th.
       </p>
     }
   </section>

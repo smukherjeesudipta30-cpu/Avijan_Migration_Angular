@@ -244,7 +244,7 @@
           <p-datePicker
             inputId="payMonth"
             [ngModel]="payMonth()"
-            (ngModelChange)="payMonth.set($event)"
+            (ngModelChange)="payMonth.set($event); loadBonusSuggestion()"
             [ngModelOptions]="{ standalone: true }"
             view="month"
             dateFormat="M yy"
@@ -266,6 +266,31 @@
             [min]="0"
             [maxFractionDigits]="2" />
         </div>
+
+        @if (bonusSuggestion(); as bonus) {
+          <div class="rec__pay-field rec__pay-field--bonus">
+            <label for="payBonus">
+              Extra-shift bonus
+              @if (bonus.coveredShiftCount > 0) {
+                <span class="app-muted" [pTooltip]="bonusTooltip(bonus)">
+                  ({{ bonus.coveredShiftCount }} shift(s) at {{ money(bonus.perShiftRate) }} each — review before saving)
+                </span>
+              }
+            </label>
+            <p-inputNumber
+              inputId="payBonus"
+              [ngModel]="payBonus()"
+              (ngModelChange)="payBonus.set($event)"
+              [ngModelOptions]="{ standalone: true }"
+              mode="currency"
+              currency="INR"
+              locale="en-IN"
+              [min]="0"
+              [maxFractionDigits]="2" />
+          </div>
+        } @else if (bonusLoading()) {
+          <div class="rec__pay-field"><span class="app-muted">Checking for covered shifts…</span></div>
+        }
 
         <!-- Distinct from Month: that is the month the salary covers, this is the
              day the cash actually changed hands. They differ whenever a month is
@@ -321,6 +346,7 @@
         <tr>
           <th style="width: 9rem">Month</th>
           <th class="rec__num" style="width: 8rem">Amount</th>
+          <th class="rec__num" style="width: 8rem">Bonus</th>
           <th style="width: 9rem">Paid on</th>
           <th>Note</th>
           <th style="width: 4rem"></th>
@@ -332,6 +358,9 @@
         <tr>
           <td><strong>{{ payment.payMonth | date: 'MMM y' }}</strong></td>
           <td class="rec__num">{{ money(payment.amount) }}</td>
+          <td class="rec__num">
+            @if (payment.extraShiftBonus) { {{ money(payment.extraShiftBonus) }} } @else { &mdash; }
+          </td>
           <td>{{ payment.paidOn ? (payment.paidOn | date: 'd MMM y') : '&mdash;' }}</td>
           <td class="rec__sub">
             {{ payment.notes || '&mdash;' }}

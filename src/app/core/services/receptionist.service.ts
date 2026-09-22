@@ -5,6 +5,7 @@ import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
 import {
+  ExtraShiftBonus,
   LeavePeriodType,
   ReceptionistLeaveDeductionRequest,
   ReceptionistLeaveReport,
@@ -118,5 +119,14 @@ export class ReceptionistService {
   /** Sets the deduction percentage/applied flag for one receptionist's period. Administrator only. */
   setLeaveDeduction(request: ReceptionistLeaveDeductionRequest): Observable<ApiResponse<boolean>> {
     return this.http.post<ApiResponse<boolean>>(`${this.base}/leave-deduction`, request);
+  }
+
+  /** Suggested extra-shift bonus for one receptionist's next payment. Administrator only. */
+  extraShiftBonus(receptionistId: number, forMonth: string): Observable<ExtraShiftBonus> {
+    return this.http
+      .get<ApiResponse<ExtraShiftBonus>>(`${this.base}/${receptionistId}/extra-shift-bonus`, {
+        params: this.params({ forMonth })
+      })
+      .pipe(map(r => r.data));
   }
 }

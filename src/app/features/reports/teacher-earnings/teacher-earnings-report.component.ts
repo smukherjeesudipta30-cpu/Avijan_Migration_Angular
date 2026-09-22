@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 
@@ -32,6 +33,7 @@ import { downloadCsv, reportFileName, startOfMonth, toIsoDate } from '../report-
     FormsModule,
     ButtonModule,
     DatePickerModule,
+    InputNumberModule,
     SelectModule,
     TableModule
   ],
@@ -122,7 +124,7 @@ export class TeacherEarningsReportComponent {
 
     this.savingPayrollSettings.set(true);
 
-    this.reports.updatePayrollSettings(enabled).subscribe({
+    this.reports.updatePayrollSettings(enabled, this.payrollSettings()?.payCycleStartDay ?? 26).subscribe({
       next: response => {
         this.savingPayrollSettings.set(false);
 
@@ -157,6 +159,62 @@ export class TeacherEarningsReportComponent {
         });
       }
     });
+  }
+
+  /** The institute's receptionist pay-cycle start day (26th-to-26th by default), typed by an Admin before saving. */
+  readonly payCycleStartDayDraft = signal<number | null>(null);
+
+  savePayCycleStartDay(): void {
+    if (!this.isAdmin()) return;
+
+    const day = this.payCycleStartDayDraft() ?? this.payrollSettings()?.payCycleStartDay;
+    if (!day || day < 1 || day > 28) {
+      this.messages.add({
+        severity: 'warn',
+        summary: 'Choose a day between 1 and 28',
+        detail: 'A later day could fall outside a short month, like February.',
+        life: 5000
+      });
+      return;
+    }
+
+    this.savingPayrollSettings.set(true);
+
+    this.reports
+      .updatePayrollSettings(this.payrollSettings()?.missedScanOutDeductionEnabled ?? false, day)
+      .subscribe({
+        next: response => {
+          this.savingPayrollSettings.set(false);
+
+          if (response.success === false) {
+            this.messages.add({
+              severity: 'error',
+              summary: 'Could not save',
+              detail: response.message ?? 'That setting could not be changed.',
+              life: 6000
+            });
+            return;
+          }
+
+          this.payrollSettings.set(response.data);
+          this.payCycleStartDayDraft.set(null);
+          this.messages.add({
+            severity: 'success',
+            summary: 'Pay cycle updated',
+            detail: `Receptionist pay months now run the ${day}th to the ${day}th.`,
+            life: 5000
+          });
+        },
+        error: () => {
+          this.savingPayrollSettings.set(false);
+          this.messages.add({
+            severity: 'error',
+            summary: 'Could not save',
+            detail: 'That setting could not be changed.',
+            life: 6000
+          });
+        }
+      });
   }
 
   downloadPayslip(): void {

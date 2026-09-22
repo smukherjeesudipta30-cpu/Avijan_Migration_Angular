@@ -19,6 +19,7 @@ import { formatMoney } from '../../core/format/money';
 import { ApiResponse } from '../../core/models/api-response.model';
 import { BranchListItem } from '../../core/models/master.model';
 import {
+  ExtraShiftBonus,
   ReceptionistListItem,
   ReceptionistPayment,
   ReceptionistSaveRequest
@@ -274,7 +275,12 @@ export class ReceptionistsComponent {
 
   readonly payMonth = signal<Date | null>(new Date());
   readonly payAmount = signal<number | null>(null);
+  readonly payBonus = signal<number | null>(null);
   readonly payNotes = signal('');
+
+  /** The suggestion this bonus figure came from, shown for the Admin to review before saving. */
+  readonly bonusSuggestion = signal<ExtraShiftBonus | null>(null);
+  readonly bonusLoading = signal(false);
 
   /**
    * The day the money actually changed hands, as distinct from `payMonth`, which is
@@ -285,7 +291,7 @@ export class ReceptionistsComponent {
   readonly payDate = signal<Date | null>(new Date());
 
   readonly paymentsTotal = computed(() =>
-    this.payments().reduce((sum, p) => sum + (p.amount ?? 0), 0));
+    this.payments().reduce((sum, p) => sum + (p.amount ?? 0) + (p.extraShiftBonus ?? 0), 0));
 
   openPayments(person: ReceptionistListItem): void {
     this.payFor.set(person);
@@ -294,8 +300,41 @@ export class ReceptionistsComponent {
     this.payMonth.set(new Date());
     this.payDate.set(new Date());
     this.payAmount.set(null);
+    this.payBonus.set(null);
+    this.bonusSuggestion.set(null);
     this.payNotes.set('');
     this.loadPayments();
+    if (this.auth.hasAnyRole(['Admin'])) this.loadBonusSuggestion();
+  }
+
+  /** Which colleague was covered, and when — spelled out for the Admin to check before saving. */
+  bonusTooltip(bonus: ExtraShiftBonus): string {
+    if (!bonus.days.length) return '';
+
+    return 'Covered for: ' + bonus.days
+      .map(d => `${d.absentReceptionistName} on ${new Date(d.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`)
+      .join(', ');
+  }
+
+  /**
+   * A suggestion only — Admin reviews the covered days and can adjust or clear
+   * the figure before it is ever saved. Nothing is paid automatically.
+   */
+  loadBonusSuggestion(): void {
+    const person = this.payFor();
+    const month = this.payMonth();
+    if (!person || !month) return;
+
+    this.bonusLoading.set(true);
+
+    this.service.extraShiftBonus(person.id, this.toIsoDate(month)!).subscribe({
+      next: (bonus: ExtraShiftBonus) => {
+        this.bonusSuggestion.set(bonus);
+        if (bonus.suggestedBonus > 0) this.payBonus.set(bonus.suggestedBonus);
+        this.bonusLoading.set(false);
+      },
+      error: () => this.bonusLoading.set(false)
+    });
   }
 
   loadPayments(): void {
@@ -336,12 +375,15 @@ export class ReceptionistsComponent {
         payMonth: this.toIsoDate(month)!,
         paidOn: this.toIsoDate(this.payDate()),
         amount,
+        extraShiftBonus: this.payBonus() ?? 0,
         notes: this.payNotes().trim() || null
       })
       .subscribe({
         next: () => {
           this.savingPayment.set(false);
           this.payAmount.set(null);
+          this.payBonus.set(null);
+          this.bonusSuggestion.set(null);
           this.payNotes.set('');
 
           this.messages.add({

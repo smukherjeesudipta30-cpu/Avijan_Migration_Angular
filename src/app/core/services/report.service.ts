@@ -133,9 +133,11 @@ export class ReportService {
   }
 
   /** Admin only. */
-  updatePayrollSettings(missedScanOutDeductionEnabled: boolean): Observable<ApiResponse<PayrollSettings>> {
+  updatePayrollSettings(
+    missedScanOutDeductionEnabled: boolean, payCycleStartDay: number
+  ): Observable<ApiResponse<PayrollSettings>> {
     return this.http.put<ApiResponse<PayrollSettings>>(
-      `${this.base}/payroll-settings`, { missedScanOutDeductionEnabled });
+      `${this.base}/payroll-settings`, { missedScanOutDeductionEnabled, payCycleStartDay });
   }
 
   studentsByTeacher(

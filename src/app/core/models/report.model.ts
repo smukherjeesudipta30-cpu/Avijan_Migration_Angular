@@ -253,6 +253,8 @@ export interface TeacherEarningsReport {
 /** The admin's own switch for the missed-scan-out deduction. */
 export interface PayrollSettings {
   missedScanOutDeductionEnabled: boolean;
+  /** Day of the month a receptionist's pay cycle starts on — 26 by default (26th to 25th), not the calendar month. */
+  payCycleStartDay: number;
   modifiedBy?: string;
   modifiedOn?: string;
 }

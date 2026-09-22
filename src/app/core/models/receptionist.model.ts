@@ -41,7 +41,10 @@ export interface ReceptionistPaymentRequest {
   /** Any date inside the month; the server normalises it to the 1st. */
   payMonth: string;
   paidOn: string | null;
+  /** The standard monthly pay — changes only when deliberately changed here. */
   amount: number;
+  /** Extra-shift bonus for the month, kept apart so it never inflates next month's base rate. */
+  extraShiftBonus: number;
   notes: string | null;
 }
 
@@ -52,6 +55,7 @@ export interface ReceptionistPayment {
   payMonth: string;
   paidOn?: string;
   amount: number;
+  extraShiftBonus: number;
   branch?: string;
   notes?: string;
   recordedBy?: string;
@@ -119,4 +123,23 @@ export interface ReceptionistLeaveDeductionRequest {
   deductionPercent: number;
   applied: boolean;
   notes: string | null;
+}
+
+/* ================================================== extra-shift bonus */
+
+export interface ExtraShiftDay {
+  date: string;
+  absentReceptionistName: string;
+  branch?: string;
+}
+
+/** A suggested bonus for covering a colleague's shift — reviewed and saved by an Admin, never applied on its own. */
+export interface ExtraShiftBonus {
+  receptionistId: number;
+  perShiftRate: number;
+  lastMonthShifts: number;
+  lastMonthAmount: number;
+  coveredShiftCount: number;
+  suggestedBonus: number;
+  days: ExtraShiftDay[];
 }
