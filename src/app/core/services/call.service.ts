@@ -167,6 +167,15 @@ export class CallService implements OnDestroy {
       this.peerName.set(call.fromName);
       this.kind.set(call.kind);
       this.status.set('incoming');
+
+      // Busy from the first ring, not just once answered. Presence's own
+      // "away" timer fires immediately on visibilitychange with no grace
+      // period, and a ringing call's tab going to the background used to
+      // read as "away" for the whole ~45s it rang — exactly backwards:
+      // ringing is the least "away" a person on the other end can be.
+      // isInCall/"incall" already wins over "away" in presenceStatus(); this
+      // just makes that true from the first ring instead of only pickup.
+      this.chat.setCallStatus(true);
     });
 
     this.chat.onCallResponded.subscribe(response => {
@@ -227,6 +236,10 @@ export class CallService implements OnDestroy {
       }
     }, CallService.RING_TIMEOUT_MS);
     this.status.set('outgoing');
+
+    // Busy from the first ring, not just once answered — see the matching
+    // comment on the incoming side above.
+    this.chat.setCallStatus(true);
 
     const me = this.auth.user();
     this.chat.callInvite(targetEmail, this.currentCallId, kind, me?.name ?? me?.email ?? 'Someone');
