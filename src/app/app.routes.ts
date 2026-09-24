@@ -176,6 +176,33 @@ export const routes: Routes = [
             .then(m => m.ExamSittingComponent)
       },
       {
+        // Admin's side: assign a teacher to a course, schedule the sitting,
+        // AI generates it. Editor may use it, same as the rest of Academics.
+        path: 'teacher-exams',
+        title: 'Teacher Exams · Avijan',
+        canActivate: [roleGuard('Admin', 'Editor')],
+        loadComponent: () =>
+          import('./features/teacher-exams/teacher-exams.component')
+            .then(m => m.TeacherExamsComponent)
+      },
+      {
+        // The teacher's own side. Teacher role only, as their earnings report is.
+        path: 'my-teacher-exam',
+        title: 'My Competency Exam · Avijan',
+        canActivate: [roleGuard('Teacher')],
+        loadComponent: () =>
+          import('./features/my-teacher-exam/my-teacher-exam.component')
+            .then(m => m.MyTeacherExamComponent)
+      },
+      {
+        path: 'my-teacher-exam/:scheduleId/sit',
+        title: 'Competency Exam · Avijan',
+        canActivate: [roleGuard('Teacher')],
+        loadComponent: () =>
+          import('./features/my-teacher-exam/exam-sitting/teacher-exam-sitting.component')
+            .then(m => m.TeacherExamSittingComponent)
+      },
+      {
         /* Attendance. The staff page carries the QR to display at the centre and
            the person's own day; the rota is the administrator's master form. */
         path: 'attendance',

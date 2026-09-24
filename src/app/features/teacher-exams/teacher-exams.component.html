@@ -1,0 +1,193 @@
+<div class="tex__header">
+  <h1>Teacher Exams</h1>
+  <p class="tex__lede">
+    Assign a teacher to a course, schedule their next sitting, and AI generates that
+    sitting's questions. A pass is due again in three months; a fail is due again
+    right away.
+    @if (dueCount() > 0) {
+      <strong class="tex__due-flag">{{ dueCount() }} due for scheduling</strong>
+    }
+  </p>
+</div>
+
+<section class="app-card tex__form">
+  <div class="tex__form-head">
+    <h2>Assign a course</h2>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="assign()" class="tex__grid">
+    <div class="tex__field">
+      <label for="teacherId">Teacher <span class="tex__req">*</span></label>
+      <p-select
+        inputId="teacherId"
+        formControlName="teacherId"
+        [options]="teachers()"
+        optionLabel="name"
+        optionValue="teacherId"
+        placeholder="Choose a teacher"
+        appendTo="body"
+        styleClass="tex__wide" />
+    </div>
+
+    <div class="tex__field">
+      <label for="courseId">Course <span class="tex__req">*</span></label>
+      <p-select
+        inputId="courseId"
+        formControlName="courseId"
+        [options]="courses()"
+        optionLabel="name"
+        optionValue="courseId"
+        placeholder="Choose a course"
+        appendTo="body"
+        styleClass="tex__wide" />
+    </div>
+
+    <div class="tex__form-actions">
+      <p-button type="submit" label="Assign" icon="pi pi-plus" [loading]="saving()" [disabled]="form.invalid" />
+    </div>
+  </form>
+</section>
+
+<section class="app-card tex__list">
+  <h2>Assignments</h2>
+
+  <p-table [value]="assignments()" [loading]="loading()" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '54rem' }">
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Teacher</th>
+        <th>Course</th>
+        <th>Last result</th>
+        <th>Status</th>
+        <th style="width: 9rem">Due on</th>
+        <th style="width: 12rem">Actions</th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-a>
+      <tr [class.tex__row--inactive]="!a.isActive">
+        <td><strong>{{ a.teacherName }}</strong></td>
+        <td>{{ a.courseName }}</td>
+        <td>
+          @if (a.lastCompletedOn) {
+            {{ pct(a.lastScorePercent) }}
+            <p-tag [value]="a.lastPassed ? 'Passed' : 'Failed'" [severity]="a.lastPassed ? 'success' : 'danger'" />
+          } @else {
+            <span class="app-muted">Never taken</span>
+          }
+        </td>
+        <td>
+          @if (a.pendingScheduleOn) {
+            <p-tag value="Scheduled" severity="info" [pTooltip]="(a.pendingScheduleOn | date: 'd MMM y, h:mm a') ?? ''" />
+          } @else if (a.needsScheduling) {
+            <p-tag value="Needs scheduling" severity="warn" />
+          } @else {
+            <p-tag value="On track" severity="success" />
+          }
+        </td>
+        <td>{{ a.dueOn | date: 'd MMM y' }}</td>
+        <td>
+          <div class="tex__actions">
+            <p-button
+              label="Schedule"
+              icon="pi pi-calendar-plus"
+              size="small"
+              [text]="true"
+              [disabled]="!!a.pendingScheduleOn"
+              pTooltip="Set the date/time for the next sitting"
+              (onClick)="openSchedule(a)" />
+
+            @if (a.isActive) {
+              <p-button icon="pi pi-pause" severity="secondary" [text]="true" pTooltip="Deactivate" (onClick)="setActive(a, false)" />
+            } @else {
+              <p-button icon="pi pi-play" severity="secondary" [text]="true" pTooltip="Reactivate" (onClick)="setActive(a, true)" />
+            }
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr><td colspan="6" class="app-muted tex__empty">No assignments yet. Assign a teacher to a course above.</td></tr>
+    </ng-template>
+  </p-table>
+</section>
+
+<section class="app-card tex__list">
+  <h2>Sittings</h2>
+
+  <p-table [value]="schedules()" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="true" [rows]="15">
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Teacher</th>
+        <th>Course</th>
+        <th style="width: 10rem">Scheduled on</th>
+        <th style="width: 6rem">Questions</th>
+        <th style="width: 8rem">Status</th>
+        <th style="width: 8rem">Score</th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-s>
+      <tr>
+        <td>{{ s.teacherName }}</td>
+        <td>{{ s.courseName }}</td>
+        <td>{{ s.scheduledOn | date: 'd MMM y, h:mm a' }}</td>
+        <td class="app-muted">{{ s.questionCount }}</td>
+        <td>
+          <p-tag
+            [value]="s.status"
+            [severity]="s.status === 'Completed' ? (s.passed ? 'success' : 'danger') : s.status === 'Ready' ? 'info' : 'secondary'" />
+        </td>
+        <td>{{ s.status === 'Completed' ? pct(s.scorePercent) : '—' }}</td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr><td colspan="6" class="app-muted tex__empty">No sittings scheduled yet.</td></tr>
+    </ng-template>
+  </p-table>
+</section>
+
+<p-dialog
+  header="Schedule a sitting"
+  [(visible)]="scheduleVisible"
+  [modal]="true"
+  [style]="{ width: '28rem' }"
+  appendTo="body">
+
+  @if (scheduleFor(); as a) {
+    <p class="tex__dialog-lede">{{ a.teacherName }} &middot; {{ a.courseName }}</p>
+
+    <div class="tex__field">
+      <label for="scheduleOn">Date &amp; time</label>
+      <p-datePicker
+        inputId="scheduleOn"
+        [(ngModel)]="scheduleOn"
+        [showTime]="true"
+        hourFormat="12"
+        dateFormat="dd/mm/yy"
+        [showIcon]="true"
+        appendTo="body"
+        styleClass="tex__wide" />
+    </div>
+
+    <div class="tex__field">
+      <label for="questionCount">Number of questions</label>
+      <p-inputNumber
+        inputId="questionCount"
+        [(ngModel)]="questionCount"
+        [min]="5"
+        [max]="25"
+        styleClass="tex__wide" />
+    </div>
+
+    <p class="app-muted tex__dialog-note">
+      Questions and a study guide are generated automatically once scheduled.
+    </p>
+
+    <div class="tex__dialog-actions">
+      <p-button label="Cancel" severity="secondary" [text]="true" (onClick)="scheduleVisible.set(false)" />
+      <p-button label="Schedule" icon="pi pi-check" [loading]="scheduling()" [disabled]="!scheduleOn()" (onClick)="confirmSchedule()" />
+    </div>
+  }
+</p-dialog>

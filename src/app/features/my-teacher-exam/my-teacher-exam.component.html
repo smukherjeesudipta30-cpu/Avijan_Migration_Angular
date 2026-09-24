@@ -1,0 +1,57 @@
+<div class="mte__header">
+  <h1>My Competency Exam</h1>
+  <p class="mte__lede">
+    Admin schedules a sitting for each course you're assigned; you need 50% to pass.
+    A pass is due again in three months, a fail right away.
+  </p>
+</div>
+
+<section class="app-card mte__list">
+  <p-table [value]="rows()" [loading]="loading()" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '42rem' }">
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Course</th>
+        <th style="width: 10rem">Scheduled on</th>
+        <th style="width: 8rem">Status</th>
+        <th style="width: 8rem">Score</th>
+        <th style="width: 12rem">Actions</th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-row>
+      <tr>
+        <td><strong>{{ row.courseName }}</strong></td>
+        <td>{{ row.scheduledOn | date: 'd MMM y, h:mm a' }}</td>
+        <td>
+          <p-tag
+            [value]="row.status"
+            [severity]="row.status === 'Completed' ? (row.passed ? 'success' : 'danger') : row.status === 'Ready' ? 'info' : 'secondary'" />
+        </td>
+        <td>{{ row.status === 'Completed' ? pct(row.scorePercent) : '—' }}</td>
+        <td>
+          <div class="mte__actions">
+            @if (row.studyGuide) {
+              <p-button label="Study guide" icon="pi pi-book" size="small" [text]="true" (onClick)="viewGuide(row)" />
+            }
+            @if (row.status === 'Ready') {
+              <p-button label="Start" icon="pi pi-pencil" size="small" (onClick)="start(row)" />
+            }
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr><td colspan="5" class="app-muted mte__empty">Nothing scheduled yet.</td></tr>
+    </ng-template>
+  </p-table>
+</section>
+
+<p-dialog
+  [header]="(guideFor()?.courseName ?? '') + ' — Study Guide'"
+  [(visible)]="guideVisible"
+  [modal]="true"
+  [style]="{ width: '38rem' }"
+  appendTo="body">
+  <div class="mte__guide">{{ guideFor()?.studyGuide }}</div>
+</p-dialog>

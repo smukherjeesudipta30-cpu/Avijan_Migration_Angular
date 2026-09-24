@@ -1,0 +1,124 @@
+<p-confirmDialog />
+
+@if (violationWarning(); as warning) {
+  <div class="tsit__violation-backdrop">
+    <div class="tsit__violation-box">
+      <i class="pi pi-exclamation-triangle"></i>
+      <h2>You left the exam window</h2>
+      <p>{{ warning }}</p>
+      <p-button label="Return to full screen" icon="pi pi-window-maximize" (onClick)="resumeFullscreen()" />
+    </div>
+  </div>
+}
+
+@if (startError(); as message) {
+  <section class="app-card tsit__gate">
+    <i class="pi pi-times-circle tsit__gate-icon"></i>
+    <h1>Could not open this exam</h1>
+    <p>{{ message }}</p>
+    <p-button label="Back" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="back()" />
+  </section>
+}
+
+@if (result(); as r) {
+  <section class="app-card tsit__result">
+    <p class="app-section-title">Competency Exam</p>
+    <h1>{{ r.courseName }}</h1>
+
+    <div class="tsit__score" [class.tsit__score--fail]="!r.passed">
+      <strong>{{ r.scorePercent }}%</strong>
+      <span>{{ r.passed ? 'Passed' : 'Not passed' }} — 50% required</span>
+    </div>
+
+    <div class="tsit__result-tiles">
+      <div class="tsit__result-tile">
+        <span>Correct</span>
+        <strong>{{ r.correctCount }} / {{ r.totalQuestions }}</strong>
+      </div>
+    </div>
+
+    @if (violationCount() > 0) {
+      <p class="tsit__note tsit__note--warn">
+        This paper carries {{ violationCount() }} strike(s) for leaving the exam window.
+      </p>
+    }
+
+    <p-button label="Back to my exams" icon="pi pi-arrow-left" (onClick)="back()" />
+  </section>
+}
+
+@if (paper(); as p) {
+  @if (!result()) {
+    <header class="tsit__bar app-card">
+      <div class="tsit__bar-title">
+        <p class="app-section-title">Competency exam in progress</p>
+        <h1>{{ p.courseName }}</h1>
+      </div>
+
+      <div class="tsit__bar-meta">
+        <span class="app-muted">{{ answeredCount() }} of {{ questionCount() }} answered</span>
+
+        @if (violationCount() > 0) {
+          <span class="tsit__strikes">
+            <i class="pi pi-exclamation-triangle"></i>
+            {{ violationCount() }} strike(s) for leaving the exam window
+          </span>
+        }
+      </div>
+    </header>
+
+    <div class="tsit__paper">
+      @for (q of p.questions; track q.id) {
+        <article class="app-card tsit__q" [id]="'q-' + q.orderNo">
+          <header class="tsit__q-head">
+            <span class="tsit__q-no">Q{{ q.orderNo }}</span>
+            <p class="tsit__q-text">{{ q.questionText }}</p>
+          </header>
+
+          <div class="tsit__options">
+            @for (option of [
+              { key: 'A', text: q.optionA },
+              { key: 'B', text: q.optionB },
+              { key: 'C', text: q.optionC },
+              { key: 'D', text: q.optionD }
+            ]; track option.key) {
+              <label class="tsit__option" [class.tsit__option--chosen]="isChosen(q.id, option.key)">
+                <p-radioButton
+                  [name]="'q' + q.id"
+                  [value]="option.key"
+                  [ngModel]="answers()[q.id]"
+                  [ngModelOptions]="{ standalone: true }"
+                  (ngModelChange)="choose(q.id, option.key)"
+                  [inputId]="'q' + q.id + option.key" />
+                <span class="tsit__option-key">{{ option.key }}</span>
+                <span class="tsit__option-text">{{ option.text }}</span>
+              </label>
+            }
+          </div>
+
+          @if (isAnswered(q.id)) {
+            <button type="button" class="tsit__clear" (click)="clearAnswer(q.id)">Clear this answer</button>
+          }
+        </article>
+      }
+
+      <div class="app-card tsit__submit">
+        <div>
+          <h2>Finished?</h2>
+          <p class="app-muted">
+            {{ answeredCount() }} of {{ questionCount() }} answered.
+            @if (!allAnswered()) { Unanswered questions score nothing. }
+            Once submitted the exam cannot be reopened.
+          </p>
+        </div>
+
+        <p-button
+          label="Submit exam"
+          icon="pi pi-check"
+          [loading]="submitting()"
+          [disabled]="submitting()"
+          (onClick)="submit()" />
+      </div>
+    </div>
+  }
+}

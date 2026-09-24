@@ -52,7 +52,11 @@ export const MENU: MenuSection[] = [
       { label: 'Notices', icon: 'pi pi-megaphone', route: '/notices', roles: ['Admin', 'Editor', 'Receptionist'] },
       { label: 'Exam Papers', icon: 'pi pi-file-edit', route: '/exams', roles: ['Admin', 'Editor', 'Receptionist'] },
       // The student's own portal: sit a theory paper, see the course result.
-      { label: 'My Exams', icon: 'pi pi-pencil', route: '/my-exams', roles: ['Student'] }
+      { label: 'My Exams', icon: 'pi pi-pencil', route: '/my-exams', roles: ['Student'] },
+      // Assigns a teacher to a course, schedules the sitting, generates it via AI.
+      { label: 'Teacher Exams', icon: 'pi pi-verified', route: '/teacher-exams', roles: ['Admin', 'Editor'] },
+      // The teacher's own side: see what's due, take it, see past results.
+      { label: 'My Competency Exam', icon: 'pi pi-verified', route: '/my-teacher-exam', roles: ['Teacher'] }
     ]
   },
   {
