@@ -364,6 +364,12 @@ export class ChatService {
   }
 
   /** Broadcasts to everyone whether this user is on a call, so a third party sees them as busy. */
+  /** STUN/TURN servers for calls, as configured on the server. */
+  iceServers(): Promise<RTCIceServer[]> {
+    return firstValueFrom(
+      this.http.get<ApiResponse<RTCIceServer[]>>(`${this.base}/ice-servers`).pipe(map(r => r.data)));
+  }
+
   setCallStatus(inCall: boolean): void {
     this.localInCall = inCall;
     // A call leaves the screen as the device found it: if it is off or the

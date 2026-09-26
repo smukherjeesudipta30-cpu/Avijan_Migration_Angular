@@ -84,10 +84,60 @@ export class CallService implements OnDestroy {
   private readonly chat = inject(ChatService);
   private readonly auth = inject(AuthService);
 
-  private readonly iceServers: RTCIceServer[] = [
+  /* STUN finds a direct path between the two devices; the TURN relay (set on
+     the server, fetched at the start of each call) carries the audio when
+     mobile data or a router will not keep a direct path open - without one
+     a call connects and then goes silent after a few tens of seconds. */
+  private iceServers: RTCIceServer[] = [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' }
   ];
+
+  /** Pending "the path dropped" check; an ICE restart is tried if it has not come back. */
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private restartAttempts = 0;
+
+  private async loadIceServers(): Promise<void> {
+    try {
+      const servers = await this.chat.iceServers();
+      if (servers?.length) this.iceServers = servers;
+    } catch {
+      // Keep the STUN defaults; a direct path still works on most Wi-Fi.
+    }
+  }
+
+  /** The Android app keeps its call alive with a foreground service; a browser has nothing to do. */
+  private startKeepAlive(): void {}
+
+  private stopKeepAlive(): void {}
+
+  /**
+   * The audio path dropped (network change, NAT timeout). Give it a few
+   * seconds to recover on its own, then renegotiate with an ICE restart -
+   * the caller makes the new offer - rather than sitting silently "in call".
+   */
+  private onPathLost(pc: RTCPeerConnection): void {
+    if (this.reconnectTimer) return;
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      if (pc !== this.peerConnection || pc.connectionState === 'connected') return;
+      if (this.restartAttempts >= 3) {
+        this.errorMessage.set('The call was lost. Please call again.');
+        this.hangup();
+        return;
+      }
+      this.restartAttempts++;
+      if (this.isCaller) void this.createOfferAndSend(true);
+      else pc.restartIce?.();
+      this.onPathLost(pc);
+    }, this.restartAttempts === 0 ? 4000 : 8000);
+  }
+
+  private clearReconnect(): void {
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
+    this.restartAttempts = 0;
+  }
 
   /** No live SignalR connection reaches the other side at all — same rule the button ignores per the last complaint about it, but a call still has to give up eventually. */
   private static readonly RING_TIMEOUT_MS = 45_000;
@@ -236,6 +286,7 @@ export class CallService implements OnDestroy {
       }
     }, CallService.RING_TIMEOUT_MS);
     this.status.set('outgoing');
+    void this.loadIceServers();
 
     // Busy from the first ring, not just once answered — see the matching
     // comment on the incoming side above.
@@ -250,6 +301,7 @@ export class CallService implements OnDestroy {
     const target = this.peerEmail();
     if (this.status() !== 'incoming' || !callId || !target) return;
 
+    await this.loadIceServers();
     try {
       await this.ensureLocalMedia();
     } catch {
@@ -362,12 +414,19 @@ export class CallService implements OnDestroy {
         this.status.set('active');
         if (!this.wasConnected) {
           this.wasConnected = true;
+          this.startKeepAlive();
           this.connectedAt = Date.now();
           this.startDurationTimer();
           void this.applyAudioSink(this.speakerOn());
           // Let everyone's presence show this person as busy for the call's life.
           this.chat.setCallStatus(true);
         }
+      }
+      if (pc.connectionState === 'connected') this.clearReconnect();
+      // Dropped mid-call: try to get it back instead of going silent.
+      if (this.wasConnected && (pc.connectionState === 'disconnected' || pc.connectionState === 'failed')) {
+        this.onPathLost(pc);
+        return;
       }
       if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
         if (this.status() !== 'idle') {
@@ -382,7 +441,7 @@ export class CallService implements OnDestroy {
     return pc;
   }
 
-  private async createOfferAndSend(): Promise<void> {
+  private async createOfferAndSend(iceRestart = false): Promise<void> {
     const target = this.peerEmail();
     const callId = this.currentCallId;
     if (!target || !callId) return;
@@ -390,9 +449,9 @@ export class CallService implements OnDestroy {
     try {
       const stream = await this.ensureLocalMedia();
       const pc = this.ensurePeerConnection();
-      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+      if (pc.getSenders().length === 0) stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
-      const offer = await pc.createOffer();
+      const offer = await pc.createOffer(iceRestart ? { iceRestart: true } : undefined);
       await pc.setLocalDescription(offer);
       this.chat.callSignal(target, callId, 'offer', JSON.stringify(offer));
     } catch {
@@ -424,7 +483,7 @@ export class CallService implements OnDestroy {
     if (type === 'offer') {
       try {
         const stream = await this.ensureLocalMedia();
-        stream.getTracks().forEach(track => pc.addTrack(track, stream));
+        if (pc.getSenders().length === 0) stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
         await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(payload)));
         await this.flushPendingIce(pc);
@@ -525,6 +584,8 @@ export class CallService implements OnDestroy {
   }
 
   private teardown(): void {
+    this.clearReconnect();
+    this.stopKeepAlive();
     this.peerConnection?.close();
     this.peerConnection = null;
     this.pendingIceCandidates = [];
