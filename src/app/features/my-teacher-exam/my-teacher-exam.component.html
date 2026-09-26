@@ -53,5 +53,5 @@
   [modal]="true"
   [style]="{ width: '38rem' }"
   appendTo="body">
-  <div class="mte__guide">{{ guideFor()?.studyGuide }}</div>
+  <div class="mte__guide" [innerHTML]="guideHtml(guideFor()?.studyGuide)"></div>
 </p-dialog>

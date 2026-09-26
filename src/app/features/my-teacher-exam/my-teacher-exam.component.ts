@@ -8,6 +8,7 @@ import { TagModule } from 'primeng/tag';
 
 import { TeacherExamScheduleItem } from '../../core/models/teacher-exam.model';
 import { TeacherExamService } from '../../core/services/teacher-exam.service';
+import { simpleMarkdownToHtml } from '../../core/text/simple-markdown';
 
 /**
  * The teacher's own side of the competency exam portal: what's coming up,
@@ -20,6 +21,9 @@ import { TeacherExamService } from '../../core/services/teacher-exam.service';
   styleUrl: './my-teacher-exam.component.scss'
 })
 export class MyTeacherExamComponent implements OnInit {
+  /** The AI writes the guide in Markdown; shown formatted, never as raw symbols. */
+  readonly guideHtml = simpleMarkdownToHtml;
+
   private readonly exams = inject(TeacherExamService);
   private readonly router = inject(Router);
 

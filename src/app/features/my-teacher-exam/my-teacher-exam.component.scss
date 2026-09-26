@@ -23,9 +23,27 @@
 }
 
 .mte__guide {
-  white-space: pre-wrap;
   font-size: 0.88rem;
   line-height: 1.6;
   max-height: 60vh;
   overflow-y: auto;
+}
+
+.mte__guide :is(h3, h4, h5, h6) {
+  margin: 1rem 0 0.35rem;
+  line-height: 1.3;
+}
+
+.mte__guide h3 { font-size: 1.1rem; }
+.mte__guide h4 { font-size: 1rem; }
+.mte__guide :is(h5, h6) { font-size: 0.92rem; }
+.mte__guide :is(h3, h4, h5, h6):first-child { margin-top: 0; }
+.mte__guide p { margin: 0 0 0.6rem; }
+.mte__guide :is(ul, ol) { margin: 0 0 0.6rem; padding-left: 1.3rem; }
+.mte__guide li { margin-bottom: 0.2rem; }
+.mte__guide code {
+  font-size: 0.82rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+  background: rgba(127, 127, 127, 0.14);
 }
