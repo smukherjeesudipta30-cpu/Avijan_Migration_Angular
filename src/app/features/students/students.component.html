@@ -393,7 +393,7 @@
         </div>
 
         <div class="stu__field">
-          <label for="referrer">
+          <label for="referrers">
             Reference
             @if (!isEditing()) {
               <span class="stu__req">*</span>
@@ -403,31 +403,43 @@
             <!-- Fixed at admission: it decided who was paid, so it is not editable. -->
             <input
               pInputText
-              id="referrer"
+              id="referrers"
               [value]="editingReferrer() || 'Not recorded (admitted before referrals)'"
               [disabled]="true"
               class="stu__select" />
           } @else {
-            <p-select
-              inputId="referrer"
-              formControlName="referrer"
+            <p-multiSelect
+              inputId="referrers"
+              formControlName="referrers"
               [options]="referrerOptions()"
               optionLabel="label"
               optionValue="key"
               [filter]="true"
               filterBy="label"
-              placeholder="--Select teacher or receptionist--"
+              display="chip"
+              [showToggleAll]="false"
+              placeholder="--Select teachers / receptionists--"
               appendTo="body"
               styleClass="stu__select" />
-            @if (form.controls.referrer.touched && form.controls.referrer.invalid) {
-              <small class="stu__error">Please select who referred this student.</small>
+
+            <label class="stu__check stu__check--inline">
+              <p-checkbox formControlName="noReferral" [binary]="true" inputId="noReferral" />
+              <span>No referral (direct / walk-in admission)</span>
+            </label>
+
+            @if (form.controls.referrers.touched && form.controls.referrers.invalid) {
+              <small class="stu__error">Select who referred this student, or tick "No referral".</small>
             }
             <small class="stu__help">
-              @if (referralPreview().percent > 0) {
-                Earns the referrer {{ referralPreview().percent }}% of the admission fee —
-                ₹{{ referralPreview().amount | number: '1.0-2' }} on this fee, credited as it is collected.
-              } @else if (form.controls.referrer.value?.startsWith('None')) {
+              @if (form.controls.noReferral.value) {
                 Direct admission — no referral amount is credited to anyone.
+              } @else if (referralPreview().percent > 0) {
+                Earns {{ referralPreview().percent }}% of the admission fee —
+                ₹{{ referralPreview().amount | number: '1.0-2' }} on this fee, credited as it is collected.
+                @if (referralPreview().people > 1) {
+                  Split equally: about ₹{{ referralPreview().share | number: '1.0-2' }} each for
+                  {{ referralPreview().people }} people.
+                }
               } @else {
                 No referral amount on an admission fee below the lowest slab.
               }

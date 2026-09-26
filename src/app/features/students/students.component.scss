@@ -421,3 +421,16 @@
   color: var(--app-negative);
   font-weight: 600;
 }
+
+/* Reference: several referrers, or a direct admission */
+.stu__check--inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.88rem;
+}
+
+:host ::ng-deep .p-multiselect.stu__select {
+  width: 100%;
+}

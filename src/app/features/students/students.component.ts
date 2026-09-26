@@ -5,6 +5,7 @@ import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angu
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DatePickerModule } from 'primeng/datepicker';
 import { DialogModule } from 'primeng/dialog';
@@ -63,6 +64,7 @@ type StatusFilter = 'active' | 'inactive' | 'all';
     ReactiveFormsModule,
     ButtonModule,
     CheckboxModule,
+    MultiSelectModule,
     ConfirmDialogModule,
     DatePickerModule,
     DialogModule,
@@ -121,18 +123,12 @@ export class StudentsComponent implements OnDestroy {
   readonly referralSlabs = signal<ReferralSlab[]>([]);
   /** The referrer shown read-only when editing a student admitted with one. */
   readonly editingReferrer = signal<string | null>(null);
-  /**
-   * Dropdown options, keyed "Type:id": a direct (walk-in) admission first -
-   * chosen deliberately, so the field stays required - then every active
-   * teacher and receptionist.
-   */
-  readonly referrerOptions = computed(() => [
-    { key: 'None:0', label: 'No referral (direct / walk-in admission)' },
-    ...this.referrers().map(r => ({
+  /** Every active teacher and receptionist, keyed "Type:id". Several can be picked. */
+  readonly referrerOptions = computed(() =>
+    this.referrers().map(r => ({
       key: `${r.type}:${r.id}`,
       label: `${r.name} — ${r.type}${r.branch ? ` (${r.branch})` : ''}`
-    }))
-  ]);
+    })));
   readonly branches = signal<BranchLookup[]>([]);
 
   /* ------------------------------------------------------------- photos */
@@ -219,9 +215,11 @@ export class StudentsComponent implements OnDestroy {
     secondTeacherId: [null as number | null],
     thirdTeacherId: [null as number | null],
     branchId: [null as number | null, [Validators.required]],
-    /* Who referred the student: required when admitting, fixed afterwards -
-       applyReferrerRule() switches it. "Teacher:5" / "Receptionist:1". */
-    referrer: [null as string | null, [Validators.required]],
+    /* Who referred the student: one or more people ("Teacher:5",
+       "Receptionist:1"), or a ticked "No referral" for a walk-in. Required when
+       admitting, fixed afterwards - applyReferrerRule() switches it. */
+    noReferral: [false],
+    referrers: [[] as string[], [Validators.required]],
     isActive: [true],
     isComplete: [false]
   });
@@ -243,6 +241,8 @@ export class StudentsComponent implements OnDestroy {
       next: data => this.courses.set(data),
       error: () => this.courses.set([])
     });
+
+    this.form.controls.noReferral.valueChanges.subscribe(v => this.syncNoReferral(v));
 
     this.referralApi.referrers().subscribe({
       next: data => this.referrers.set(data),
@@ -458,10 +458,20 @@ export class StudentsComponent implements OnDestroy {
              editing this same, just-created record instead keeps the form
              open with everything already typed, and reveals the photo
              fieldset (gated on isEditing()) immediately. */
+          // What was just chosen, read before the form switches to editing.
+          const direct = this.form.controls.noReferral.value;
+          const chosen = this.form.controls.referrers.value ?? [];
+          const percent = this.referralPreview().percent;
+
           this.editingId.set(created.id);
           this.editingRegistrationId.set(created.registrationId);
           this.editingBillNo.set(created.billNo);
           this.loginEdited.set(true);
+          this.applyReferrerRule({
+            referrerType: direct ? 'None' : 'Referred',
+            referrerName: this.referrerOptions().filter(o => chosen.includes(o.key)).map(o => o.label).join(', '),
+            referralPercent: percent || undefined
+          });
           this.photoError.set(null);
           this.clearEditingPhoto();
         } else {
@@ -1052,7 +1062,7 @@ export class StudentsComponent implements OnDestroy {
       secondTeacherId: Number(v.teacherCount) >= 2 ? v.secondTeacherId : null,
       thirdTeacherId: Number(v.teacherCount) >= 3 ? v.thirdTeacherId : null,
       branchId: v.branchId,
-      ...(this.isEditing() ? {} : this.referrerPayload(v.referrer)),
+      ...(this.isEditing() ? {} : this.referrerPayload(v.noReferral, v.referrers)),
       isActive: v.isActive,
       isComplete: v.isComplete
     };
@@ -1185,48 +1195,79 @@ export class StudentsComponent implements OnDestroy {
    * correction, like fixing a phone number, into a branch decision.
    */
   /**
-   * Admitting: the referrer is required. Editing: never required (students
-   * admitted before referrals have none) and never changeable - it decided who
-   * was paid - so it is shown read-only.
+   * Admitting: either tick "No referral" or pick one or more referrers. Editing:
+   * never required (students admitted before referrals have none) and never
+   * changeable - it decided who was paid - so it is shown read-only.
    */
   private applyReferrerRule(
-    student: { referrerType?: string; referrerId?: number; referrerName?: string; referralPercent?: number } | null
+    student: { referrerType?: string; referrerName?: string; referralPercent?: number } | null
   ): void {
-    const control = this.form.controls.referrer;
+    const none = this.form.controls.noReferral;
+    const people = this.form.controls.referrers;
 
     if (this.isEditing()) {
-      control.clearValidators();
-      control.setValue(student?.referrerType && student.referrerId ? `${student.referrerType}:${student.referrerId}` : null);
-      control.disable({ emitEvent: false });
-      this.editingReferrer.set(student?.referrerType === 'None'
-        ? 'No referral (direct admission)'
-        : student?.referrerName
-        ? `${student.referrerName} (${student.referrerType}${student.referralPercent ? `, ${student.referralPercent}%` : ''})`
-        : null);
+      none.setValue(student?.referrerType === 'None', { emitEvent: false });
+      people.setValue([], { emitEvent: false });
+      none.disable({ emitEvent: false });
+      people.clearValidators();
+      people.disable({ emitEvent: false });
+      this.editingReferrer.set(
+        student?.referrerType === 'None'
+          ? 'No referral (direct admission)'
+          : student?.referrerName
+            ? `${student.referrerName}${student.referralPercent ? ` — ${student.referralPercent}%` : ''}`
+            : null);
     } else {
-      control.enable({ emitEvent: false });
-      control.setValidators([Validators.required]);
-      control.setValue(null);
+      none.enable({ emitEvent: false });
+      none.setValue(false, { emitEvent: false });
+      people.enable({ emitEvent: false });
+      people.setValue([], { emitEvent: false });
+      people.setValidators([Validators.required]);
       this.editingReferrer.set(null);
     }
 
-    control.updateValueAndValidity({ emitEvent: false });
+    people.updateValueAndValidity({ emitEvent: false });
   }
 
-  private referrerPayload(key: string | null): { referrerType: ReferrerType | null; referrerId: number | null } {
-    const [type, id] = (key ?? '').split(':');
-    if (type === 'None') return { referrerType: 'None', referrerId: null };
-    return type && id
-      ? { referrerType: type as ReferrerType, referrerId: Number(id) }
-      : { referrerType: null, referrerId: null };
+  /** "No referral" ticked: nobody may be picked. Unticked: at least one person. */
+  private syncNoReferral(noReferral: boolean): void {
+    if (this.isEditing()) return;
+    const people = this.form.controls.referrers;
+
+    if (noReferral) {
+      people.setValue([], { emitEvent: false });
+      people.clearValidators();
+      people.disable({ emitEvent: false });
+    } else {
+      people.enable({ emitEvent: false });
+      people.setValidators([Validators.required]);
+    }
+
+    people.updateValueAndValidity({ emitEvent: false });
   }
 
-  /** What the admission fee will earn the referrer, shown under the dropdown. */
-  referralPreview(): { percent: number; amount: number } {
-    if (this.form.controls.referrer.value?.startsWith('None')) return { percent: 0, amount: 0 };
+  private referrerPayload(
+    noReferral: boolean,
+    keys: string[] | null
+  ): { referrerType: ReferrerType | null; referrers: { type: string; id: number }[] } {
+    if (noReferral) return { referrerType: 'None', referrers: [] };
+
+    return {
+      referrerType: null,
+      referrers: (keys ?? []).map(k => {
+        const [type, id] = k.split(':');
+        return { type, id: Number(id) };
+      })
+    };
+  }
+
+  /** What the admission fee earns, and each referrer's equal share, shown under the field. */
+  referralPreview(): { percent: number; amount: number; people: number; share: number } {
+    const people = this.form.controls.noReferral.value ? 0 : (this.form.controls.referrers.value ?? []).length;
     const fee = this.form.controls.admissionFees.value ?? 0;
-    const percent = referralPercentFor(fee, this.referralSlabs());
-    return { percent, amount: Math.round(fee * percent) / 100 };
+    const percent = this.form.controls.noReferral.value ? 0 : referralPercentFor(fee, this.referralSlabs());
+    const amount = Math.round(fee * percent) / 100;
+    return { percent, amount, people, share: people > 0 ? Math.floor((amount / people) * 100) / 100 : 0 };
   }
 
   private applyBranchRule(): void {
