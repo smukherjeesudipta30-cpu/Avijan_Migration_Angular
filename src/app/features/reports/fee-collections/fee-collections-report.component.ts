@@ -59,9 +59,10 @@ export class FeeCollectionsReportComponent implements OnInit {
      just them out when it is the admission money being reconciled. */
   readonly kind = signal<string | null>(null);
   readonly kinds = [
-    { label: 'Monthly and admission', value: null },
+    { label: 'All fees', value: null },
     { label: 'Monthly fees only', value: 'Monthly' },
-    { label: 'Admission fees only', value: 'Admission' }
+    { label: 'Admission fees only', value: 'Admission' },
+    { label: 'Exam fees only', value: 'Exam' }
   ];
 
   readonly from = signal<Date>(startOfMonth(new Date()));

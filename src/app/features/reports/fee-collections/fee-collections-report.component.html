@@ -116,6 +116,12 @@
       <strong>{{ (r.admissionTotal ?? 0) | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
       <small class="app-muted">{{ r.admissionCount ?? 0 }} payment(s)</small>
     </div>
+
+    <div class="app-card rpt__tile fcr__tile--exam">
+      <span>Exam fees</span>
+      <strong>{{ (r.examFeeTotal ?? 0) | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+      <small class="app-muted">{{ r.examFeeCount ?? 0 }} payment(s)</small>
+    </div>
   </div>
 
   <!-- --------------------------------------------------- reconciliation -->
@@ -212,6 +218,8 @@
                  monthly ones has to be visible at a glance when scrolling. -->
             @if (row.kind === 'Monthly fee') {
               <span class="app-muted">{{ row.kind }}</span>
+            } @else if (row.kind === 'Exam fee') {
+              <p-tag [value]="row.kind" severity="info" />
             } @else {
               <p-tag [value]="row.kind" severity="warn" />
             }

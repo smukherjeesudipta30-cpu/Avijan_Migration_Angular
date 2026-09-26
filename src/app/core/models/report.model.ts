@@ -196,6 +196,8 @@ export interface FeeCollectionsReport {
   admissionTotal?: number;
   monthlyCount?: number;
   admissionCount?: number;
+  examFeeTotal?: number;
+  examFeeCount?: number;
 }
 
 /* --------------------------------------------------------------- expenses */
