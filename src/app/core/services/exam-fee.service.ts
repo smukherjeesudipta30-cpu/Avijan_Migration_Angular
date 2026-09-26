@@ -4,7 +4,7 @@ import { Observable, map } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
-import { ExamFeeDueRow, ExamFeeRate, StudentExamFee } from '../models/exam-fee.model';
+import { ExamFeeDueRow, ExamFeePaymentRow, ExamFeeRate, StudentExamFee } from '../models/exam-fee.model';
 
 /** Exam fees: the per course/branch master, collecting, and the student's own view. */
 @Injectable({ providedIn: 'root' })
@@ -42,6 +42,16 @@ export class ExamFeeService {
   /** Moves an exam fee typed into Other income onto a student's exam fee. */
   moveFromOtherIncome(otherIncomeId: number, studentId: number): Observable<ApiResponse<StudentExamFee>> {
     return this.http.post<ApiResponse<StudentExamFee>>(`${this.base}/move-from-other-income`, { otherIncomeId, studentId });
+  }
+
+  /** Exam fees received in a range, optionally for one branch, course or registration id. */
+  payments(f: { from: string; to: string; branch?: string | null; courseId?: number | null; registrationId?: string | null }):
+    Observable<ExamFeePaymentRow[]> {
+    let params = new HttpParams().set('from', f.from).set('to', f.to);
+    if (f.branch) params = params.set('branch', f.branch);
+    if (f.courseId) params = params.set('courseId', f.courseId);
+    if (f.registrationId?.trim()) params = params.set('registrationId', f.registrationId.trim());
+    return this.http.get<ApiResponse<ExamFeePaymentRow[]>>(`${this.base}/payments`, { params }).pipe(map(r => r.data));
   }
 
   dues(branch?: string | null): Observable<ExamFeeDueRow[]> {

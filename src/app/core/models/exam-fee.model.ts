@@ -36,6 +36,22 @@ export interface StudentExamFee {
 }
 
 /** A student scheduled for an exam who still owes exam fee. */
+/** One exam fee received (the exam fee receipts report). */
+export interface ExamFeePaymentRow {
+  id: number;
+  paidOn: string;
+  studentId: number;
+  registrationId?: string;
+  studentName?: string;
+  branch?: string;
+  courseId?: number | null;
+  courseName?: string;
+  amount: number;
+  paymentMode: string;
+  receivedBy?: string;
+  note?: string;
+}
+
 export interface ExamFeeDueRow {
   studentId: number;
   registrationId?: string;

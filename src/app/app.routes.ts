@@ -327,6 +327,14 @@ export const routes: Routes = [
         /* Cash-versus-bank and who collected it, branch-wise. Admin and the front
            desk only, the same rule as pending-payments — this names who collected
            what. */
+        path: 'reports/exam-fee-receipts',
+        title: 'Exam fee receipts · Avijan',
+        canActivate: [roleGuard('Admin', 'Editor', 'Receptionist')],
+        loadComponent: () =>
+          import('./features/reports/exam-fee-payments/exam-fee-payments-report.component')
+            .then(m => m.ExamFeePaymentsReportComponent)
+      },
+      {
         path: 'reports/fee-collections',
         title: 'Fee collections · Avijan',
         canActivate: [roleGuard('Admin', 'Receptionist')],

@@ -83,6 +83,7 @@ export const MENU: MenuSection[] = [
       { label: 'Outstanding Dues', icon: 'pi pi-exclamation-circle', route: '/reports/dues', roles: ['Admin', 'Editor', 'Receptionist'] },
       { label: 'Pending Payments', icon: 'pi pi-wallet', route: '/reports/pending-payments', roles: ['Admin', 'Receptionist'] },
       { label: 'Fee Collections', icon: 'pi pi-money-bill', route: '/reports/fee-collections', roles: ['Admin', 'Receptionist'] },
+      { label: 'Exam Fee Receipts', icon: 'pi pi-receipt', route: '/reports/exam-fee-receipts', roles: ['Admin', 'Editor', 'Receptionist'] },
       { label: 'Competition Entries', icon: 'pi pi-palette', route: '/reports/competition', roles: ['Admin', 'Editor', 'Receptionist'], feature: 'competition' },
       { label: 'Expense Report', icon: 'pi pi-minus-circle', route: '/reports/expenses', roles: ['Admin', 'Editor', 'Receptionist'] },
       { label: 'Teacher Account', icon: 'pi pi-briefcase', route: '/reports/teacher-earnings', roles: ['Admin', 'Editor', 'Receptionist', 'Teacher'] },
