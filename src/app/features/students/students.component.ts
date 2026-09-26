@@ -42,6 +42,10 @@ import { saveCertificatePdf } from '../../core/printing/pdf-download';
 import { AuthService } from '../../core/services/auth.service';
 import { ReportService } from '../../core/services/report.service';
 import { StudentService } from '../../core/services/student.service';
+import { ReferralService, referralPercentFor } from '../../core/services/referral.service';
+import { ReferralSlab, ReferrerOption } from '../../core/models/referral.model';
+import { ReferralSlabsDialogComponent } from '../../shared/referral-slabs/referral-slabs-dialog.component';
+import { ReferrerType } from '../../core/models/student.model';
 
 type StatusFilter = 'active' | 'inactive' | 'all';
 
@@ -64,6 +68,7 @@ type StatusFilter = 'active' | 'inactive' | 'all';
     DialogModule,
     InputNumberModule,
     InputTextModule,
+    ReferralSlabsDialogComponent,
     SelectModule,
     SelectButtonModule,
     TableModule,
@@ -79,6 +84,7 @@ type StatusFilter = 'active' | 'inactive' | 'all';
 export class StudentsComponent implements OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly students = inject(StudentService);
+  private readonly referralApi = inject(ReferralService);
   private readonly reports = inject(ReportService);
   private readonly messages = inject(MessageService);
   private readonly confirm = inject(ConfirmationService);
@@ -88,6 +94,9 @@ export class StudentsComponent implements OnDestroy {
      receptionist works this screen all day, and a button that always answers
      "you do not have permission" reads as the page being broken for them. */
   readonly canDeactivate = computed(() => this.auth.hasAnyRole(['Admin']));
+  /** Only Admin sets the referral slabs. */
+  readonly canEditReferralSlabs = computed(() => this.auth.hasAnyRole(['Admin']));
+  referralSlabsVisible = false;
 
   /* ------------------------------------------------------------- state */
   readonly rows = signal<StudentListItem[]>([]);
@@ -106,6 +115,18 @@ export class StudentsComponent implements OnDestroy {
 
   readonly courses = signal<CourseLookup[]>([]);
   readonly teachers = signal<TeacherLookup[]>([]);
+
+  /* ------------------------------------------------ admission referral */
+  readonly referrers = signal<ReferrerOption[]>([]);
+  readonly referralSlabs = signal<ReferralSlab[]>([]);
+  /** The referrer shown read-only when editing a student admitted with one. */
+  readonly editingReferrer = signal<string | null>(null);
+  /** Dropdown options: every active teacher and receptionist, keyed "Type:id". */
+  readonly referrerOptions = computed(() =>
+    this.referrers().map(r => ({
+      key: `${r.type}:${r.id}`,
+      label: `${r.name} — ${r.type}${r.branch ? ` (${r.branch})` : ''}`
+    })));
   readonly branches = signal<BranchLookup[]>([]);
 
   /* ------------------------------------------------------------- photos */
@@ -192,6 +213,9 @@ export class StudentsComponent implements OnDestroy {
     secondTeacherId: [null as number | null],
     thirdTeacherId: [null as number | null],
     branchId: [null as number | null, [Validators.required]],
+    /* Who referred the student: required when admitting, fixed afterwards -
+       applyReferrerRule() switches it. "Teacher:5" / "Receptionist:1". */
+    referrer: [null as string | null, [Validators.required]],
     isActive: [true],
     isComplete: [false]
   });
@@ -212,6 +236,16 @@ export class StudentsComponent implements OnDestroy {
     this.students.courses().subscribe({
       next: data => this.courses.set(data),
       error: () => this.courses.set([])
+    });
+
+    this.referralApi.referrers().subscribe({
+      next: data => this.referrers.set(data),
+      error: () => this.referrers.set([])
+    });
+
+    this.referralApi.settings().subscribe({
+      next: data => this.referralSlabs.set(data.slabs),
+      error: () => this.referralSlabs.set([])
     });
 
     this.students.teachers().subscribe({
@@ -453,6 +487,7 @@ export class StudentsComponent implements OnDestroy {
     this.editingId.set(student.id);
     this.applyPersonalEmailRule();
     this.applyBranchRule();
+    this.applyReferrerRule(student);
     // An existing student keeps the login they were issued; do not re-derive it.
     this.loginEdited.set(true);
     this.editingRegistrationId.set(student.registrationId ?? null);
@@ -528,6 +563,7 @@ export class StudentsComponent implements OnDestroy {
     this.editingId.set(null);
     this.applyPersonalEmailRule();
     this.applyBranchRule();
+    this.applyReferrerRule(null);
     this.loginEdited.set(false);
     this.editingRegistrationId.set(null);
     this.editingBillNo.set(null);
@@ -1010,6 +1046,7 @@ export class StudentsComponent implements OnDestroy {
       secondTeacherId: Number(v.teacherCount) >= 2 ? v.secondTeacherId : null,
       thirdTeacherId: Number(v.teacherCount) >= 3 ? v.thirdTeacherId : null,
       branchId: v.branchId,
+      ...(this.isEditing() ? {} : this.referrerPayload(v.referrer)),
       isActive: v.isActive,
       isComplete: v.isComplete
     };
@@ -1141,6 +1178,47 @@ export class StudentsComponent implements OnDestroy {
    * recorded against Rajpur, and a stricter rule on edit would turn an unrelated
    * correction, like fixing a phone number, into a branch decision.
    */
+  /**
+   * Admitting: the referrer is required. Editing: never required (students
+   * admitted before referrals have none) and never changeable - it decided who
+   * was paid - so it is shown read-only.
+   */
+  private applyReferrerRule(
+    student: { referrerType?: string; referrerId?: number; referrerName?: string; referralPercent?: number } | null
+  ): void {
+    const control = this.form.controls.referrer;
+
+    if (this.isEditing()) {
+      control.clearValidators();
+      control.setValue(student?.referrerType && student.referrerId ? `${student.referrerType}:${student.referrerId}` : null);
+      control.disable({ emitEvent: false });
+      this.editingReferrer.set(student?.referrerName
+        ? `${student.referrerName} (${student.referrerType}${student.referralPercent ? `, ${student.referralPercent}%` : ''})`
+        : null);
+    } else {
+      control.enable({ emitEvent: false });
+      control.setValidators([Validators.required]);
+      control.setValue(null);
+      this.editingReferrer.set(null);
+    }
+
+    control.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private referrerPayload(key: string | null): { referrerType: ReferrerType | null; referrerId: number | null } {
+    const [type, id] = (key ?? '').split(':');
+    return type && id
+      ? { referrerType: type as ReferrerType, referrerId: Number(id) }
+      : { referrerType: null, referrerId: null };
+  }
+
+  /** What the admission fee will earn the referrer, shown under the dropdown. */
+  referralPreview(): { percent: number; amount: number } {
+    const fee = this.form.controls.admissionFees.value ?? 0;
+    const percent = referralPercentFor(fee, this.referralSlabs());
+    return { percent, amount: Math.round(fee * percent) / 100 };
+  }
+
   private applyBranchRule(): void {
     const control = this.form.controls.branchId;
 

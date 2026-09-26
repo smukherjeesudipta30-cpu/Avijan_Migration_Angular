@@ -64,6 +64,8 @@ export interface ReceptionistPayment {
   paidOn?: string;
   amount: number;
   extraShiftBonus: number;
+  /** Admission referral credits paid on this payment. */
+  referralBonus?: number;
   branch?: string;
   notes?: string;
   recordedBy?: string;

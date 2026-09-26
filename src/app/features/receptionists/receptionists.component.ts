@@ -319,6 +319,8 @@ export class ReceptionistsComponent {
    */
   readonly bonusSuggestion = signal<ExtraShiftBonus | null>(null);
   readonly bonusLoading = signal(false);
+  /** Admission referral credits this payment will pay; null until loaded. */
+  readonly referralBonus = signal<number | null>(null);
 
   /**
    * The day the money actually changed hands, as distinct from `payMonth`, which is
@@ -374,6 +376,12 @@ export class ReceptionistsComponent {
     if (!person || !month) return;
 
     this.bonusLoading.set(true);
+    this.referralBonus.set(null);
+
+    this.service.referralBonus(person.id, this.toIsoDate(month)!).subscribe({
+      next: amount => this.referralBonus.set(amount),
+      error: () => this.referralBonus.set(null)
+    });
 
     this.service.extraShiftBonus(person.id, this.toIsoDate(month)!).subscribe({
       next: (bonus: ExtraShiftBonus) => {

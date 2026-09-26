@@ -120,6 +120,7 @@
           <th class="brp__num">Other income</th>
           <th class="brp__num">Expenses</th>
           <th class="brp__num">Receptionist pay</th>
+          <th class="brp__num">Referral commission</th>
           <th class="brp__num">Net</th>
         </tr>
       </ng-template>
@@ -140,6 +141,7 @@
           <td class="brp__num">{{ money(row.otherIncome) }}</td>
           <td class="brp__num brp__out">{{ money(row.expenses) }}</td>
           <td class="brp__num brp__out">{{ money(row.receptionistPay) }}</td>
+          <td class="brp__num brp__out">{{ money(row.referralCommission) }}</td>
           <td class="brp__num" [class.brp__negative]="row.net < 0">
             <strong>{{ money(row.net) }}</strong>
           </td>
@@ -157,6 +159,7 @@
           <td class="brp__num"><strong>{{ money(d.grandTotal.otherIncome) }}</strong></td>
           <td class="brp__num brp__out"><strong>{{ money(d.grandTotal.expenses) }}</strong></td>
           <td class="brp__num brp__out"><strong>{{ money(d.grandTotal.receptionistPay) }}</strong></td>
+          <td class="brp__num brp__out"><strong>{{ money(d.grandTotal.referralCommission) }}</strong></td>
           <td class="brp__num" [class.brp__negative]="d.grandTotal.net < 0">
             <strong>{{ money(d.grandTotal.net) }}</strong>
           </td>
@@ -165,7 +168,7 @@
 
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="10" class="app-muted brp__empty">
+          <td colspan="11" class="app-muted brp__empty">
             Nothing recorded in this range.
           </td>
         </tr>
@@ -202,13 +205,14 @@
           <th class="brp__num">Other income</th>
           <th class="brp__num">Expenses</th>
           <th class="brp__num">Receptionist pay</th>
+          <th class="brp__num">Referral commission</th>
           <th class="brp__num">Net</th>
         </tr>
       </ng-template>
 
       <ng-template pTemplate="groupheader" let-row>
         <tr class="brp__group">
-          <td colspan="10">
+          <td colspan="11">
             <strong>{{ row.branch }}</strong>
             @if (row.branch === 'Unassigned') {
               <span class="app-muted brp__sub">&nbsp;&middot; no branch recorded</span>
@@ -228,13 +232,14 @@
           <td class="brp__num">{{ money(row.otherIncome) }}</td>
           <td class="brp__num brp__out">{{ money(row.expenses) }}</td>
           <td class="brp__num brp__out">{{ money(row.receptionistPay) }}</td>
+          <td class="brp__num brp__out">{{ money(row.referralCommission) }}</td>
           <td class="brp__num" [class.brp__negative]="row.net < 0">{{ money(row.net) }}</td>
         </tr>
       </ng-template>
 
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="10" class="app-muted brp__empty">
+          <td colspan="11" class="app-muted brp__empty">
             Nothing recorded in this range.
           </td>
         </tr>

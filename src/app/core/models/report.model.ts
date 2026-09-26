@@ -446,6 +446,8 @@ export interface BranchPeriodRow {
 
   /** Receptionist salary paid by this branch. */
   receptionistPay: number;
+  /** Admission referral commission in the period, already deducted in net. */
+  referralCommission: number;
   net: number;
 }
 
@@ -459,6 +461,8 @@ export interface BranchTotal {
   expenses: number;
   otherIncome: number;
   receptionistPay: number;
+  /** Admission referral commission in the period, already deducted in net. */
+  referralCommission: number;
   net: number;
 }
 

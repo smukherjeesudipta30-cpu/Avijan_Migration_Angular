@@ -392,6 +392,54 @@
           </small>
         </div>
 
+        <div class="stu__field">
+          <label for="referrer">
+            Reference
+            @if (!isEditing()) {
+              <span class="stu__req">*</span>
+            }
+          </label>
+          @if (isEditing()) {
+            <!-- Fixed at admission: it decided who was paid, so it is not editable. -->
+            <input
+              pInputText
+              id="referrer"
+              [value]="editingReferrer() || 'Not recorded (admitted before referrals)'"
+              [disabled]="true"
+              class="stu__select" />
+          } @else {
+            <p-select
+              inputId="referrer"
+              formControlName="referrer"
+              [options]="referrerOptions()"
+              optionLabel="label"
+              optionValue="key"
+              [filter]="true"
+              filterBy="label"
+              placeholder="--Select teacher or receptionist--"
+              appendTo="body"
+              styleClass="stu__select" />
+            @if (form.controls.referrer.touched && form.controls.referrer.invalid) {
+              <small class="stu__error">Please select who referred this student.</small>
+            }
+            <small class="stu__help">
+              @if (referralPreview().percent > 0) {
+                Earns the referrer {{ referralPreview().percent }}% of the admission fee —
+                ₹{{ referralPreview().amount | number: '1.0-2' }} on this fee, credited as it is collected.
+              } @else {
+                No referral amount on an admission fee below the lowest slab.
+              }
+              @if (canEditReferralSlabs()) {
+                <a href="javascript:void(0)" class="stu__link" (click)="referralSlabsVisible = true">Edit slabs</a>
+              }
+            </small>
+          }
+        </div>
+
+        <app-referral-slabs-dialog
+          [(visible)]="referralSlabsVisible"
+          (saved)="referralSlabs.set($event)" />
+
         <div class="stu__checks">
           <label class="stu__check">
             <p-checkbox formControlName="isActive" [binary]="true" inputId="isActive" />

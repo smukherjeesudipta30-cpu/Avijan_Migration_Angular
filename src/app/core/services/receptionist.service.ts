@@ -128,6 +128,15 @@ export class ReceptionistService {
     return this.http.post<ApiResponse<boolean>>(`${this.base}/leave-deduction`, request);
   }
 
+  /** Admission referral credits the payment for this month will pay. Administrator only. */
+  referralBonus(receptionistId: number, forMonth: string): Observable<number> {
+    return this.http
+      .get<ApiResponse<number>>(`${this.base}/${receptionistId}/referral-bonus`, {
+        params: this.params({ forMonth })
+      })
+      .pipe(map(r => r.data));
+  }
+
   /** Suggested extra-shift bonus for one receptionist's next payment. Administrator only. */
   extraShiftBonus(receptionistId: number, forMonth: string): Observable<ExtraShiftBonus> {
     return this.http

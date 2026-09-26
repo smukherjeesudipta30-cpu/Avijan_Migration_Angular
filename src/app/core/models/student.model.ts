@@ -34,6 +34,11 @@ export interface StudentListItem {
   hasPhoto: boolean;
   /** The student's own address, where receipts and reset codes go. */
   personalEmail?: string;
+  /** Who referred the student at admission; fixed once admitted. */
+  referrerType?: ReferrerType;
+  referrerId?: number;
+  referrerName?: string;
+  referralPercent?: number;
 }
 
 export interface StudentLookup {
@@ -66,6 +71,9 @@ export interface StudentSaveRequest {
   isActive: boolean;
   isComplete: boolean;
   branchId: number | null;
+  /** Required when admitting; ignored on edit. */
+  referrerType?: ReferrerType | null;
+  referrerId?: number | null;
   personalEmail: string | null;
 
   /** Leave both null on create and the server generates them from the name. */
@@ -184,3 +192,5 @@ export interface AdmissionDueCollectRequest {
   paidOn: string | null;
   note: string | null;
 }
+
+export type ReferrerType = 'Teacher' | 'Receptionist';

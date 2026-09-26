@@ -8,7 +8,8 @@ export type IncomeSection =
   | 'TeacherPayouts'
   | 'TeacherExpenses'
   | 'Dues'
-  | 'ReceptionistPay';
+  | 'ReceptionistPay'
+  | 'ReferralCommission';
 
 export interface IncomeSectionTotal {
   section: IncomeSection;

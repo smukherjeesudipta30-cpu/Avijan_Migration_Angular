@@ -311,6 +311,22 @@
           <div class="rec__pay-field"><span class="app-muted">Checking for covered shifts…</span></div>
         }
 
+        @if (referralBonus() !== null) {
+          <!-- Admission referral credits: computed and attached by the server when
+               the payment is saved, shown here so the total is no surprise. -->
+          <div class="rec__pay-field rec__pay-field--bonus">
+            <label>Referral bonus</label>
+            <div class="rec__pay-bonus-readout">
+              @if (referralBonus()! > 0) {
+                <strong>{{ money(referralBonus()!) }}</strong>
+                <span class="app-muted">(admission referrals, added automatically)</span>
+              } @else {
+                <span class="app-muted">None this month</span>
+              }
+            </div>
+          </div>
+        }
+
         <!-- Distinct from Month: that is the month the salary covers, this is the
              day the cash actually changed hands. They differ whenever a month is
              paid late, which is exactly when the difference matters. -->
@@ -366,6 +382,7 @@
           <th style="width: 9rem">Month</th>
           <th class="rec__num" style="width: 8rem">Amount</th>
           <th class="rec__num" style="width: 8rem">Bonus</th>
+          <th class="rec__num" style="width: 8rem">Referral</th>
           <th style="width: 9rem">Paid on</th>
           <th>Note</th>
           <th style="width: 4rem"></th>
@@ -379,6 +396,9 @@
           <td class="rec__num">{{ money(payment.amount) }}</td>
           <td class="rec__num">
             @if (payment.extraShiftBonus) { {{ money(payment.extraShiftBonus) }} } @else { &mdash; }
+          </td>
+          <td class="rec__num">
+            @if (payment.referralBonus) { {{ money(payment.referralBonus) }} } @else { &mdash; }
           </td>
           <td>{{ payment.paidOn ? (payment.paidOn | date: 'd MMM y') : '&mdash;' }}</td>
           <td class="rec__sub">
