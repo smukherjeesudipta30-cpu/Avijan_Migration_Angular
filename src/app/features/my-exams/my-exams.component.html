@@ -32,7 +32,20 @@
 }
 
 <!-- --------------------------------------------------------- admit cards -->
-@if (admitCards().length) {
+@if (feeBlocksAdmitCard()) {
+  <section class="app-card mex__section">
+    <header class="mex__section-head">
+      <h2>Admit cards</h2>
+    </header>
+    <div class="mex__fee-due">
+      <i class="pi pi-lock"></i>
+      <span>
+        Please pay your exam fee (<strong>₹{{ examFee()!.due | number: '1.0-2' }}</strong> still due) at the
+        institute office to download your admit card.
+      </span>
+    </div>
+  </section>
+} @else if (admitCards().length) {
   <section class="app-card mex__section">
     <header class="mex__section-head">
       <h2>Admit cards</h2>

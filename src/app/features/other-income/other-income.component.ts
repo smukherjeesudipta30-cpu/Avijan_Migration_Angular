@@ -23,6 +23,7 @@ import {
 import { AuthService } from '../../core/services/auth.service';
 import { MasterService } from '../../core/services/master.service';
 import { OtherIncomeService } from '../../core/services/other-income.service';
+import { MoveToExamFeeDialogComponent } from '../../shared/exam-fee/move-to-exam-fee-dialog.component';
 
 /**
  * The non-fee income register — anything the institute earns that is not a
@@ -45,7 +46,8 @@ import { OtherIncomeService } from '../../core/services/other-income.service';
     InputTextModule,
     SelectModule,
     TableModule,
-    TooltipModule
+    TooltipModule,
+    MoveToExamFeeDialogComponent
   ],
   providers: [ConfirmationService],
   templateUrl: './other-income.component.html',
@@ -58,6 +60,15 @@ export class OtherIncomeComponent {
   private readonly auth = inject(AuthService);
   private readonly messages = inject(MessageService);
   private readonly confirm = inject(ConfirmationService);
+
+  /* ---- an exam fee typed in here, moved onto the student's exam fee ---- */
+  moveVisible = false;
+  readonly moveRow = signal<{ incomeId: number; purpose?: string; amount: number } | null>(null);
+
+  openMove(row: { incomeId: number; purpose?: string; amount: number }): void {
+    this.moveRow.set(row);
+    this.moveVisible = true;
+  }
 
   readonly data = signal<OtherIncomeList | null>(null);
   readonly loading = signal(false);

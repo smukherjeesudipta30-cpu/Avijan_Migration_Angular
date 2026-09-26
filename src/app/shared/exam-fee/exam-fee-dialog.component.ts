@@ -87,7 +87,7 @@ import { ExamFeeService } from '../../core/services/exam-fee.service';
               <li>
                 <span>{{ p.paidOn | date: 'd MMM y' }}</span>
                 <strong>{{ money(p.amount) }}</strong>
-                <span class="app-muted">{{ p.paymentMode }}@if (p.recordedBy) { · {{ p.recordedBy }} }</span>
+                <span class="app-muted">{{ p.paymentMode }}@if (p.recordedBy) { · received by {{ p.recordedBy }} }</span>
                 <p-button icon="pi pi-trash" severity="danger" [text]="true" size="small" (onClick)="remove(p.id, p.amount)" />
               </li>
             }

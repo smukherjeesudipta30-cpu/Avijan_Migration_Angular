@@ -73,9 +73,17 @@ export class MyExamsComponent {
   readonly done = computed(() => this.available().filter(e => e.status === 'Submitted'));
 
   constructor() {
+    /* The exam fee is checked first: while some is owed the admit card is
+       held back (the server refuses it too), so it is only fetched once paid. */
     this.examFees.mine().subscribe({
-      next: f => this.examFee.set(f),
-      error: () => this.examFee.set(null)
+      next: f => {
+        this.examFee.set(f);
+        if (!this.feeBlocksAdmitCard()) this.loadAdmitCards();
+      },
+      error: () => {
+        this.examFee.set(null);
+        this.loadAdmitCards();
+      }
     });
 
     this.load();
@@ -94,6 +102,15 @@ export class MyExamsComponent {
 
     this.exams.myResults().subscribe({ next: rows => this.results.set(rows) });
     this.exams.myCourseResults().subscribe({ next: data => this.standing.set(data) });
+  }
+
+  /** Exam fee set and not fully paid: the admit card waits until it is. */
+  feeBlocksAdmitCard(): boolean {
+    const f = this.examFee();
+    return !!f && f.examFee !== null && f.examFee !== undefined && f.due > 0;
+  }
+
+  private loadAdmitCards(): void {
     this.exams.admitCards().subscribe({ next: cards => this.admitCards.set(cards) });
   }
 

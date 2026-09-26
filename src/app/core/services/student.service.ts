@@ -57,8 +57,10 @@ export class StudentService {
       .pipe(map(r => r.data));
   }
 
-  lookup(search: string): Observable<StudentLookup[]> {
-    const params = new HttpParams().set('search', search);
+  /** includeCompleted: also students who have finished their course. */
+  lookup(search: string, includeCompleted = false): Observable<StudentLookup[]> {
+    let params = new HttpParams().set('search', search);
+    if (includeCompleted) params = params.set('includeCompleted', 'true');
 
     return this.http
       .get<ApiResponse<StudentLookup[]>>(`${this.base}/lookup`, { params })

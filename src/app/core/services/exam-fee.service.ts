@@ -39,6 +39,11 @@ export class ExamFeeService {
     return this.http.delete<ApiResponse<boolean>>(`${this.base}/payments/${paymentId}`);
   }
 
+  /** Moves an exam fee typed into Other income onto a student's exam fee. */
+  moveFromOtherIncome(otherIncomeId: number, studentId: number): Observable<ApiResponse<StudentExamFee>> {
+    return this.http.post<ApiResponse<StudentExamFee>>(`${this.base}/move-from-other-income`, { otherIncomeId, studentId });
+  }
+
   dues(branch?: string | null): Observable<ExamFeeDueRow[]> {
     let params = new HttpParams();
     if (branch) params = params.set('branch', branch);

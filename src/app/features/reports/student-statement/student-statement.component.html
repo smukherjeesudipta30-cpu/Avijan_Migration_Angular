@@ -144,6 +144,7 @@
                 <th style="width: 10rem">Paid on</th>
                 <th class="rpt__num" style="width: 9rem">Amount</th>
                 <th>Mode</th>
+                <th>Received by</th>
               </tr>
             </ng-template>
             <ng-template pTemplate="body" let-p>
@@ -151,6 +152,7 @@
                 <td>{{ p.paidOn | date: 'd MMM y' }}</td>
                 <td class="rpt__num">{{ p.amount | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</td>
                 <td>{{ p.paymentMode }}</td>
+                <td>{{ p.recordedBy || '—' }}</td>
               </tr>
             </ng-template>
           </p-table>

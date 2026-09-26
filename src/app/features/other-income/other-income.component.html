@@ -241,6 +241,15 @@
                 tooltipPosition="top"
                 (onClick)="edit(row)" />
 
+              <!-- An exam fee typed in here belongs on the student's exam fee instead. -->
+              <p-button
+                icon="pi pi-arrow-right-arrow-left"
+                severity="secondary"
+                [text]="true"
+                pTooltip="Move to exam fee"
+                tooltipPosition="top"
+                (onClick)="openMove(row)" />
+
               @if (canDelete()) {
                 <p-button
                   icon="pi pi-trash"
@@ -273,3 +282,10 @@
     </p>
   </section>
 }
+
+<app-move-to-exam-fee-dialog
+  [(visible)]="moveVisible"
+  [incomeId]="moveRow()?.incomeId ?? null"
+  [purpose]="moveRow()?.purpose ?? ''"
+  [amount]="moveRow()?.amount ?? 0"
+  (moved)="load()" />
