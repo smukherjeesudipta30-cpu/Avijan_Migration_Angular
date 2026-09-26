@@ -204,3 +204,9 @@
 @media (max-width: 760px) {
   .mrk__search { width: 100%; }
 }
+
+/* examination-portal rows are listed read-only */
+:host ::ng-deep .mrk__source {
+  margin-top: 0.3rem;
+  font-size: 0.72rem;
+}

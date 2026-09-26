@@ -45,6 +45,8 @@ export interface MarkListItem {
   totalFullMarks: number;
   totalObtainedMarks: number;
   percentScored: number;
+  /** "Register" (typed on this screen) or "ExamPortal" (read-only here; managed on the Exams screen). */
+  source?: 'Register' | 'ExamPortal';
 }
 
 export interface MarkSaveRequest {

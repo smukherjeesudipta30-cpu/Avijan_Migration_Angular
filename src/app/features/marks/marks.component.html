@@ -165,6 +165,9 @@
           @if (mark.courseName) {
             <small class="app-muted mrk__cell-sub">{{ mark.courseName }}</small>
           }
+          @if (mark.source === 'ExamPortal') {
+            <p-tag value="Exam portal" severity="info" styleClass="mrk__source" />
+          }
         </td>
         <td>{{ mark.examDate ? (mark.examDate | date: 'd MMM y') : '—' }}</td>
         <td>
@@ -185,6 +188,10 @@
         </td>
         <td>
           <div class="mrk__actions">
+            @if (mark.source === 'ExamPortal') {
+              <!-- Marked by the examination portal: corrected on the Exams screen, not here. -->
+              <span class="app-muted mrk__cell-sub" pTooltip="Managed on the Exams screen" tooltipPosition="top">Exams screen</span>
+            } @else {
             <p-button
               icon="pi pi-pencil"
               severity="secondary"
@@ -200,6 +207,7 @@
               pTooltip="Delete"
               tooltipPosition="top"
               (onClick)="remove(mark)" />
+            }
           </div>
         </td>
       </tr>
