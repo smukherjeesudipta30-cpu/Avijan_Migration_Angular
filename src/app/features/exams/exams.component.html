@@ -795,14 +795,23 @@
   (visibleChange)="practicalDialog.set($event)"
   [modal]="true"
   [style]="{ width: '52rem' }"
-  [header]="'Practical marks — ' + (practicalPaper()?.title ?? '')">
+  [header]="(practicalPaper()?.paperType === 'Theory' ? 'Theory marks — ' : 'Practical marks — ') + (practicalPaper()?.title ?? '')">
 
   @if (practicalPaper(); as paper) {
-    <p class="app-muted ex__lede">
-      Every student on {{ paper.courseName || courseName(paper.courseId) }}. Enter a
-      mark out of {{ paper.totalMarks }} and save the row. Saving again corrects a
-      mark already entered.
-    </p>
+    @if (paper.paperType === 'Theory') {
+      <p class="app-muted ex__lede">
+        Students sitting this theory paper offline are marked here. Upload the
+        student's written answer copy first (photos of each page, or a PDF scan) —
+        the mark cannot be saved without it. Papers sat online are marked by the
+        portal; open their answer sheet to see what was answered.
+      </p>
+    } @else {
+      <p class="app-muted ex__lede">
+        Every student on {{ paper.courseName || courseName(paper.courseId) }}. Enter a
+        mark out of {{ paper.totalMarks }} and save the row. Saving again corrects a
+        mark already entered.
+      </p>
+    }
 
     <p-table
       [value]="roster()"
@@ -817,6 +826,9 @@
           <th style="width: 10rem">Registration</th>
           <th>Student</th>
           <th style="width: 10rem">Mark</th>
+          @if (paper.paperType === 'Theory') {
+            <th style="width: 10rem">Answer copy</th>
+          }
           <th style="width: 11rem">Entered</th>
           <th style="width: 6rem"></th>
         </tr>
@@ -827,14 +839,44 @@
           <td>{{ row.registrationId }}</td>
           <td>{{ row.studentName || '&mdash;' }}</td>
           <td>
-            <p-inputNumber
-              [(ngModel)]="row.score"
-              [ngModelOptions]="{ standalone: true }"
-              [min]="0"
-              [max]="row.totalMarks"
-              [suffix]="' / ' + row.totalMarks"
-              styleClass="ex__mark" />
+            @if (row.source === 'Portal') {
+              <!-- Sat online: the portal marked it, so it is not typed over here. -->
+              <strong>{{ row.score }} / {{ row.totalMarks }}</strong>
+              <div class="app-muted ex__sub">Sat online</div>
+            } @else {
+              <p-inputNumber
+                [(ngModel)]="row.score"
+                [ngModelOptions]="{ standalone: true }"
+                [min]="0"
+                [max]="row.totalMarks"
+                [suffix]="' / ' + row.totalMarks"
+                styleClass="ex__mark" />
+            }
           </td>
+          @if (paper.paperType === 'Theory') {
+            <td>
+              @if (row.source === 'Portal' && row.attemptId) {
+                <p-button
+                  label="View answers"
+                  icon="pi pi-eye"
+                  size="small"
+                  [text]="true"
+                  (onClick)="openReview(row)" />
+              } @else if (row.isOfflineTheory) {
+                <p-button
+                  [label]="row.answerCopyCount ? row.answerCopyCount + ' file(s)' : 'Upload'"
+                  [icon]="row.answerCopyCount ? 'pi pi-paperclip' : 'pi pi-upload'"
+                  [severity]="row.answerCopyCount ? 'secondary' : 'warn'"
+                  size="small"
+                  [text]="true"
+                  pTooltip="Written answer copy — required before the mark can be saved"
+                  tooltipPosition="top"
+                  (onClick)="openCopies(row)" />
+              } @else {
+                <span class="app-muted ex__sub">&mdash;</span>
+              }
+            </td>
+          }
           <td>
             @if (row.enteredOn) {
               <span class="app-muted ex__sub">
@@ -846,21 +888,24 @@
             }
           </td>
           <td>
-            <p-button
-              icon="pi pi-check"
-              severity="success"
-              [text]="true"
-              pTooltip="Save mark"
-              tooltipPosition="top"
-              [loading]="savingMark() === row.registrationId"
-              (onClick)="saveMark(row)" />
+            @if (row.source !== 'Portal') {
+              <p-button
+                icon="pi pi-check"
+                severity="success"
+                [text]="true"
+                [pTooltip]="row.isOfflineTheory && !row.answerCopyCount ? 'Upload the answer copy first' : 'Save mark'"
+                tooltipPosition="top"
+                [disabled]="row.isOfflineTheory && !row.answerCopyCount"
+                [loading]="savingMark() === row.registrationId"
+                (onClick)="saveMark(row)" />
+            }
           </td>
         </tr>
       </ng-template>
 
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="5" class="app-muted ex__empty">
+          <td [attr.colspan]="paper.paperType === 'Theory' ? 6 : 5" class="app-muted ex__empty">
             No students are enrolled on this course.
           </td>
         </tr>
@@ -873,3 +918,60 @@
     </p>
   }
 </p-dialog>
+
+<!-- ---------------------------------------- offline theory: answer copy -->
+<p-dialog
+  [visible]="copiesOpen()"
+  (visibleChange)="copiesOpen.set($event)"
+  [modal]="true"
+  [style]="{ width: '36rem', maxWidth: '96vw' }"
+  [header]="'Answer copy — ' + (copiesRow()?.studentName || copiesRow()?.registrationId || '')">
+
+  <p class="app-muted ex__lede">
+    Photos of each page (JPEG/PNG) or one PDF scan of the student's written
+    theory answers. At least one file must be on record before the mark can be
+    saved. Up to 10 files; photos are shrunk before upload.
+  </p>
+
+  <label class="ex__upload">
+    <input
+      type="file"
+      multiple
+      accept="image/jpeg,image/png,application/pdf"
+      [disabled]="uploadingCopies()"
+      (change)="uploadCopies($event)" />
+    <span class="p-button p-button-sm">
+      <i class="pi" [class.pi-upload]="!uploadingCopies()" [class.pi-spin]="uploadingCopies()" [class.pi-spinner]="uploadingCopies()"></i>
+      {{ uploadingCopies() ? 'Uploading…' : 'Choose photos or PDF' }}
+    </span>
+  </label>
+
+  @if (copiesLoading()) {
+    <p class="app-muted">Loading…</p>
+  } @else if (!copies().length) {
+    <p class="app-muted ex__empty">No answer copy uploaded yet.</p>
+  } @else {
+    <ul class="ex__copies">
+      @for (c of copies(); track c.id) {
+        <li>
+          <i class="pi" [class.pi-file-pdf]="c.contentType === 'application/pdf'" [class.pi-image]="c.contentType !== 'application/pdf'"></i>
+          <span class="ex__copy-name">
+            {{ c.fileName }}
+            <span class="app-muted ex__sub">
+              {{ c.sizeBytes / 1024 | number: '1.0-0' }} KB · {{ c.uploadedOn | date: 'd MMM y, h:mm a' }}
+              @if (c.uploadedBy) { · {{ c.uploadedBy }} }
+            </span>
+          </span>
+          <p-button icon="pi pi-eye" [text]="true" size="small" pTooltip="View" (onClick)="viewCopy(c)" />
+          <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger" pTooltip="Remove" (onClick)="removeCopy(c)" />
+        </li>
+      }
+    </ul>
+  }
+</p-dialog>
+
+<!-- ------------------------------------------ online theory: answer sheet -->
+<app-exam-review-dialog
+  [(visible)]="reviewOpen"
+  [review]="review()"
+  [loading]="reviewLoading()" />

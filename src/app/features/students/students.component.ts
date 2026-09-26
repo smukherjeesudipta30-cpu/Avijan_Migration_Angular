@@ -38,6 +38,7 @@ import {
   openPendingDocumentWindow,
   writeDocumentWindow
 } from '../../core/printing/legacy-documents';
+import { saveCertificatePdf } from '../../core/printing/pdf-download';
 import { AuthService } from '../../core/services/auth.service';
 import { ReportService } from '../../core/services/report.service';
 import { StudentService } from '../../core/services/student.service';
@@ -687,6 +688,14 @@ export class StudentsComponent implements OnDestroy {
             life: 9000
           });
         }
+
+        saveCertificatePdf(certificate).catch(() =>
+          this.messages.add({
+            severity: 'warn',
+            summary: 'PDF not saved',
+            detail: 'Could not save the certificate as a PDF. Try again.',
+            life: 6000
+          }));
 
         if (!writeDocumentWindow(win, certificateHtml(certificate))) {
           this.messages.add({

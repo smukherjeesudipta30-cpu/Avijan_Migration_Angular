@@ -83,6 +83,53 @@ export interface PracticalRosterRow {
   totalMarks: number;
   enteredOn?: string;
   enteredBy?: string;
+  /** The result's attempt, when there is one. */
+  attemptId?: number;
+  /** "Portal" (sat online) or "Entered" (hand-marked). */
+  source?: string;
+  /** Theory paper scheduled offline: a mark needs an answer copy on file first. */
+  isOfflineTheory: boolean;
+  answerCopyCount: number;
+}
+
+/** One question of a submitted online paper, as the student sat it. */
+export interface ExamAttemptReviewItem {
+  questionNo: number;
+  questionText: string;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
+  chosenOption?: string;
+  isCorrect: boolean;
+  marks: number;
+  /** Staff only - never sent to the student. */
+  correctOption?: string;
+}
+
+/** A submitted online paper, read-only. */
+export interface ExamAttemptReview {
+  attemptId: number;
+  examId: number;
+  title: string;
+  registrationId: string;
+  studentName?: string;
+  score: number;
+  totalMarks: number;
+  correctCount: number;
+  questionCount: number;
+  submittedOn?: string;
+  questions: ExamAttemptReviewItem[];
+}
+
+/** One uploaded page or scan of an offline theory answer script. */
+export interface ExamAnswerCopy {
+  id: number;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedBy?: string;
+  uploadedOn: string;
 }
 
 export interface PracticalMarkRequest {

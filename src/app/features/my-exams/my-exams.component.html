@@ -201,6 +201,7 @@
           <th class="mex__num" style="width: 8rem">Score</th>
           <th class="mex__num" style="width: 7rem">Percent</th>
           <th style="width: 6rem">Grade</th>
+          <th style="width: 9rem"></th>
         </tr>
       </ng-template>
 
@@ -217,11 +218,27 @@
           <td class="mex__num">{{ r.score }} / {{ r.totalMarks }}</td>
           <td class="mex__num">{{ r.percentScored | number: '1.0-2' }}%</td>
           <td><p-tag [value]="r.grade" severity="info" /></td>
+          <td>
+            <!-- Only a paper sat online has an answer sheet; a hand-entered mark has none. -->
+            @if (r.questionCount > 0) {
+              <p-button
+                label="View answers"
+                icon="pi pi-eye"
+                size="small"
+                [text]="true"
+                (onClick)="openReview(r)" />
+            }
+          </td>
         </tr>
       </ng-template>
     </p-table>
   </section>
 }
+
+<app-exam-review-dialog
+  [(visible)]="reviewOpen"
+  [review]="review()"
+  [loading]="reviewLoading()" />
 
 <!-- ------------------------------------------------------ course standing -->
 @if (standing(); as s) {

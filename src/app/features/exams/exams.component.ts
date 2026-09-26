@@ -19,6 +19,8 @@ import { Observable } from 'rxjs';
 import { CourseListItem } from '../../core/models/academic.model';
 import { ApiResponse } from '../../core/models/api-response.model';
 import {
+  ExamAnswerCopy,
+  ExamAttemptReview,
   ExamPaper,
   ExamPaperSaveRequest,
   ExamQuestion,
@@ -29,7 +31,9 @@ import {
 } from '../../core/models/exam.model';
 import { AcademicService } from '../../core/services/academic.service';
 import { AuthService } from '../../core/services/auth.service';
+import { resizeImageToLimit } from '../../core/images/image-resize';
 import { ExamService } from '../../core/services/exam.service';
+import { ExamReviewDialogComponent } from '../../shared/exam-review/exam-review-dialog.component';
 
 /**
  * The administrator's side of the examination portal: the papers, their question
@@ -56,7 +60,8 @@ import { ExamService } from '../../core/services/exam.service';
     SelectModule,
     TableModule,
     TagModule,
-    TooltipModule
+    TooltipModule,
+    ExamReviewDialogComponent
   ],
   providers: [ConfirmationService],
   templateUrl: './exams.component.html',
@@ -195,6 +200,18 @@ export class ExamsComponent {
   readonly roster = signal<PracticalRosterRow[]>([]);
   readonly rosterLoading = signal(false);
   readonly savingMark = signal<string | null>(null);
+
+  /* online theory: the saved answer sheet */
+  readonly reviewOpen = signal(false);
+  readonly reviewLoading = signal(false);
+  readonly review = signal<ExamAttemptReview | null>(null);
+
+  /* offline theory: the uploaded answer script */
+  readonly copiesOpen = signal(false);
+  readonly copiesRow = signal<PracticalRosterRow | null>(null);
+  readonly copies = signal<ExamAnswerCopy[]>([]);
+  readonly copiesLoading = signal(false);
+  readonly uploadingCopies = signal(false);
 
   constructor() {
     this.load();
@@ -705,6 +722,132 @@ export class ExamsComponent {
         },
         error: () => this.savingMark.set(null)
       });
+  }
+
+  /* ------------------------------------- online theory: answer sheet */
+
+  /** A student's submitted online paper, read-only, with the correct options. */
+  openReview(row: PracticalRosterRow): void {
+    if (!row.attemptId) return;
+
+    this.review.set(null);
+    this.reviewLoading.set(true);
+    this.reviewOpen.set(true);
+
+    this.exams.attemptReview(row.attemptId).subscribe({
+      next: r => {
+        this.review.set(r);
+        this.reviewLoading.set(false);
+      },
+      error: () => {
+        this.reviewLoading.set(false);
+        this.reviewOpen.set(false);
+      }
+    });
+  }
+
+  /* --------------------------------- offline theory: answer script copy */
+
+  /** Largest photo kept after shrinking on the device - 3 MB is the server's cap. */
+  private static readonly MaxCopyImageBytes = 1_500_000;
+
+  openCopies(row: PracticalRosterRow): void {
+    const paper = this.practicalPaper();
+    if (!paper) return;
+
+    this.copiesRow.set(row);
+    this.copies.set([]);
+    this.copiesOpen.set(true);
+    this.copiesLoading.set(true);
+
+    this.exams.answerCopies(paper.examId, row.registrationId).subscribe({
+      next: copies => {
+        this.copies.set(copies);
+        this.copiesLoading.set(false);
+      },
+      error: () => this.copiesLoading.set(false)
+    });
+  }
+
+  async uploadCopies(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const picked = Array.from(input.files ?? []);
+    input.value = '';
+
+    const paper = this.practicalPaper();
+    const row = this.copiesRow();
+    if (!paper || !row || picked.length === 0) return;
+
+    this.uploadingCopies.set(true);
+
+    // Phone photos are several MB each; shrink them here so an upload over a
+    // slow connection is quick and the database stays lean. PDFs go as they are.
+    const files = await Promise.all(picked.map(f =>
+      f.type.startsWith('image/')
+        ? resizeImageToLimit(f, ExamsComponent.MaxCopyImageBytes, 2000)
+        : Promise.resolve(f)));
+
+    this.exams.uploadAnswerCopies(paper.examId, row.registrationId, files).subscribe({
+      next: copies => {
+        this.uploadingCopies.set(false);
+        this.copies.set(copies);
+        this.setCopyCount(row.registrationId, copies.length);
+        this.messages.add({
+          severity: 'success',
+          summary: 'Answer copy uploaded',
+          detail: `${this.who(row)}: ${copies.length} file(s) on record. The mark can now be saved.`,
+          life: 5000
+        });
+      },
+      error: () => this.uploadingCopies.set(false)
+    });
+  }
+
+  viewCopy(copy: ExamAnswerCopy): void {
+    // Opened synchronously so the popup is not blocked, then filled once loaded.
+    const win = window.open('', '_blank');
+
+    this.exams.answerCopyFile(copy.id).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        if (win) {
+          win.location.href = url;
+        } else {
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = copy.fileName;
+          a.click();
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      },
+      error: () => win?.close()
+    });
+  }
+
+  removeCopy(copy: ExamAnswerCopy): void {
+    const row = this.copiesRow();
+    if (!row) return;
+
+    this.confirm.confirm({
+      header: 'Remove this page?',
+      message: `Remove "${copy.fileName}" from ${this.who(row)}'s answer copy?`,
+      acceptLabel: 'Remove',
+      rejectLabel: 'Keep',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () =>
+        this.exams.deleteAnswerCopy(copy.id).subscribe({
+          next: () => {
+            const left = this.copies().filter(c => c.id !== copy.id);
+            this.copies.set(left);
+            this.setCopyCount(row.registrationId, left.length);
+          }
+        })
+    });
+  }
+
+  private setCopyCount(registrationId: string, count: number): void {
+    this.roster.update(rows =>
+      rows.map(r => (r.registrationId === registrationId ? { ...r, answerCopyCount: count } : r)));
   }
 
   /* ------------------------------------------------------------ helpers */

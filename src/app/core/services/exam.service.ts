@@ -5,6 +5,8 @@ import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
 import {
+  ExamAnswerCopy,
+  ExamAttemptReview,
   AdmitCard,
   AvailableExam,
   ExamPaper,
@@ -107,6 +109,47 @@ export class ExamService {
 
   savePracticalMark(request: PracticalMarkRequest): Observable<ApiResponse<boolean>> {
     return this.http.post<ApiResponse<boolean>>(`${this.admin}/practical/marks`, request);
+  }
+
+  /** Staff: a submitted online paper, read-only, with the correct options. */
+  attemptReview(attemptId: number): Observable<ExamAttemptReview> {
+    return this.http
+      .get<ApiResponse<ExamAttemptReview>>(`${this.admin}/attempts/${attemptId}/review`)
+      .pipe(map(r => r.data));
+  }
+
+  /** Student: their own submitted paper, read-only, without the correct options. */
+  myReview(attemptId: number): Observable<ExamAttemptReview> {
+    return this.http
+      .get<ApiResponse<ExamAttemptReview>>(`${this.mine}/results/${attemptId}/review`)
+      .pipe(map(r => r.data));
+  }
+
+  answerCopies(examId: number, registrationId: string): Observable<ExamAnswerCopy[]> {
+    return this.http
+      .get<ApiResponse<ExamAnswerCopy[]>>(`${this.admin}/${examId}/answer-copies`, {
+        params: this.params({ registrationId })
+      })
+      .pipe(map(r => r.data));
+  }
+
+  uploadAnswerCopies(examId: number, registrationId: string, files: File[]): Observable<ExamAnswerCopy[]> {
+    const form = new FormData();
+    files.forEach(f => form.append('files', f, f.name));
+
+    return this.http
+      .post<ApiResponse<ExamAnswerCopy[]>>(`${this.admin}/${examId}/answer-copies`, form, {
+        params: this.params({ registrationId })
+      })
+      .pipe(map(r => r.data));
+  }
+
+  answerCopyFile(copyId: number): Observable<Blob> {
+    return this.http.get(`${this.admin}/answer-copies/${copyId}`, { responseType: 'blob' });
+  }
+
+  deleteAnswerCopy(copyId: number): Observable<ApiResponse<boolean>> {
+    return this.http.delete<ApiResponse<boolean>>(`${this.admin}/answer-copies/${copyId}`);
   }
 
   /* -------------------------------------- admin: sittings and codes */

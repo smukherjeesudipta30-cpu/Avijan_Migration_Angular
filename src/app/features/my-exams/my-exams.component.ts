@@ -10,11 +10,14 @@ import { MessageService } from 'primeng/api';
 import {
   AdmitCard,
   AvailableExam,
+  ExamAttemptReview,
   ExamResult,
   StudentExamResults
 } from '../../core/models/exam.model';
 import { admitCardHtml, openDocumentWindow } from '../../core/printing/legacy-documents';
+import { isNativeApp, saveAdmitCardPdf } from '../../core/printing/pdf-download';
 import { ExamService } from '../../core/services/exam.service';
+import { ExamReviewDialogComponent } from '../../shared/exam-review/exam-review-dialog.component';
 
 /**
  * The student's examination portal: the papers they may sit, the ones they have
@@ -26,7 +29,7 @@ import { ExamService } from '../../core/services/exam.service';
  */
 @Component({
   selector: 'app-my-exams',
-  imports: [CommonModule, ButtonModule, TableModule, TagModule],
+  imports: [CommonModule, ButtonModule, TableModule, TagModule, ExamReviewDialogComponent],
   templateUrl: './my-exams.component.html',
   styleUrl: './my-exams.component.scss'
 })
@@ -41,6 +44,10 @@ export class MyExamsComponent {
   readonly admitCards = signal<AdmitCard[]>([]);
 
   readonly loading = signal(true);
+
+  readonly reviewOpen = signal(false);
+  readonly reviewLoading = signal(false);
+  readonly review = signal<ExamAttemptReview | null>(null);
 
   readonly openNow = computed(
     () => this.available().filter(e => e.status === 'NotStarted' || e.status === 'InProgress'));
@@ -106,11 +113,45 @@ export class MyExamsComponent {
     }
   }
 
+  /* ----------------------------------------------------- answer sheet */
+
+  /** The student's own submitted online paper, read-only. */
+  openReview(result: ExamResult): void {
+    this.review.set(null);
+    this.reviewLoading.set(true);
+    this.reviewOpen.set(true);
+
+    this.exams.myReview(result.attemptId).subscribe({
+      next: r => {
+        this.review.set(r);
+        this.reviewLoading.set(false);
+      },
+      error: () => {
+        this.reviewLoading.set(false);
+        this.reviewOpen.set(false);
+        this.messages.add({
+          severity: 'warn',
+          summary: 'Not available',
+          detail: 'The answer sheet for this paper could not be opened.',
+          life: 6000
+        });
+      }
+    });
+  }
+
   /* -------------------------------------------------------- admit card */
 
-  /** Prints the card in the legacy layout, with the sitting the institute set. */
+  /**
+   * Saves the card as a PDF and, on a computer, also opens it in the legacy
+   * print layout. The app's WebView has no print popup, so there the saved
+   * PDF (handed to the share sheet) is the whole of it.
+   */
   printAdmitCard(card: AdmitCard): void {
-    if (!openDocumentWindow(admitCardHtml(card))) {
+    const popupOk = isNativeApp() || openDocumentWindow(admitCardHtml(card));
+
+    saveAdmitCardPdf(card).catch(() => this.pdfFailed('admit card'));
+
+    if (!popupOk) {
       this.messages.add({
         severity: 'warn',
         summary: 'Popup blocked',
@@ -118,5 +159,14 @@ export class MyExamsComponent {
         life: 6000
       });
     }
+  }
+
+  private pdfFailed(what: string): void {
+    this.messages.add({
+      severity: 'warn',
+      summary: 'PDF not saved',
+      detail: `Could not save the ${what} as a PDF. Try again.`,
+      life: 6000
+    });
   }
 }

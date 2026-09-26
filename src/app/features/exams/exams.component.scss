@@ -370,3 +370,29 @@
   border-left-color: var(--app-accent);
   background: color-mix(in srgb, var(--app-accent) 8%, transparent);
 }
+
+/* offline theory answer copy */
+.ex__upload {
+  display: inline-block;
+  margin-bottom: 0.75rem;
+  cursor: pointer;
+
+  input { display: none; }
+  .p-button { display: inline-flex; gap: 0.4rem; align-items: center; }
+}
+
+.ex__copies {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+
+  li { display: flex; align-items: center; gap: 0.5rem; }
+}
+
+.ex__copy-name {
+  flex: 1;
+  display: grid;
+  word-break: break-all;
+}
