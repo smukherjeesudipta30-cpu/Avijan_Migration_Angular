@@ -69,6 +69,7 @@ export const MENU: MenuSection[] = [
       { label: 'Other Income', icon: 'pi pi-plus-circle', route: '/other-income', roles: ['Admin', 'Editor', 'Receptionist'] },
       // The legacy Income/Index was [Authorize(Roles = "Admin")] only.
       { label: 'Income', icon: 'pi pi-chart-line', route: '/income', roles: ['Admin'] },
+      { label: 'Proprietor Honorarium', icon: 'pi pi-user', route: '/proprietor-honorarium', roles: ['Admin', 'Editor'] },
       // The student's own side: pay this month against the institute's QR code.
       { label: 'Pay My Fees', icon: 'pi pi-indian-rupee', route: '/my-fees', roles: ['Student'] }
     ]

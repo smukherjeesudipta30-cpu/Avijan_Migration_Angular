@@ -87,6 +87,8 @@ export class ChatService {
 
   private awayTimer: ReturnType<typeof setTimeout> | null = null;
   private localAway = false;
+  /** This device is ringing or on a call: never reported away meanwhile. */
+  private localInCall = false;
   private activityCleanup: (() => void) | null = null;
 
   /**
@@ -214,6 +216,9 @@ export class ChatService {
     this.localAway = false;
 
     const reportLocal = (away: boolean): void => {
+      // On a call (or ringing) the screen going off, or another app coming to
+      // the front, is not "away" - the person is talking. Stay present.
+      if (away && this.localInCall) away = false;
       if (this.localAway === away) return;
       this.localAway = away;
       connection.invoke('SetPresenceStatus', away).catch(() => {
@@ -360,7 +365,12 @@ export class ChatService {
 
   /** Broadcasts to everyone whether this user is on a call, so a third party sees them as busy. */
   setCallStatus(inCall: boolean): void {
+    this.localInCall = inCall;
+    // A call leaves the screen as the device found it: if it is off or the
+    // app is in the background when the call ends, that is away now.
+    if (inCall && this.localAway) { this.localAway = false; this.connection?.invoke('SetPresenceStatus', false).catch(() => {}); }
     this.connection?.invoke('SetCallStatus', inCall).catch(() => {});
+    if (!inCall && document.hidden) { this.localAway = true; this.connection?.invoke('SetPresenceStatus', true).catch(() => {}); }
   }
 
   disconnect(): void {
