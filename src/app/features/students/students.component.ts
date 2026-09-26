@@ -121,12 +121,18 @@ export class StudentsComponent implements OnDestroy {
   readonly referralSlabs = signal<ReferralSlab[]>([]);
   /** The referrer shown read-only when editing a student admitted with one. */
   readonly editingReferrer = signal<string | null>(null);
-  /** Dropdown options: every active teacher and receptionist, keyed "Type:id". */
-  readonly referrerOptions = computed(() =>
-    this.referrers().map(r => ({
+  /**
+   * Dropdown options, keyed "Type:id": a direct (walk-in) admission first -
+   * chosen deliberately, so the field stays required - then every active
+   * teacher and receptionist.
+   */
+  readonly referrerOptions = computed(() => [
+    { key: 'None:0', label: 'No referral (direct / walk-in admission)' },
+    ...this.referrers().map(r => ({
       key: `${r.type}:${r.id}`,
       label: `${r.name} — ${r.type}${r.branch ? ` (${r.branch})` : ''}`
-    })));
+    }))
+  ]);
   readonly branches = signal<BranchLookup[]>([]);
 
   /* ------------------------------------------------------------- photos */
@@ -1192,7 +1198,9 @@ export class StudentsComponent implements OnDestroy {
       control.clearValidators();
       control.setValue(student?.referrerType && student.referrerId ? `${student.referrerType}:${student.referrerId}` : null);
       control.disable({ emitEvent: false });
-      this.editingReferrer.set(student?.referrerName
+      this.editingReferrer.set(student?.referrerType === 'None'
+        ? 'No referral (direct admission)'
+        : student?.referrerName
         ? `${student.referrerName} (${student.referrerType}${student.referralPercent ? `, ${student.referralPercent}%` : ''})`
         : null);
     } else {
@@ -1207,6 +1215,7 @@ export class StudentsComponent implements OnDestroy {
 
   private referrerPayload(key: string | null): { referrerType: ReferrerType | null; referrerId: number | null } {
     const [type, id] = (key ?? '').split(':');
+    if (type === 'None') return { referrerType: 'None', referrerId: null };
     return type && id
       ? { referrerType: type as ReferrerType, referrerId: Number(id) }
       : { referrerType: null, referrerId: null };
@@ -1214,6 +1223,7 @@ export class StudentsComponent implements OnDestroy {
 
   /** What the admission fee will earn the referrer, shown under the dropdown. */
   referralPreview(): { percent: number; amount: number } {
+    if (this.form.controls.referrer.value?.startsWith('None')) return { percent: 0, amount: 0 };
     const fee = this.form.controls.admissionFees.value ?? 0;
     const percent = referralPercentFor(fee, this.referralSlabs());
     return { percent, amount: Math.round(fee * percent) / 100 };

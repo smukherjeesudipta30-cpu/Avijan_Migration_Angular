@@ -193,4 +193,5 @@ export interface AdmissionDueCollectRequest {
   note: string | null;
 }
 
-export type ReferrerType = 'Teacher' | 'Receptionist';
+/** 'None' = a direct / walk-in admission: deliberately unreferred, nobody credited. */
+export type ReferrerType = 'Teacher' | 'Receptionist' | 'None';

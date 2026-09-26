@@ -426,6 +426,8 @@
               @if (referralPreview().percent > 0) {
                 Earns the referrer {{ referralPreview().percent }}% of the admission fee —
                 ₹{{ referralPreview().amount | number: '1.0-2' }} on this fee, credited as it is collected.
+              } @else if (form.controls.referrer.value?.startsWith('None')) {
+                Direct admission — no referral amount is credited to anyone.
               } @else {
                 No referral amount on an admission fee below the lowest slab.
               }
