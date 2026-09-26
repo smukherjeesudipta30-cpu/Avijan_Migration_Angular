@@ -120,6 +120,47 @@
     </div>
   </div>
 
+  <!-- Exam fee: charged once for the course. Shown when a fee applies. -->
+  @if (s.examFee; as ef) {
+    @if (ef.examFee !== null && ef.examFee !== undefined) {
+      <section class="app-card rpt__result">
+        <header class="rpt__result-head">
+          <h2>Exam fee</h2>
+          <span class="app-muted">
+            {{ ef.examFee | currency: 'INR' : 'symbol-narrow' : '1.2-2' }} &middot;
+            paid {{ ef.paid | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}
+            @if (ef.due > 0) {
+              &middot; <strong class="rpt__negative">{{ ef.due | currency: 'INR' : 'symbol-narrow' : '1.2-2' }} still to pay</strong>
+            } @else {
+              &middot; paid in full
+            }
+          </span>
+        </header>
+
+        @if (ef.payments.length) {
+          <p-table [value]="ef.payments" styleClass="p-datatable-sm">
+            <ng-template pTemplate="header">
+              <tr>
+                <th style="width: 10rem">Paid on</th>
+                <th class="rpt__num" style="width: 9rem">Amount</th>
+                <th>Mode</th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-p>
+              <tr>
+                <td>{{ p.paidOn | date: 'd MMM y' }}</td>
+                <td class="rpt__num">{{ p.amount | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</td>
+                <td>{{ p.paymentMode }}</td>
+              </tr>
+            </ng-template>
+          </p-table>
+        } @else {
+          <p class="app-muted">No exam fee paid yet.</p>
+        }
+      </section>
+    }
+  }
+
   <section class="app-card rpt__result">
     <header class="rpt__result-head">
       <h2>Fee payments</h2>

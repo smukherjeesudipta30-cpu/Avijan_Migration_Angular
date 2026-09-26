@@ -63,6 +63,8 @@ export const MENU: MenuSection[] = [
     title: 'Finance',
     items: [
       { label: 'Monthly Fees', icon: 'pi pi-wallet', route: '/fees', roles: ['Admin', 'Editor', 'Receptionist'] },
+      // Exam fee per course/branch (Admin sets), and collecting it from students.
+      { label: 'Exam Fees', icon: 'pi pi-file-edit', route: '/exam-fees', roles: ['Admin', 'Editor', 'Receptionist'] },
       { label: 'Expenses', icon: 'pi pi-minus-circle', route: '/expenses', roles: ['Admin', 'Editor', 'Receptionist'] },
       { label: 'Other Income', icon: 'pi pi-plus-circle', route: '/other-income', roles: ['Admin', 'Editor', 'Receptionist'] },
       // The legacy Income/Index was [Authorize(Roles = "Admin")] only.

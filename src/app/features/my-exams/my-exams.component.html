@@ -18,6 +18,19 @@
     (onClick)="load()" />
 </header>
 
+@if (examFee(); as ef) {
+  @if (ef.due > 0) {
+    <!-- A reminder only: it never stops the student sitting the exam. -->
+    <div class="mex__fee-due">
+      <i class="pi pi-info-circle"></i>
+      <span>
+        Exam fee for {{ ef.courseName }}: <strong>₹{{ ef.due | number: '1.0-2' }}</strong> still to pay
+        (of ₹{{ ef.examFee | number: '1.0-2' }}). Please pay it at the institute office.
+      </span>
+    </div>
+  }
+}
+
 <!-- --------------------------------------------------------- admit cards -->
 @if (admitCards().length) {
   <section class="app-card mex__section">

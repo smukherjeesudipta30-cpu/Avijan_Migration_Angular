@@ -1,3 +1,4 @@
+import { ExamFeeDueRow, StudentExamFee } from './exam-fee.model';
 import { PagedResult } from './student.model';
 
 /* ------------------------------------------------------------- admissions */
@@ -147,6 +148,11 @@ export interface PendingPaymentsReport {
   admissionDues?: AdmissionDueRow[];
 
   totalAdmissionDue?: number;
+
+  /** Students scheduled for an exam who still owe exam fee (as it stands today). */
+  examFeeDues?: ExamFeeDueRow[];
+
+  totalExamFeeDue?: number;
 }
 
 /* ------------------------------------------------------ fee collections */
@@ -363,6 +369,8 @@ export interface StudentStatement {
   payments: StatementPayment[];
   marks: StatementMark[];
   generatedOn: string;
+  /** The exam fee: charged, paid, owed and each payment. */
+  examFee?: StudentExamFee | null;
 }
 
 /* ------------------------------------------------------------ certificate */
@@ -448,6 +456,8 @@ export interface BranchPeriodRow {
   receptionistPay: number;
   /** Admission referral commission in the period, already deducted in net. */
   referralCommission: number;
+  /** Exam fees collected in the period, already included in net. */
+  examFees: number;
   net: number;
 }
 
@@ -463,6 +473,8 @@ export interface BranchTotal {
   receptionistPay: number;
   /** Admission referral commission in the period, already deducted in net. */
   referralCommission: number;
+  /** Exam fees collected in the period, already included in net. */
+  examFees: number;
   net: number;
 }
 

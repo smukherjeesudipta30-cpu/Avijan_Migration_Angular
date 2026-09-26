@@ -644,6 +644,12 @@
           <td>
             {{ row.studentName || '&mdash;' }}
 
+            @if (row.examFeeUnpaid) {
+              <!-- A reminder to collect it; it does not stop scheduling. -->
+              <p-tag value="Exam fee unpaid" severity="warn" styleClass="ex__fee-tag"
+                     pTooltip="Collect it from Finance → Exam Fees or the Students list" tooltipPosition="top" />
+            }
+
             @if (isDuplicateName(row)) {
               <!-- Another student on this course answers to the same name; the
                    registration id beside it is the only thing telling them apart. -->

@@ -46,6 +46,7 @@ import { StudentService } from '../../core/services/student.service';
 import { ReferralService, referralPercentFor } from '../../core/services/referral.service';
 import { ReferralSlab, ReferrerOption } from '../../core/models/referral.model';
 import { ReferralSlabsDialogComponent } from '../../shared/referral-slabs/referral-slabs-dialog.component';
+import { ExamFeeDialogComponent } from '../../shared/exam-fee/exam-fee-dialog.component';
 import { ReferrerType } from '../../core/models/student.model';
 
 type StatusFilter = 'active' | 'inactive' | 'all';
@@ -71,6 +72,7 @@ type StatusFilter = 'active' | 'inactive' | 'all';
     InputNumberModule,
     InputTextModule,
     ReferralSlabsDialogComponent,
+    ExamFeeDialogComponent,
     SelectModule,
     SelectButtonModule,
     TableModule,
@@ -99,6 +101,15 @@ export class StudentsComponent implements OnDestroy {
   /** Only Admin sets the referral slabs. */
   readonly canEditReferralSlabs = computed(() => this.auth.hasAnyRole(['Admin']));
   referralSlabsVisible = false;
+
+  /* ------------------------------------------------------ exam fee */
+  examFeeVisible = false;
+  readonly examFeeStudentId = signal<number | null>(null);
+
+  openExamFee(student: { id: number }): void {
+    this.examFeeStudentId.set(student.id);
+    this.examFeeVisible = true;
+  }
 
   /* ------------------------------------------------------------- state */
   readonly rows = signal<StudentListItem[]>([]);

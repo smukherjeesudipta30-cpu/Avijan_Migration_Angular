@@ -450,9 +450,7 @@
           }
         </div>
 
-        <app-referral-slabs-dialog
-          [(visible)]="referralSlabsVisible"
-          (saved)="referralSlabs.set($event)" />
+
 
         <div class="stu__checks">
           <label class="stu__check">
@@ -727,6 +725,14 @@
               tooltipPosition="top"
               (onClick)="printReceipt(student)" />
 
+            <p-button
+              icon="pi pi-file-edit"
+              severity="secondary"
+              [text]="true"
+              pTooltip="Exam fee"
+              tooltipPosition="top"
+              (onClick)="openExamFee(student)" />
+
             <!-- Only offered once the course is marked complete — the server
                  refuses it either way, this just saves the round trip. -->
             @if (student.isComplete) {
@@ -859,3 +865,10 @@
   [studentId]="admissionDueStudentId()"
   [(visible)]="admissionDueVisible"
   (collected)="onAdmissionDueCollected()" />
+
+<!-- Kept outside the registration form, so their own inputs never join it. -->
+<app-exam-fee-dialog [(visible)]="examFeeVisible" [studentId]="examFeeStudentId()" />
+
+<app-referral-slabs-dialog
+  [(visible)]="referralSlabsVisible"
+  (saved)="referralSlabs.set($event)" />

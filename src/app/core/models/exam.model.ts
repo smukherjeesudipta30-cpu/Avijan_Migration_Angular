@@ -174,6 +174,9 @@ export interface ExamScheduleRow {
 
   /** How the theory paper is sat — 'Online' or 'Offline'. Always 'Online' for a practical. */
   mode: 'Online' | 'Offline';
+
+  /** Exam fee set but not fully paid - a warning only, never a block. */
+  examFeeUnpaid?: boolean;
 }
 
 export interface ExamScheduleSaveRequest {

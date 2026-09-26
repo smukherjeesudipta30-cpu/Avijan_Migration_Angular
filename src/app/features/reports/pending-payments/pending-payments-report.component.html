@@ -98,6 +98,14 @@
         <small class="app-muted">{{ (r.admissionDues ?? []).length }} student(s)</small>
       </div>
     }
+
+    @if ((r.totalExamFeeDue ?? 0) > 0) {
+      <div class="app-card rpt__tile rpt__tile--negative">
+        <span>Exam fees owing</span>
+        <strong>{{ r.totalExamFeeDue ?? 0 | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+        <small class="app-muted">{{ (r.examFeeDues ?? []).length }} student(s)</small>
+      </div>
+    }
   </div>
 
   @if (r.branchTotals.length) {
@@ -198,6 +206,68 @@
               {{ r.totalAdmissionDue ?? 0 | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}
             </td>
             <td></td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </section>
+  }
+
+  <!-- Exam fees still owing: students scheduled for (or who sat) an exam on
+       their course who have not paid the exam fee in full. As it stands today. -->
+  @if ((r.examFeeDues ?? []).length) {
+    <section class="app-card rpt__result">
+      <header class="rpt__result-head">
+        <h2>Exam fees still owing</h2>
+        <span class="app-muted">
+          {{ (r.examFeeDues ?? []).length }} student(s) &middot;
+          {{ r.totalExamFeeDue ?? 0 | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}
+          &middot; as it stands today, whatever the date range above
+        </span>
+      </header>
+
+      <p-table
+        [value]="r.examFeeDues ?? []"
+        [paginator]="(r.examFeeDues ?? []).length > 25"
+        [rows]="25"
+        styleClass="p-datatable-sm"
+        [tableStyle]="{ 'min-width': '46rem' }">
+
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Student</th>
+            <th style="width: 10rem">Branch</th>
+            <th>Course</th>
+            <th class="rpt__num" style="width: 8rem">Exam fee</th>
+            <th class="rpt__num" style="width: 8rem">Received</th>
+            <th class="rpt__num" style="width: 8rem">Owing</th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-row>
+          <tr>
+            <td>
+              <strong>{{ row.studentName || '—' }}</strong>
+              <small class="app-muted rpt__cell-sub">
+                <code class="rpt__code">{{ row.registrationId }}</code>
+                @if (row.phone) { &middot; {{ row.phone }} }
+              </small>
+            </td>
+            <td>{{ row.branch || '—' }}</td>
+            <td>{{ row.courseName || '—' }}</td>
+            <td class="rpt__num">{{ row.examFee | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</td>
+            <td class="rpt__num">{{ row.paid | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</td>
+            <td class="rpt__num rpt__negative">
+              <strong>{{ row.due | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}</strong>
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="footer">
+          <tr class="rpt__total-row">
+            <td colspan="5">Total exam fees owing</td>
+            <td class="rpt__num">
+              {{ r.totalExamFeeDue ?? 0 | currency: 'INR' : 'symbol-narrow' : '1.2-2' }}
+            </td>
           </tr>
         </ng-template>
       </p-table>

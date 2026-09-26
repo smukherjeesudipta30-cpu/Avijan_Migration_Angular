@@ -265,6 +265,14 @@ export const routes: Routes = [
             .then(m => m.EnquiryReportComponent)
       },
       {
+        path: 'exam-fees',
+        title: 'Exam fees · Avijan',
+        canActivate: [roleGuard('Admin', 'Editor', 'Receptionist')],
+        loadComponent: () =>
+          import('./features/exam-fees/exam-fees.component')
+            .then(m => m.ExamFeesComponent)
+      },
+      {
         path: 'receptionists',
         title: 'Receptionists · Avijan',
         canActivate: [roleGuard('Admin', 'Editor', 'Receptionist')],

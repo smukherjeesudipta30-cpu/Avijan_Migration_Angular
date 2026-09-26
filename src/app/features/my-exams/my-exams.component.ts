@@ -17,6 +17,8 @@ import {
 import { admitCardHtml, openDocumentWindow } from '../../core/printing/legacy-documents';
 import { isNativeApp, saveAdmitCardPdf } from '../../core/printing/pdf-download';
 import { ExamService } from '../../core/services/exam.service';
+import { ExamFeeService } from '../../core/services/exam-fee.service';
+import { StudentExamFee } from '../../core/models/exam-fee.model';
 import { ExamReviewDialogComponent } from '../../shared/exam-review/exam-review-dialog.component';
 
 /**
@@ -35,6 +37,10 @@ import { ExamReviewDialogComponent } from '../../shared/exam-review/exam-review-
 })
 export class MyExamsComponent {
   private readonly exams = inject(ExamService);
+  private readonly examFees = inject(ExamFeeService);
+
+  /** The student's own exam fee, for the reminder when some is still owed. */
+  readonly examFee = signal<StudentExamFee | null>(null);
   private readonly router = inject(Router);
   private readonly messages = inject(MessageService);
 
@@ -67,6 +73,11 @@ export class MyExamsComponent {
   readonly done = computed(() => this.available().filter(e => e.status === 'Submitted'));
 
   constructor() {
+    this.examFees.mine().subscribe({
+      next: f => this.examFee.set(f),
+      error: () => this.examFee.set(null)
+    });
+
     this.load();
   }
 
