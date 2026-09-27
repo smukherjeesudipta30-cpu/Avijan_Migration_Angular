@@ -33,6 +33,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { MasterService } from '../../core/services/master.service';
 import { ReceptionistService } from '../../core/services/receptionist.service';
 import { ReportService } from '../../core/services/report.service';
+import { PayCycleNoticeComponent } from '../../shared/pay-cycle/pay-cycle-notice.component';
 
 /**
  * Receptionist master and their monthly pay.
@@ -46,6 +47,7 @@ import { ReportService } from '../../core/services/report.service';
   selector: 'app-receptionists',
   imports: [
     CommonModule,
+    PayCycleNoticeComponent,
     FormsModule,
     ReactiveFormsModule,
     ButtonModule,

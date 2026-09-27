@@ -260,6 +260,8 @@
     </p>
 
     @if (canPay()) {
+      <app-pay-cycle-notice [payMonth]="payMonth()" />
+
       <div class="rec__pay">
         <div class="rec__pay-field">
           <label for="payMonth">Month</label>

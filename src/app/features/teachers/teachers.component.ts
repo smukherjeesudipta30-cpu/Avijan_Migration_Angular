@@ -28,6 +28,7 @@ import {
 } from '../../core/models/master.model';
 import { AuthService } from '../../core/services/auth.service';
 import { MasterService } from '../../core/services/master.service';
+import { PayCycleNoticeComponent } from '../../shared/pay-cycle/pay-cycle-notice.component';
 
 /**
  * Teacher master — the migration of `Views/Teacher/Index.cshtml` and
@@ -39,6 +40,7 @@ import { MasterService } from '../../core/services/master.service';
   selector: 'app-teachers',
   imports: [
     CommonModule,
+    PayCycleNoticeComponent,
     FormsModule,
     ReactiveFormsModule,
     ButtonModule,

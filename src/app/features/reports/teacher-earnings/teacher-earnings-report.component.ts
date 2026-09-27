@@ -161,8 +161,15 @@ export class TeacherEarningsReportComponent {
     });
   }
 
-  /** The institute's receptionist pay-cycle start day (26th-to-26th by default), typed by an Admin before saving. */
+  /** The institute's pay-cycle start day (26th to 25th by default), typed by an Admin before saving. */
   readonly payCycleStartDayDraft = signal<number | null>(null);
+
+  /** 26 → "26th", 1 → "1st", 22 → "22nd". */
+  dayName(n: number): string {
+    const teen = n % 100 >= 11 && n % 100 <= 13;
+    const suffix = !teen && n % 10 === 1 ? 'st' : !teen && n % 10 === 2 ? 'nd' : !teen && n % 10 === 3 ? 'rd' : 'th';
+    return `${n}${suffix}`;
+  }
 
   savePayCycleStartDay(): void {
     if (!this.isAdmin()) return;

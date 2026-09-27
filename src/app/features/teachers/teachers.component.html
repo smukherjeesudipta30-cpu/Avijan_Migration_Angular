@@ -336,6 +336,8 @@
     </div>
 
     @if (canPay()) {
+      <app-pay-cycle-notice [paidOn]="payDate()" />
+
       <!-- Recording a payment is what moves the "paid" figure, and with it the
            teacher account report. -->
       <div class="tch__pay">

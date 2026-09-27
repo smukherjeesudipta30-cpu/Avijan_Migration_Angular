@@ -27,7 +27,7 @@
       </small>
 
       <div class="rpt__payroll-cycle">
-        <label for="payCycleStartDay">Receptionist pay cycle starts on the</label>
+        <label for="payCycleStartDay">Pay cycle (teachers &amp; receptionists) starts on the</label>
         <p-inputNumber
           inputId="payCycleStartDay"
           [ngModel]="payCycleStartDayDraft() ?? ps.payCycleStartDay"
@@ -38,7 +38,11 @@
           [showButtons]="true"
           [disabled]="savingPayrollSettings()"
           styleClass="rpt__payroll-cycle-input" />
-        <span class="app-muted">of each month (currently the {{ ps.payCycleStartDay }}th to the {{ ps.payCycleStartDay }}th)</span>
+        <span class="app-muted">
+          of each month (currently the {{ dayName(ps.payCycleStartDay) }} to the
+          {{ ps.payCycleStartDay === 1 ? 'last day of the same month' : dayName(ps.payCycleStartDay - 1) + ' of the next' }}).
+          Shown on every teacher and receptionist payment form.
+        </span>
         <p-button
           label="Save"
           size="small"
