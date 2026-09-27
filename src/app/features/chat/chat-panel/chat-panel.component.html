@@ -217,7 +217,9 @@
                       <strong>{{ m.attachmentFileName }}</strong>
                       <small>{{ formatAttachmentSize(m.attachmentSize) }}</small>
                     </span>
-                    <i class="pi pi-download" aria-hidden="true"></i>
+                    <i class="pi" [class.pi-download]="downloadingId() !== m.id"
+                       [class.pi-spin]="downloadingId() === m.id" [class.pi-spinner]="downloadingId() === m.id"
+                       aria-hidden="true"></i>
                   </button>
                 }
                 <span class="chat__msg-time">

@@ -391,7 +391,7 @@
   max-width: 100%;
 
   i.pi-paperclip { color: var(--app-text-muted); }
-  i.pi-download { color: var(--app-text-muted); font-size: 0.8rem; margin-left: auto; }
+  i.pi-download, i.pi-spinner { color: var(--app-text-muted); font-size: 0.8rem; margin-left: auto; }
 
   &:hover { border-color: var(--app-brand); }
 }

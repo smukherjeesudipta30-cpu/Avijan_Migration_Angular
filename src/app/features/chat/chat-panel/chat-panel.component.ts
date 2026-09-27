@@ -483,6 +483,12 @@ export class ChatPanelComponent {
        NOT opened chat yet. The conversation/message BODIES stay lazy
        (fetched only once a thread is actually opened); this is just the
        count and the live connection. */
+    // Every time the panel is opened, re-read who is online rather than trust
+    // live updates alone — one missed on the way would otherwise stick.
+    effect(() => {
+      if (this.chatUi.open()) this.chat.refreshPresence();
+    });
+
     effect(() => {
       if (this.auth.isAuthenticated() && !this.initialized) {
         this.initialized = true;
@@ -621,9 +627,24 @@ export class ChatPanelComponent {
    * different: the token travels in the query string there, so it previews
    * images directly.)
    */
-  downloadAttachment(message: ChatMessage): void {
-    if (!message.attachmentFileName) return;
-    this.chat.downloadAttachment(message.conversationId, message.id, message.attachmentFileName);
+  readonly downloadingId = signal<number | null>(null);
+
+  async downloadAttachment(message: ChatMessage): Promise<void> {
+    if (!message.attachmentFileName || this.downloadingId() !== null) return;
+
+    this.downloadingId.set(message.id);
+    try {
+      await this.chat.downloadAttachment(message.conversationId, message.id, message.attachmentFileName);
+    } catch {
+      this.toast.add({
+        severity: 'error',
+        summary: 'Could not download',
+        detail: `${message.attachmentFileName} could not be downloaded. Please try again.`,
+        life: 5000
+      });
+    } finally {
+      this.downloadingId.set(null);
+    }
   }
 
   formatAttachmentSize(bytes: number | undefined): string {

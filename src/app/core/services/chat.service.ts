@@ -164,7 +164,10 @@ export class ChatService {
 
     // 'online' | 'away' | 'incall' | 'offline'. Away and incall are courtesy
     // states on top of online; offline drops the connection entirely.
-    connection.on('PresenceChanged', (email: string, status: 'online' | 'away' | 'incall' | 'offline', lastSeenOn?: string | null) => {
+    connection.on('PresenceChanged', (rawEmail: string, status: 'online' | 'away' | 'incall' | 'offline', lastSeenOn?: string | null) => {
+      // Matched without regard to case: a few accounts' addresses are stored
+      // with capitals, and the server keys presence in lower case.
+      const email = norm(rawEmail);
       this.onlineEmails.update(current => {
         const next = new Set(current);
         if (status === 'offline') next.delete(email); else next.add(email);
@@ -208,7 +211,12 @@ export class ChatService {
     // it existed, so it needs a snapshot rather than only future deltas. The
     // guest widget has no token and no use for this — skipped for it.
     connection.onreconnected(() => {
-      if (this.auth.accessToken) this.loadPresenceSnapshot();
+      if (this.auth.accessToken) {
+        this.loadPresenceSnapshot();
+        // The server treats a new connection as active; if this tab is in fact
+        // hidden or idle, say so again or it would read "online" to everyone.
+        if (this.localAway) connection.invoke('SetPresenceStatus', true).catch(() => {});
+      }
       this.reconnected$.next();
     });
 
@@ -341,31 +349,40 @@ export class ChatService {
       .get<ApiResponse<ChatPresenceSnapshot>>(`${this.base}/presence`)
       .subscribe({
         next: response => {
-          this.onlineEmails.set(new Set(response.data.onlineEmails));
-          this.awayEmails.set(new Set(response.data.awayEmails));
-          this.inCallEmails.set(new Set(response.data.inCallEmails ?? []));
+          this.onlineEmails.set(new Set(response.data.onlineEmails.map(norm)));
+          this.awayEmails.set(new Set(response.data.awayEmails.map(norm)));
+          this.inCallEmails.set(new Set((response.data.inCallEmails ?? []).map(norm)));
         },
         error: () => { /* presence is a courtesy; nothing to recover here */ }
       });
   }
 
+  /**
+   * Re-reads who is online. Called when the chat panel opens, so a live
+   * update missed along the way (a phone asleep, a dropped socket) cannot
+   * leave someone showing offline for the rest of the session.
+   */
+  refreshPresence(): void {
+    if (this.connection && this.auth.accessToken) this.loadPresenceSnapshot();
+  }
+
   isOnline(email: string | null | undefined): boolean {
-    return !!email && this.onlineEmails().has(email);
+    return !!email && this.onlineEmails().has(norm(email));
   }
 
   /** Only meaningful alongside {@link isOnline} — someone offline is never "away". */
   isAway(email: string | null | undefined): boolean {
-    return !!email && this.awayEmails().has(email);
+    return !!email && this.awayEmails().has(norm(email));
   }
 
   /** Only meaningful alongside {@link isOnline} — someone offline is never "in call". */
   isInCall(email: string | null | undefined): boolean {
-    return !!email && this.inCallEmails().has(email);
+    return !!email && this.inCallEmails().has(norm(email));
   }
 
   /** When this person was last seen, ISO string, for an offline contact — null if never recorded. */
   lastSeen(email: string | null | undefined): string | null {
-    return (email && this.lastSeenByEmail().get(email)) || null;
+    return (email && this.lastSeenByEmail().get(norm(email))) || null;
   }
 
   presenceStatus(email: string | null | undefined): 'online' | 'away' | 'incall' | 'offline' {
@@ -381,7 +398,7 @@ export class ChatService {
     this.lastSeenByEmail.update(current => {
       const next = new Map(current);
       for (const e of entries) {
-        if (e.lastSeenOn && !next.has(e.email)) next.set(e.email, e.lastSeenOn);
+        if (e.lastSeenOn && !next.has(norm(e.email))) next.set(norm(e.email), e.lastSeenOn);
       }
       return next;
     });
@@ -570,13 +587,18 @@ export class ChatService {
    * HttpClient rather than a plain `<a href>` — then hands the browser a
    * blob URL to save, the same trick a plain link would have done natively.
    */
-  downloadAttachment(conversationId: number, messageId: number, fileName: string): void {
-    this.http
+  async downloadAttachment(conversationId: number, messageId: number, fileName: string): Promise<void> {
+    const blob = await firstValueFrom(this.http
       .get(`${this.base}/conversations/${conversationId}/messages/${messageId}/attachment`, {
         responseType: 'blob'
-      })
-      .subscribe(blob => saveBlob(blob, fileName));
+      }));
+    saveBlob(blob, fileName);
   }
+}
+
+/** Case-insensitive key for presence — the server holds emails lower-cased. */
+function norm(email: string): string {
+  return email.trim().toLowerCase();
 }
 
 function saveBlob(blob: Blob, fileName: string): void {
@@ -584,8 +606,16 @@ function saveBlob(blob: Blob, fileName: string): void {
   const link = document.createElement('a');
   link.href = url;
   link.download = fileName;
+  link.style.display = 'none';
+  // Attached, and the URL kept alive a moment: some browsers ignore a click on
+  // a detached link, and revoking straight after the click can cancel the
+  // download before it has started.
+  document.body.appendChild(link);
   link.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => {
+    link.remove();
+    URL.revokeObjectURL(url);
+  }, 30_000);
 }
 
 /** The VAPID public key arrives as URL-safe base64 text; PushManager wants raw bytes. */
