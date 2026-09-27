@@ -26,6 +26,8 @@ export interface ChatMessage {
   attachmentSize?: number;
   /** Direct conversations only — true once the other participant has read up to this message. */
   isSeen?: boolean;
+  /** The sender deleted it for everyone — body and attachment come back empty. */
+  isDeleted?: boolean;
 }
 
 /** A file picked for the next outgoing message, read into a data URL client-side. */
@@ -59,6 +61,21 @@ export interface ChatMessagesRead {
   conversationId: number;
   readerEmail: string;
   lastReadMessageId: number;
+}
+
+/** Pushed live when someone starts or stops typing in a conversation. */
+export interface ChatTypingChanged {
+  conversationId: number;
+  /** Null when the typist is the guest side of a Guest conversation. */
+  email: string | null;
+  name: string;
+  isTyping: boolean;
+}
+
+/** Messages removed from a thread — for everyone (placeholder shown) or hidden for this user only. */
+export interface ChatMessagesRemoved {
+  conversationId: number;
+  messageIds: number[];
 }
 
 export interface GuestStarted {

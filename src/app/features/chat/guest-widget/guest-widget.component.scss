@@ -232,3 +232,48 @@
     bottom: 0.75rem;
   }
 }
+
+/* Deleted by staff — a quiet placeholder where the message was. */
+.gcw__msg-bubble--deleted {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: none !important;
+  border: 1px dashed var(--app-border, #d1d5db);
+  color: var(--app-text-muted, #6b7280) !important;
+  font-style: italic;
+}
+
+.gcw__typing {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.2rem 0.75rem 0.35rem;
+  font-size: 0.72rem;
+  font-style: italic;
+  color: var(--app-text-muted, #6b7280);
+}
+
+.gcw__typing-dots {
+  display: inline-flex;
+  gap: 0.18rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.8rem;
+  background: var(--app-page-bg, #f3f4f6);
+
+  i {
+    width: 0.3rem;
+    height: 0.3rem;
+    border-radius: 50%;
+    background: currentColor;
+    animation: gcw-typing-bounce 1.2s ease-in-out infinite;
+
+    &:nth-child(2) { animation-delay: 0.15s; }
+    &:nth-child(3) { animation-delay: 0.3s; }
+  }
+}
+
+@keyframes gcw-typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.45; }
+  30% { transform: translateY(-3px); opacity: 1; }
+}

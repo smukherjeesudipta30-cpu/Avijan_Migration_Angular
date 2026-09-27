@@ -16,7 +16,12 @@ import {
 } from '../../../core/models/chat.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { CallService } from '../../../core/services/call.service';
-import { ChatService, readFileAsAttachment } from '../../../core/services/chat.service';
+import {
+  ChatService,
+  TypingReporter,
+  TypingTracker,
+  readFileAsAttachment
+} from '../../../core/services/chat.service';
 import { ChatUiService } from '../../../core/services/chat-ui.service';
 
 /** Comfortably under the server's 5 MB cap, checked client-side so a large pick fails fast. */
@@ -148,12 +153,44 @@ export class ChatPanelComponent {
     return this.chat.isInCall(other?.email);
   });
 
-  /** Set to a conversation id while the other side is typing there; lapses on its own. */
-  readonly typingConversationId = signal<number | null>(null);
-  private typingClearTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Who else is typing, in every conversation this panel can see. */
+  readonly typing = new TypingTracker();
 
+  /** Direct only — drives the "typing…" status in the header in place of Online/Away. */
   readonly threadTyping = computed(() =>
-    this.threadIsDirect() && this.typingConversationId() === this.activeConversationId());
+    this.threadIsDirect() && this.typing.has(this.activeConversationId()));
+
+  /** "Asha is typing…" under the open thread — direct, group and guest alike. */
+  readonly threadTypingLabel = computed(() => {
+    this.typing.typists();
+    return this.typing.label(this.activeConversationId());
+  });
+
+  /** The conversation this browser last reported typing into — a stop must go there, not to whatever is open now. */
+  private typingFor: number | null = null;
+  private readonly typingReporter = new TypingReporter(isTyping => {
+    if (this.typingFor !== null) this.chat.setTyping(this.typingFor, isTyping);
+  });
+
+  /* ------------------------------------------------------- selection */
+
+  readonly selecting = signal(false);
+  readonly selectedIds = signal<ReadonlySet<number>>(new Set());
+  readonly deleteSheetOpen = signal(false);
+  readonly deleting = signal(false);
+
+  readonly selectedMessages = computed(() => {
+    const ids = this.selectedIds();
+    return this.messages().filter(m => ids.has(m.id));
+  });
+
+  /** Delete for everyone only when every selected message is the viewer's own and still there to delete. */
+  readonly canDeleteForEveryone = computed(() => {
+    const selected = this.selectedMessages();
+    return selected.length > 0 && selected.every(m => m.isMine && !m.isDeleted);
+  });
+
+  private longPressTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** ISO last-seen for the other person, shown only when they are offline. */
   readonly threadLastSeen = computed(() => {
@@ -188,17 +225,133 @@ export class ChatPanelComponent {
     return sameDay ? `today at ${time}` : `${then.toLocaleDateString()} ${time}`;
   }
 
-  /** Called as the viewer types, to tell the other end. Throttled so it is not one call per keystroke. */
-  private lastTypingSentAt = 0;
-  notifyTyping(): void {
-    const other = this.threadOther();
-    const conversationId = this.activeConversationId();
-    if (!other || conversationId === null) return;
+  /** Called on every change to the composer — the reporter throttles the starts and sends the stop. */
+  onComposerInput(value: string): void {
+    this.messageInput.set(value);
 
-    const now = Date.now();
-    if (now - this.lastTypingSentAt < 2500) return;
-    this.lastTypingSentAt = now;
-    this.chat.sendTyping(other.email, conversationId);
+    const conversationId = this.activeConversationId();
+    if (conversationId === null) return;
+
+    if (this.typingFor !== conversationId) {
+      this.typingReporter.stop();
+      this.typingFor = conversationId;
+    }
+    this.typingReporter.input(value.trim().length > 0);
+  }
+
+  /* ------------------------------------------------------- selection */
+
+  startSelecting(message?: ChatMessage): void {
+    this.selecting.set(true);
+    this.selectedIds.set(message ? new Set([message.id]) : new Set());
+  }
+
+  cancelSelecting(): void {
+    this.selecting.set(false);
+    this.selectedIds.set(new Set());
+    this.deleteSheetOpen.set(false);
+  }
+
+  toggleSelected(message: ChatMessage): void {
+    this.selectedIds.update(current => {
+      const next = new Set(current);
+      if (next.has(message.id)) next.delete(message.id); else next.add(message.id);
+      return next;
+    });
+  }
+
+  isSelected(message: ChatMessage): boolean {
+    return this.selectedIds().has(message.id);
+  }
+
+  /** A tap on a message: toggles it while selecting, otherwise does nothing special. */
+  onMessageClick(message: ChatMessage, event: Event): void {
+    if (!this.selecting()) return;
+    event.preventDefault();
+    this.toggleSelected(message);
+  }
+
+  /** Right-click (desktop) enters selection with that message picked. */
+  onMessageContextMenu(message: ChatMessage, event: MouseEvent): void {
+    event.preventDefault();
+    if (this.selecting()) this.toggleSelected(message); else this.startSelecting(message);
+  }
+
+  /** Press-and-hold (touch) does the same as a right-click. */
+  onMessagePressStart(message: ChatMessage): void {
+    if (this.selecting()) return;
+    this.cancelLongPress();
+    this.longPressTimer = setTimeout(() => this.startSelecting(message), 500);
+  }
+
+  cancelLongPress(): void {
+    if (this.longPressTimer) clearTimeout(this.longPressTimer);
+    this.longPressTimer = null;
+  }
+
+  openDeleteSheet(): void {
+    if (this.selectedIds().size > 0) this.deleteSheetOpen.set(true);
+  }
+
+  confirmDelete(forEveryone: boolean): void {
+    const id = this.activeConversationId();
+    const messageIds = [...this.selectedIds()];
+    if (id === null || messageIds.length === 0 || this.deleting()) return;
+    if (forEveryone && !this.canDeleteForEveryone()) return;
+
+    this.deleting.set(true);
+
+    this.chat.deleteMessages(id, messageIds, forEveryone).subscribe({
+      next: () => {
+        this.deleting.set(false);
+        // Applied here straight away rather than waiting for the socket echo —
+        // the echo (and any other open tab) then finds nothing left to change.
+        if (forEveryone) this.markDeleted(messageIds); else this.removeMessages(messageIds);
+        this.cancelSelecting();
+        this.refreshConversations();
+      },
+      error: () => {
+        this.deleting.set(false);
+        this.toast.add({
+          severity: 'error',
+          summary: 'Could not delete',
+          detail: forEveryone
+            ? 'Only your own messages can be deleted for everyone.'
+            : 'Please try again.',
+          life: 5000
+        });
+      }
+    });
+  }
+
+  private markDeleted(ids: number[]): void {
+    const set = new Set(ids);
+    this.messages.update(list => list.map(m => set.has(m.id)
+      ? {
+          ...m,
+          body: '',
+          isDeleted: true,
+          attachmentFileName: undefined,
+          attachmentContentType: undefined,
+          attachmentSize: undefined
+        }
+      : m));
+    this.dropFromSelection(ids);
+  }
+
+  private removeMessages(ids: number[]): void {
+    const set = new Set(ids);
+    this.messages.update(list => list.filter(m => !set.has(m.id)));
+    this.dropFromSelection(ids);
+  }
+
+  private dropFromSelection(ids: number[]): void {
+    if (!this.selecting()) return;
+    this.selectedIds.update(current => {
+      const next = new Set(current);
+      for (const id of ids) next.delete(id);
+      return next;
+    });
   }
 
   readonly threadIsDirect = computed(() => this.activeConversation()?.type === 'Direct');
@@ -238,6 +391,9 @@ export class ChatPanelComponent {
     const destroyRef = inject(DestroyRef);
 
     this.chat.onMessage.pipe(takeUntilDestroyed(destroyRef)).subscribe(message => {
+      // Their message landed — whatever they were typing is sent, not still in progress.
+      if (!message.isMine) this.typing.clear(message.conversationId, message.senderEmail, message.senderDisplayName);
+
       const isOpenHere = this.chatUi.open() && message.conversationId === this.activeConversationId();
 
       if (message.conversationId === this.activeConversationId()) {
@@ -273,18 +429,36 @@ export class ChatPanelComponent {
         list.map(m => (m.isMine && m.id <= read.lastReadMessageId ? { ...m, isSeen: true } : m)));
     });
 
-    this.chat.onTyping.pipe(takeUntilDestroyed(destroyRef)).subscribe(({ fromEmail, conversationId }) => {
-      // Only the thread currently open, and only the other person — never echo
-      // the viewer's own typing back at them.
-      if (conversationId !== this.activeConversationId()) return;
-      const me = this.auth.user()?.email;
-      if (fromEmail === me) return;
+    this.chat.onTypingChanged.pipe(takeUntilDestroyed(destroyRef)).subscribe(e => {
+      // The hub skips only the typing connection itself — the same person's
+      // other tab would otherwise see "You are typing".
+      if (e.email && e.email === this.auth.user()?.email) return;
+      this.typing.apply(e);
+    });
 
-      this.typingConversationId.set(conversationId);
-      if (this.typingClearTimer) clearTimeout(this.typingClearTimer);
-      // A typing ping has no matching "stopped"; it simply lapses if none
-      // arrives within a few seconds, which every keystroke renews.
-      this.typingClearTimer = setTimeout(() => this.typingConversationId.set(null), 4000);
+    this.chat.onMessagesDeleted.pipe(takeUntilDestroyed(destroyRef)).subscribe(e => {
+      if (e.conversationId === this.activeConversationId()) this.markDeleted(e.messageIds);
+    });
+
+    this.chat.onMessagesHidden.pipe(takeUntilDestroyed(destroyRef)).subscribe(e => {
+      if (e.conversationId === this.activeConversationId()) this.removeMessages(e.messageIds);
+    });
+
+    this.chat.onReconnected.pipe(takeUntilDestroyed(destroyRef)).subscribe(() => {
+      // Hand-joined groups (an unclaimed guest thread) did not survive the
+      // drop, and anything sent or deleted meanwhile was missed — rejoin and
+      // reload rather than trust what is on screen.
+      this.joinedConversationIds.clear();
+      const id = this.activeConversationId();
+      if (id !== null && this.view() === 'thread') {
+        this.joinedConversationIds.add(id);
+        void this.chat.joinConversation(id);
+        this.chat.messages(id).subscribe(rows => {
+          if (this.activeConversationId() === id) this.messages.set(rows);
+        });
+      }
+      this.refreshConversations();
+      if (this.isStaff()) this.refreshGuestInbox();
     });
 
     this.chat.onGuestInboxChanged.pipe(takeUntilDestroyed(destroyRef)).subscribe(() => {
@@ -352,6 +526,8 @@ export class ChatPanelComponent {
   /* -------------------------------------------------------------- nav */
 
   showList(): void {
+    this.typingReporter.stop();
+    this.cancelSelecting();
     this.view.set('list');
     this.activeConversationId.set(null);
     this.messages.set([]);
@@ -363,6 +539,8 @@ export class ChatPanelComponent {
   }
 
   openConversation(id: number): void {
+    this.typingReporter.stop();
+    this.cancelSelecting();
     this.activeConversationId.set(id);
     this.view.set('thread');
     this.messages.set([]);
@@ -397,6 +575,7 @@ export class ChatPanelComponent {
     if ((!body && !attachment) || id === null || this.sending()) return;
 
     this.sending.set(true);
+    this.typingReporter.stop();
 
     this.chat.send(id, body, attachment ?? undefined).subscribe({
       next: message => {

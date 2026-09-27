@@ -66,6 +66,11 @@
                   @if (!m.isMine) {
                     <span class="gcw__msg-sender">{{ m.senderDisplayName }}</span>
                   }
+                  @if (m.isDeleted) {
+                    <span class="gcw__msg-bubble gcw__msg-bubble--deleted">
+                      <i class="pi pi-ban" aria-hidden="true"></i> This message was deleted
+                    </span>
+                  }
                   @if (m.body) {
                     <span class="gcw__msg-bubble">{{ m.body }}</span>
                   }
@@ -85,6 +90,13 @@
               }
             }
           </div>
+
+          @if (typingLabel(); as label) {
+            <div class="gcw__typing" aria-live="polite">
+              <span class="gcw__typing-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              {{ label }}
+            </div>
+          }
 
           @if (pendingAttachment(); as pending) {
             <div class="gcw__pending-attachment">
@@ -111,7 +123,7 @@
               class="gcw__input"
               placeholder="Type a message…"
               [ngModel]="messageInput()"
-              (ngModelChange)="messageInput.set($event)"
+              (ngModelChange)="onComposerInput($event)"
               [ngModelOptions]="{ standalone: true }"
               (keyup.enter)="sendMessage()"
               [disabled]="sending()" />

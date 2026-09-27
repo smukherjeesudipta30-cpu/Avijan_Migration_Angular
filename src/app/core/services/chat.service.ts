@@ -14,7 +14,9 @@ import {
   ChatDirectoryEntry,
   ChatMessage,
   ChatMessagesRead,
+  ChatMessagesRemoved,
   ChatPresenceSnapshot,
+  ChatTypingChanged,
   GuestStarted,
   IncomingCall
 } from '../models/chat.model';
@@ -53,6 +55,27 @@ export class ChatService {
   readonly onGuestInboxChanged: Observable<void> = this.guestInboxChanged$.asObservable();
   readonly onMessagesRead: Observable<ChatMessagesRead> = this.messagesRead$.asObservable();
 
+  private readonly messagesDeleted$ = new Subject<ChatMessagesRemoved>();
+  private readonly messagesHidden$ = new Subject<ChatMessagesRemoved>();
+  private readonly typingChanged$ = new Subject<ChatTypingChanged>();
+  private readonly reconnected$ = new Subject<void>();
+
+  /** Deleted for everyone — swap each for a "This message was deleted" placeholder. */
+  readonly onMessagesDeleted: Observable<ChatMessagesRemoved> = this.messagesDeleted$.asObservable();
+
+  /** Hidden by this same user from another tab or device — drop them from view. */
+  readonly onMessagesHidden: Observable<ChatMessagesRemoved> = this.messagesHidden$.asObservable();
+
+  /** Someone else in a conversation started or stopped typing. */
+  readonly onTypingChanged: Observable<ChatTypingChanged> = this.typingChanged$.asObservable();
+
+  /**
+   * The socket came back after a drop. Anything pushed while it was down
+   * (a message, a deletion) was missed, and SignalR group memberships joined
+   * by hand were lost — listeners reload what they show and rejoin.
+   */
+  readonly onReconnected: Observable<void> = this.reconnected$.asObservable();
+
   /* ------------------------------------------------------------- calls */
   /** WebRTC signaling relay only — see CallService for the actual peer connection. */
   readonly onIncomingCall: Observable<IncomingCall> = this.incomingCall$.asObservable();
@@ -76,11 +99,6 @@ export class ChatService {
 
   /** Email → when that person was last seen (ISO string), for offline contacts. */
   readonly lastSeenByEmail = signal<ReadonlyMap<string, string>>(new Map());
-
-  private readonly typing$ = new Subject<{ fromEmail: string; conversationId: number }>();
-
-  /** Fires when the other side of a conversation is typing. */
-  readonly onTyping: Observable<{ fromEmail: string; conversationId: number }> = this.typing$.asObservable();
 
   /** How long with no activity, or with the tab hidden, before this browser reports itself away. */
   private static readonly AWAY_AFTER_MS = 2 * 60 * 1000;
@@ -174,14 +192,25 @@ export class ChatService {
       }
     });
 
-    connection.on('Typing', (fromEmail: string, conversationId: number) => {
-      this.typing$.next({ fromEmail, conversationId });
+    connection.on('TypingChanged', (conversationId: number, email: string | null, name: string, isTyping: boolean) => {
+      this.typingChanged$.next({ conversationId, email, name, isTyping });
+    });
+
+    connection.on('MessagesDeleted', (conversationId: number, messageIds: number[]) => {
+      this.messagesDeleted$.next({ conversationId, messageIds });
+    });
+
+    connection.on('MessagesHidden', (conversationId: number, messageIds: number[]) => {
+      this.messagesHidden$.next({ conversationId, messageIds });
     });
 
     // A fresh connection has missed whatever presence changes happened before
     // it existed, so it needs a snapshot rather than only future deltas. The
     // guest widget has no token and no use for this — skipped for it.
-    connection.onreconnected(() => this.loadPresenceSnapshot());
+    connection.onreconnected(() => {
+      if (this.auth.accessToken) this.loadPresenceSnapshot();
+      this.reconnected$.next();
+    });
 
     this.connecting = connection
       .start()
@@ -358,9 +387,14 @@ export class ChatService {
     });
   }
 
-  /** Tells the other end of a direct chat that this user is typing. Best-effort. */
-  sendTyping(targetEmail: string, conversationId: number): void {
-    this.connection?.invoke('Typing', targetEmail, conversationId).catch(() => {});
+  /** Tells everyone else in a conversation this user started or stopped typing. Best-effort. */
+  setTyping(conversationId: number, isTyping: boolean): void {
+    this.connection?.invoke('SetTyping', conversationId, isTyping).catch(() => {});
+  }
+
+  /** The guest widget's {@link setTyping}, proved by its guest token. */
+  setGuestTyping(conversationId: number, guestToken: string, isTyping: boolean): void {
+    this.connection?.invoke('SetGuestTyping', conversationId, guestToken, isTyping).catch(() => {});
   }
 
   /** Broadcasts to everyone whether this user is on a call, so a third party sees them as busy. */
@@ -524,6 +558,12 @@ export class ChatService {
     return this.http.post<ApiResponse<boolean>>(`${this.base}/conversations/${conversationId}/read`, {});
   }
 
+  /** For everyone (own messages only — the server enforces it) or just from this user's view. */
+  deleteMessages(conversationId: number, messageIds: number[], forEveryone: boolean): Observable<ApiResponse<unknown>> {
+    return this.http.post<ApiResponse<unknown>>(
+      `${this.base}/conversations/${conversationId}/messages/delete`, { messageIds, forEveryone });
+  }
+
   /**
    * Downloads an attachment from a conversation the caller belongs to. Needs
    * the auth header the interceptor already attaches, so this goes through
@@ -554,6 +594,102 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
   const normalized = (base64 + padding).replace(/-/g, '+').replace(/_/g, '/');
   const raw = atob(normalized);
   return Uint8Array.from([...raw].map(char => char.charCodeAt(0)));
+}
+
+/**
+ * The sending side of "is typing": announces a start at most once every few
+ * seconds while keys keep arriving, and a stop once the input goes quiet,
+ * is cleared, or the message is sent — so the other side never has to guess.
+ */
+export class TypingReporter {
+  private static readonly IDLE_MS = 3000;
+  private static readonly RESEND_MS = 2500;
+
+  private active = false;
+  private lastSentAt = 0;
+  private idleTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor(private readonly send: (isTyping: boolean) => void) {}
+
+  /** Call on every change to the input, with whether it now holds any text. */
+  input(hasText: boolean): void {
+    if (!hasText) {
+      this.stop();
+      return;
+    }
+
+    const now = Date.now();
+    if (!this.active || now - this.lastSentAt > TypingReporter.RESEND_MS) {
+      this.active = true;
+      this.lastSentAt = now;
+      this.send(true);
+    }
+
+    if (this.idleTimer) clearTimeout(this.idleTimer);
+    this.idleTimer = setTimeout(() => this.stop(), TypingReporter.IDLE_MS);
+  }
+
+  stop(): void {
+    if (this.idleTimer) clearTimeout(this.idleTimer);
+    this.idleTimer = null;
+    if (!this.active) return;
+    this.active = false;
+    this.send(false);
+  }
+}
+
+/**
+ * The receiving side: who is typing in which conversation right now. Every
+ * start also expires on its own, so a stop lost to a closed tab or dropped
+ * connection never leaves someone "typing…" forever.
+ */
+export class TypingTracker {
+  private static readonly EXPIRE_MS = 6000;
+
+  /** conversationId → (typist key → display name). */
+  readonly typists = signal<ReadonlyMap<number, ReadonlyMap<string, string>>>(new Map());
+  private readonly timers = new Map<string, ReturnType<typeof setTimeout>>();
+
+  apply(e: ChatTypingChanged): void {
+    const key = e.email ?? `guest:${e.name}`;
+    const timerKey = `${e.conversationId}|${key}`;
+
+    const existing = this.timers.get(timerKey);
+    if (existing) clearTimeout(existing);
+    this.timers.delete(timerKey);
+
+    if (e.isTyping) {
+      this.timers.set(timerKey, setTimeout(
+        () => this.apply({ ...e, isTyping: false }), TypingTracker.EXPIRE_MS));
+    }
+
+    this.typists.update(current => {
+      const next = new Map(current);
+      const names = new Map(next.get(e.conversationId) ?? []);
+      if (e.isTyping) names.set(key, e.name); else names.delete(key);
+      if (names.size) next.set(e.conversationId, names); else next.delete(e.conversationId);
+      return next;
+    });
+  }
+
+  /** A typist's message arrived — they have obviously stopped typing it. */
+  clear(conversationId: number, email: string | null | undefined, name: string): void {
+    this.apply({ conversationId, email: email ?? null, name, isTyping: false });
+  }
+
+  /** "Asha is typing…", "Asha and Ravi are typing…", "3 people are typing…", or ''. */
+  label(conversationId: number | null): string {
+    if (conversationId === null) return '';
+    const names = [...(this.typists().get(conversationId)?.values() ?? [])];
+    if (names.length === 0) return '';
+    if (names.length === 1) return `${names[0]} is typing…`;
+    if (names.length === 2) return `${names[0]} and ${names[1]} are typing…`;
+    return `${names.length} people are typing…`;
+  }
+
+  has(conversationId: number | null): boolean {
+    return conversationId !== null && this.typists().has(conversationId);
+  }
 }
 
 /** Reads a picked file into the shape the send endpoints expect. */

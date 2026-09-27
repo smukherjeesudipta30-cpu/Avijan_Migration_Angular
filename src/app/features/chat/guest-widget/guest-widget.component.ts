@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -7,7 +7,12 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 
 import { ChatAttachmentUpload, ChatMessage } from '../../../core/models/chat.model';
-import { ChatService, readFileAsAttachment } from '../../../core/services/chat.service';
+import {
+  ChatService,
+  TypingReporter,
+  TypingTracker,
+  readFileAsAttachment
+} from '../../../core/services/chat.service';
 
 const CONVERSATION_KEY = 'avijan.guestChat.conversationId';
 const TOKEN_KEY = 'avijan.guestChat.token';
@@ -49,6 +54,18 @@ export class GuestWidgetComponent {
   readonly pendingAttachment = signal<ChatAttachmentUpload | null>(null);
   readonly attachmentError = signal<string | null>(null);
 
+  /** The front desk typing a reply. */
+  readonly typing = new TypingTracker();
+  readonly typingLabel = computed(() => {
+    this.typing.typists();
+    return this.typing.label(this.conversationId());
+  });
+
+  private readonly typingReporter = new TypingReporter(isTyping => {
+    const id = this.conversationId();
+    if (id !== null && this.guestToken) this.chat.setGuestTyping(id, this.guestToken, isTyping);
+  });
+
   constructor() {
     const storedId = localStorage.getItem(CONVERSATION_KEY);
     const storedToken = localStorage.getItem(TOKEN_KEY);
@@ -59,12 +76,40 @@ export class GuestWidgetComponent {
       this.started.set(true);
     }
 
-    this.chat.onMessage.pipe(takeUntilDestroyed(inject(DestroyRef))).subscribe(message => {
+    const destroyRef = inject(DestroyRef);
+
+    this.chat.onMessage.pipe(takeUntilDestroyed(destroyRef)).subscribe(message => {
       if (message.conversationId === this.conversationId()) {
+        if (!message.isMine) this.typing.clear(message.conversationId, message.senderEmail, message.senderDisplayName);
         this.messages.update(list =>
           list.some(m => m.id === message.id) ? list : [...list, message]);
       }
     });
+
+    this.chat.onTypingChanged.pipe(takeUntilDestroyed(destroyRef)).subscribe(e => {
+      // Only staff typing matters here — the guest's own other tab reports with no email.
+      if (e.conversationId === this.conversationId() && e.email) this.typing.apply(e);
+    });
+
+    this.chat.onMessagesDeleted.pipe(takeUntilDestroyed(destroyRef)).subscribe(e => {
+      if (e.conversationId !== this.conversationId()) return;
+      const ids = new Set(e.messageIds);
+      this.messages.update(list => list.map(m => ids.has(m.id)
+        ? { ...m, body: '', isDeleted: true, attachmentFileName: undefined, attachmentContentType: undefined }
+        : m));
+    });
+
+    this.chat.onReconnected.pipe(takeUntilDestroyed(destroyRef)).subscribe(() => {
+      const id = this.conversationId();
+      if (!this.open() || id === null || !this.guestToken) return;
+      void this.chat.joinGuestConversation(id, this.guestToken);
+      this.loadMessages();
+    });
+  }
+
+  onComposerInput(value: string): void {
+    this.messageInput.set(value);
+    this.typingReporter.input(value.trim().length > 0);
   }
 
   toggle(): void {
@@ -129,6 +174,7 @@ export class GuestWidgetComponent {
     if ((!body && !attachment) || id === null || !this.guestToken || this.sending()) return;
 
     this.sending.set(true);
+    this.typingReporter.stop();
 
     this.chat.sendGuestMessage(id, this.guestToken, body, attachment ?? undefined).subscribe({
       next: message => {

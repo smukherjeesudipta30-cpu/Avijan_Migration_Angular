@@ -15,6 +15,25 @@
 
       @switch (view()) {
         @case ('thread') {
+          @if (selecting()) {
+            <span class="chat__header-title">
+              <strong>{{ selectedIds().size }} selected</strong>
+              <small>Tap messages to select</small>
+            </span>
+            <span class="chat__call-actions">
+              <button
+                type="button"
+                class="chat__call-btn chat__call-btn--danger"
+                (click)="openDeleteSheet()"
+                [disabled]="selectedIds().size === 0"
+                title="Delete">
+                <i class="pi pi-trash" aria-hidden="true"></i>
+              </button>
+              <button type="button" class="chat__call-btn" (click)="cancelSelecting()" title="Cancel">
+                <i class="pi pi-times" aria-hidden="true"></i>
+              </button>
+            </span>
+          } @else {
           <span class="chat__header-title">
             <strong>
               {{ threadTitle() }}
@@ -32,15 +51,21 @@
             <small>{{ threadSubtitle() }}</small>
           </span>
 
-          @if (threadIsDirect()) {
-            <span class="chat__call-actions">
+          <span class="chat__call-actions">
+            @if (messages().length > 0) {
+              <button type="button" class="chat__call-btn" (click)="startSelecting()" title="Select messages">
+                <i class="pi pi-check-square" aria-hidden="true"></i>
+              </button>
+            }
+            @if (threadIsDirect()) {
               <button type="button" class="chat__call-btn" (click)="startAudioCall()" title="Voice call">
                 <i class="pi pi-phone" aria-hidden="true"></i>
               </button>
               <button type="button" class="chat__call-btn" (click)="startVideoCall()" title="Video call">
                 <i class="pi pi-video" aria-hidden="true"></i>
               </button>
-            </span>
+            }
+          </span>
           }
         }
         @case ('new-direct') {
@@ -107,7 +132,11 @@
                 </span>
                 <span class="chat__list-text">
                   <strong>{{ conversationTitle(c) }}</strong>
-                  <small>{{ c.lastMessagePreview || 'No messages yet' }}</small>
+                  @if (typing.has(c.id)) {
+                    <small class="chat__list-typing">{{ typing.label(c.id) }}</small>
+                  } @else {
+                    <small>{{ c.lastMessagePreview || 'No messages yet' }}</small>
+                  }
                 </span>
                 @if (c.unreadCount > 0) {
                   <span class="chat__unread">{{ c.unreadCount }}</span>
@@ -126,7 +155,11 @@
                 <span class="chat__avatar chat__avatar--guest">{{ initials(conversationTitle(c)) }}</span>
                 <span class="chat__list-text">
                   <strong>{{ conversationTitle(c) }}</strong>
-                  <small>{{ c.lastMessagePreview || 'No messages yet' }}</small>
+                  @if (typing.has(c.id)) {
+                    <small class="chat__list-typing">{{ typing.label(c.id) }}</small>
+                  } @else {
+                    <small>{{ c.lastMessagePreview || 'No messages yet' }}</small>
+                  }
                 </span>
                 @if (c.unreadCount > 0) {
                   <span class="chat__unread">{{ c.unreadCount }}</span>
@@ -148,15 +181,37 @@
             <p class="chat__empty">No messages yet — say hello.</p>
           } @else {
             @for (m of messages(); track m.id) {
+              <div
+                class="chat__msg-row"
+                [class.chat__msg-row--mine]="m.isMine"
+                [class.chat__msg-row--selecting]="selecting()"
+                [class.chat__msg-row--selected]="isSelected(m)"
+                (click)="onMessageClick(m, $event)"
+                (contextmenu)="onMessageContextMenu(m, $event)"
+                (pointerdown)="onMessagePressStart(m)"
+                (pointerup)="cancelLongPress()"
+                (pointerleave)="cancelLongPress()"
+                (pointercancel)="cancelLongPress()">
+              @if (selecting()) {
+                <span class="chat__select-box" [class.chat__select-box--on]="isSelected(m)" aria-hidden="true">
+                  @if (isSelected(m)) { <i class="pi pi-check"></i> }
+                </span>
+              }
               <div class="chat__msg" [class.chat__msg--mine]="m.isMine">
                 @if (!m.isMine) {
                   <span class="chat__msg-sender">{{ m.senderDisplayName }}</span>
+                }
+                @if (m.isDeleted) {
+                  <span class="chat__msg-bubble chat__msg-bubble--deleted">
+                    <i class="pi pi-ban" aria-hidden="true"></i>
+                    {{ m.isMine ? 'You deleted this message' : 'This message was deleted' }}
+                  </span>
                 }
                 @if (m.body) {
                   <span class="chat__msg-bubble">{{ m.body }}</span>
                 }
                 @if (m.attachmentFileName) {
-                  <button type="button" class="chat__attachment" (click)="downloadAttachment(m)">
+                  <button type="button" class="chat__attachment" (click)="!selecting() && downloadAttachment(m)">
                     <i class="pi pi-paperclip" aria-hidden="true"></i>
                     <span class="chat__attachment-text">
                       <strong>{{ m.attachmentFileName }}</strong>
@@ -167,15 +222,46 @@
                 }
                 <span class="chat__msg-time">
                   {{ m.sentOn | date: 'shortTime' }}
-                  @if (m.isMine && m.isSeen) {
+                  @if (m.isMine && m.isSeen && !m.isDeleted) {
                     <i class="pi pi-check-circle chat__seen" aria-hidden="true"></i>
                     <span class="chat__seen-text">Seen</span>
                   }
                 </span>
               </div>
+              </div>
             }
           }
         </div>
+
+        @if (threadTypingLabel(); as typingLabel) {
+          <div class="chat__typing" aria-live="polite">
+            <span class="chat__typing-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            {{ typingLabel }}
+          </div>
+        }
+
+        @if (deleteSheetOpen()) {
+          <div class="chat__sheet-backdrop" (click)="deleteSheetOpen.set(false)"></div>
+          <div class="chat__sheet" role="dialog" aria-label="Delete messages">
+            <strong class="chat__sheet-title">
+              Delete {{ selectedIds().size }} {{ selectedIds().size === 1 ? 'message' : 'messages' }}?
+            </strong>
+            @if (!canDeleteForEveryone()) {
+              <small class="chat__sheet-note">Only your own messages can be deleted for everyone.</small>
+            }
+            @if (canDeleteForEveryone()) {
+              <button type="button" class="chat__sheet-btn chat__sheet-btn--danger" [disabled]="deleting()" (click)="confirmDelete(true)">
+                <i class="pi pi-users" aria-hidden="true"></i> Delete for everyone
+              </button>
+            }
+            <button type="button" class="chat__sheet-btn chat__sheet-btn--danger" [disabled]="deleting()" (click)="confirmDelete(false)">
+              <i class="pi pi-user" aria-hidden="true"></i> Delete for me
+            </button>
+            <button type="button" class="chat__sheet-btn" [disabled]="deleting()" (click)="deleteSheetOpen.set(false)">
+              Cancel
+            </button>
+          </div>
+        }
 
         @if (pendingAttachment(); as pending) {
           <div class="chat__pending-attachment">
@@ -202,7 +288,7 @@
             class="chat__input"
             placeholder="Type a message…"
             [ngModel]="messageInput()"
-            (ngModelChange)="messageInput.set($event); notifyTyping()"
+            (ngModelChange)="onComposerInput($event)"
             [ngModelOptions]="{ standalone: true }"
             (keyup.enter)="sendMessage()"
             [disabled]="sending()" />
