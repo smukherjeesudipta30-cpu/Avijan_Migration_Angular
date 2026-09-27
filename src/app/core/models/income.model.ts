@@ -11,7 +11,9 @@ export type IncomeSection =
   | 'ReceptionistPay'
   | 'ReferralCommission'
   | 'ExamFees'
-  | 'ProprietorHonorarium';
+  | 'ProprietorHonorarium'
+  /** The same amount, named neutrally in a Receptionist's copy of the report. */
+  | 'AdministrativeExpenses';
 
 export interface IncomeSectionTotal {
   section: IncomeSection;

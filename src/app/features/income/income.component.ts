@@ -94,6 +94,17 @@ export class IncomeComponent {
     { label: 'All time', value: 'all' }
   ];
 
+  /**
+   * Whatever the server called the proprietor's line in this report — the
+   * Receptionist's copy names it "Administrative expenses", so the page never
+   * spells it out itself.
+   */
+  readonly honorariumLabel = computed(() => {
+    const s = (this.report()?.sections ?? [])
+      .find(x => x.section === 'ProprietorHonorarium' || x.section === 'AdministrativeExpenses');
+    return (s?.label ?? 'Administrative expenses').toLowerCase();
+  });
+
   /** Income sections shown above the cost ones, breakdowns last. */
   readonly incomeSections = computed(() =>
     (this.report()?.sections ?? []).filter(s => !s.isCost && !s.isBreakdown));

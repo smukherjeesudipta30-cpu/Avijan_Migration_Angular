@@ -68,8 +68,8 @@ export const MENU: MenuSection[] = [
       { label: 'Exam Fees', icon: 'pi pi-file-edit', route: '/exam-fees', roles: ['Admin', 'Editor', 'Receptionist'] },
       { label: 'Expenses', icon: 'pi pi-minus-circle', route: '/expenses', roles: ['Admin', 'Editor', 'Receptionist'] },
       { label: 'Other Income', icon: 'pi pi-plus-circle', route: '/other-income', roles: ['Admin', 'Editor', 'Receptionist'] },
-      // The legacy Income/Index was [Authorize(Roles = "Admin")] only.
-      { label: 'Income', icon: 'pi pi-chart-line', route: '/income', roles: ['Admin'] },
+      // Admin, and Receptionist to validate it (proprietor's line named "Administrative expenses" for them).
+      { label: 'Income', icon: 'pi pi-chart-line', route: '/income', roles: ['Admin', 'Receptionist'] },
       { label: 'Proprietor Honorarium', icon: 'pi pi-user', route: '/proprietor-honorarium', roles: ['Admin', 'Editor'] },
       // The student's own side: pay this month against the institute's QR code.
       { label: 'Pay My Fees', icon: 'pi pi-indian-rupee', route: '/my-fees', roles: ['Student'] }

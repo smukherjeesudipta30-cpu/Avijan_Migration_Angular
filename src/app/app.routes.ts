@@ -437,7 +437,8 @@ export const routes: Routes = [
       {
         path: 'income',
         title: 'Income report · Avijan',
-        canActivate: [roleGuard('Admin')],
+        // Receptionist validates the report; the server names the proprietor's line neutrally for them.
+        canActivate: [roleGuard('Admin', 'Receptionist')],
         loadComponent: () =>
           import('./features/income/income.component').then(m => m.IncomeComponent)
       },
