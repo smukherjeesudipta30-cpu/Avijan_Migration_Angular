@@ -9,14 +9,34 @@
     }
   </div>
 
-  <p-button
-    label="Refresh"
-    icon="pi pi-refresh"
-    severity="secondary"
-    [outlined]="true"
-    [disabled]="loading()"
-    (onClick)="load()" />
+  <div class="dash__header-actions">
+    <p-select
+      [options]="cycleOptions()"
+      [ngModel]="cycleMonth()"
+      (ngModelChange)="selectCycle($event)"
+      optionLabel="label"
+      optionValue="value"
+      [disabled]="loading()"
+      ariaLabel="Pay cycle"
+      appendTo="body" />
+    <p-button
+      label="Refresh"
+      icon="pi pi-refresh"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="loading()"
+      (onClick)="load()" />
+  </div>
 </header>
+
+@if (!loading() && summary(); as data) {
+  <p class="dash__cycle app-muted">
+    <i class="pi pi-calendar" aria-hidden="true"></i>
+    Pay cycle <strong>{{ data.finance.cycleLabel }}</strong>:
+    {{ data.finance.cycleStart | date: 'd MMM y' }} – {{ data.finance.cycleEnd | date: 'd MMM y' }}.
+    Figures as in the Income report for these dates, with fixed monthly costs counted once per cycle.
+  </p>
+}
 
 @if (loading()) {
   <div class="dash__stats">
@@ -48,7 +68,7 @@
     <div class="app-card dash__notice">
       <i class="pi pi-info-circle" aria-hidden="true"></i>
       <span>
-        No income or cost recorded for the current month. The most recent payment on
+        No income or cost recorded in this pay cycle yet. The most recent payment on
         record is <strong>{{ data.finance.lastPaymentOn | date: 'd MMM y' }}</strong> —
         the figures below reflect the migrated ledger as it stands.
       </span>
@@ -76,7 +96,7 @@
     <article class="app-card dash__panel dash__panel--wide">
       <header class="dash__panel-head">
         <h2>Income vs cost</h2>
-        <span class="app-muted">Last 12 months</span>
+        <span class="app-muted">12 pay cycles to {{ data.finance.cycleLabel }}</span>
       </header>
       <div class="dash__chart">
         <p-chart type="line" [data]="trendChart()" [options]="trendOptions" height="300px" />

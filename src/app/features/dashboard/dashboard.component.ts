@@ -3,6 +3,8 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { ChartModule } from 'primeng/chart';
+import { FormsModule } from '@angular/forms';
+import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
@@ -38,7 +40,7 @@ interface StatCard {
  */
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule, CardModule, ChartModule, TableModule, TagModule, ButtonModule, SkeletonModule, OrgChartComponent],
+  imports: [CommonModule, FormsModule, CardModule, ChartModule, TableModule, TagModule, ButtonModule, SelectModule, SkeletonModule, OrgChartComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
 })
@@ -87,25 +89,31 @@ export class DashboardComponent {
         caption: `${counts.inactiveStudents} inactive · ${counts.completedStudents} completed`
       },
       {
-        label: 'Income this month',
+        label: `Income · ${finance.cycleLabel}`,
         value: this.money(finance.totalIncomeThisMonth),
         icon: 'pi pi-wallet',
         tone: 'accent',
-        caption:
-          `${this.money(finance.feesCollectedThisMonth)} fees` +
-          (finance.lateFinesThisMonth > 0 ? ` · ${this.money(finance.lateFinesThisMonth)} fines` : '')
+        caption: this.parts([
+          [finance.feesCollectedThisMonth, 'fees'],
+          [finance.admissionFees, 'admission'],
+          [finance.examFees, 'exam fees'],
+          [finance.otherIncomeThisMonth, 'other']
+        ])
       },
       {
-        label: 'Cost this month',
+        label: `Cost · ${finance.cycleLabel}`,
         value: this.money(finance.totalCostThisMonth),
         icon: 'pi pi-minus-circle',
         tone: 'neutral',
-        caption:
-          `${this.money(finance.teacherPayoutThisMonth)} to teachers · ` +
-          `${this.money(finance.expensesThisMonth)} expenses`
+        caption: this.parts([
+          [finance.teacherPayoutThisMonth, 'teachers'],
+          [finance.expensesThisMonth, 'expenses'],
+          [finance.receptionistPay, 'receptionists'],
+          [finance.otherCosts, 'other']
+        ])
       },
       {
-        label: 'Net this month',
+        label: `Net · ${finance.cycleLabel}`,
         value: this.money(finance.netThisMonth),
         icon: finance.netThisMonth >= 0 ? 'pi pi-arrow-up-right' : 'pi pi-arrow-down-right',
         tone: finance.netThisMonth >= 0 ? 'positive' : 'negative',
@@ -148,7 +156,7 @@ export class DashboardComponent {
           pointRadius: 3
         },
         {
-          label: 'Expenses',
+          label: 'Other costs',
           data: data.trend.map(point => point.expense),
           borderColor: '#0ea5e9',
           backgroundColor: 'rgba(14, 165, 233, 0.10)',
@@ -208,11 +216,41 @@ export class DashboardComponent {
     this.loadOnlinePayments();
   }
 
+  /**
+   * The pay cycle shown, as 'yyyy-MM-01' of the month it ends in; null is the
+   * cycle running today. Kept across Refresh.
+   */
+  readonly cycleMonth = signal<string | null>(null);
+
+  /**
+   * The running cycle and the 23 before it, newest first. A cycle is named by
+   * the month it ends in: from the start day on, today's cycle ends next month.
+   */
+  readonly cycleOptions = computed(() => {
+    const startDay = this.summary()?.finance.payCycleStartDay ?? 26;
+    const today = new Date();
+    const running = new Date(today.getFullYear(), today.getMonth() + (startDay > 1 && today.getDate() >= startDay ? 1 : 0), 1);
+
+    return Array.from({ length: 24 }, (_, i) => {
+      const d = new Date(running.getFullYear(), running.getMonth() - i, 1);
+      const label = d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+      return {
+        value: i === 0 ? null : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`,
+        label: i === 0 ? `${label} (current)` : label
+      };
+    });
+  });
+
+  selectCycle(value: string | null): void {
+    this.cycleMonth.set(value);
+    this.load();
+  }
+
   load(): void {
     this.loading.set(true);
     this.failed.set(false);
 
-    this.dashboard.getSummary().subscribe({
+    this.dashboard.getSummary(this.cycleMonth()).subscribe({
       next: data => {
         this.summary.set(data);
         this.loading.set(false);
@@ -223,6 +261,12 @@ export class DashboardComponent {
         this.failed.set(true);
       }
     });
+  }
+
+  /** "₹83,150.91 fees · ₹7,700 admission" — only the parts that are not zero. */
+  private parts(items: [number, string][]): string {
+    const shown = items.filter(([amount]) => amount);
+    return shown.length ? shown.map(([amount, name]) => `${this.money(amount)} ${name}`).join(' · ') : 'Nothing recorded yet';
   }
 
   money(value: number): string {

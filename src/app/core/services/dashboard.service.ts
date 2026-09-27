@@ -14,9 +14,12 @@ import {
 export class DashboardService {
   private readonly http = inject(HttpClient);
 
-  getSummary(): Observable<DashboardSummary> {
+  /** @param cycleMonth 'yyyy-MM-01' of the month a pay cycle ends in; omitted for the running cycle. */
+  getSummary(cycleMonth?: string | null): Observable<DashboardSummary> {
     return this.http
-      .get<ApiResponse<DashboardSummary>>(`${environment.apiBaseUrl}/dashboard/summary`)
+      .get<ApiResponse<DashboardSummary>>(`${environment.apiBaseUrl}/dashboard/summary`, {
+        params: cycleMonth ? { cycleMonth } : {}
+      })
       .pipe(map(response => response.data));
   }
 

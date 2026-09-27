@@ -23,6 +23,16 @@ export interface DashboardFinance {
   studentsInArrears: number;
   /** Most recent fee payment on record — the migrated ledger may predate this month. */
   lastPaymentOn?: string;
+  /** The pay cycle the "ThisMonth" figures cover, named by the month it ends in. */
+  cycleStart: string;
+  cycleEnd: string;
+  cycleLabel: string;
+  admissionFees: number;
+  examFees: number;
+  receptionistPay: number;
+  /** Every other cost inside the total (referral commission, administrative expenses). */
+  otherCosts: number;
+  payCycleStartDay: number;
 }
 
 export interface MonthlyTrendPoint {
