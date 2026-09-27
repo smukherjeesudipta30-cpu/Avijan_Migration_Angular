@@ -26,6 +26,7 @@ export const MENU: MenuSection[] = [
     items: [
       { label: 'Dashboard', icon: 'pi pi-home', route: '/dashboard', roles: ['Admin', 'Editor'] },
       { label: 'Public Site', icon: 'pi pi-globe', route: '/', roles: ['Admin', 'Editor', 'Student', 'Teacher', 'Receptionist'] },
+      { label: 'Holiday List', icon: 'pi pi-calendar', route: '/holidays', roles: ['Admin', 'Editor', 'Student', 'Teacher', 'Receptionist'] },
       { label: 'Attendance', icon: 'pi pi-qrcode', route: '/attendance', roles: ['Admin', 'Editor', 'Receptionist', 'Teacher'], feature: 'attendance' }
     ]
   },

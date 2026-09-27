@@ -265,6 +265,14 @@ export const routes: Routes = [
             .then(m => m.EnquiryReportComponent)
       },
       {
+        path: 'holidays',
+        title: 'Holiday list · Avijan',
+        canActivate: [roleGuard('Admin', 'Editor', 'Receptionist', 'Teacher', 'Student')],
+        loadComponent: () =>
+          import('./features/holidays/holidays.component')
+            .then(m => m.HolidaysComponent)
+      },
+      {
         path: 'proprietor-honorarium',
         title: 'Proprietor honorarium · Avijan',
         canActivate: [roleGuard('Admin', 'Editor')],
