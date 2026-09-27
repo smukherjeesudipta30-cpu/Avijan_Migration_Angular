@@ -18,7 +18,8 @@ import {
   StudentCertificate,
   StudentStatement,
   StudentsByTeacherReport,
-  TeacherEarningsReport
+  TeacherEarningsReport,
+  TeachersEarningsReport
 } from '../models/report.model';
 
 /**
@@ -123,6 +124,29 @@ export class ReportService {
         params: this.params({ teacherId, from, to })
       })
       .pipe(map(r => r.data));
+  }
+
+  /** Several teachers' accounts for one range, with totals. */
+  teachersEarnings(teacherIds: number[], from: string, to: string): Observable<TeachersEarningsReport> {
+    return this.http
+      .get<ApiResponse<TeachersEarningsReport>>(`${this.base}/teachers-earnings`, {
+        params: this.idsParams(teacherIds, from, to)
+      })
+      .pipe(map(r => r.data));
+  }
+
+  /** The same report as a file built on the server: 'pdf' or 'excel' (.xlsx). */
+  teachersEarningsFile(kind: 'pdf' | 'excel', teacherIds: number[], from: string, to: string): Observable<Blob> {
+    return this.http.get(`${this.base}/teachers-earnings/${kind}`, {
+      params: this.idsParams(teacherIds, from, to),
+      responseType: 'blob'
+    });
+  }
+
+  private idsParams(teacherIds: number[], from: string, to: string): HttpParams {
+    let params = new HttpParams().set('from', from).set('to', to);
+    for (const id of teacherIds) params = params.append('teacherIds', String(id));
+    return params;
   }
 
   /** Whether the missed-scan-out deduction is currently switched on — the admin's own call. */

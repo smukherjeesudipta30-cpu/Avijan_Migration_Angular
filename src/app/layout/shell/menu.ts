@@ -89,6 +89,7 @@ export const MENU: MenuSection[] = [
       { label: 'Competition Entries', icon: 'pi pi-palette', route: '/reports/competition', roles: ['Admin', 'Editor', 'Receptionist'], feature: 'competition' },
       { label: 'Expense Report', icon: 'pi pi-minus-circle', route: '/reports/expenses', roles: ['Admin', 'Editor', 'Receptionist'] },
       { label: 'Teacher Account', icon: 'pi pi-briefcase', route: '/reports/teacher-earnings', roles: ['Admin', 'Editor', 'Receptionist', 'Teacher'] },
+      { label: 'Teacher Earnings (PDF/Excel)', icon: 'pi pi-file-pdf', route: '/reports/teachers-earnings', roles: ['Admin', 'Receptionist'] },
       { label: 'Students by Teacher', icon: 'pi pi-sitemap', route: '/reports/students-by-teacher', roles: ['Admin', 'Editor', 'Teacher'] },
       { label: 'Staff Attendance', icon: 'pi pi-clock', route: '/reports/attendance', roles: ['Admin', 'Editor'], feature: 'attendance' },
       // Students see their own; staff can look up anyone's.

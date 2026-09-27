@@ -258,6 +258,19 @@ export interface TeacherEarningsReport {
   generatedOn: string;
 }
 
+/** Several teachers' accounts for one range, each as its own TeacherEarningsReport, with totals. */
+export interface TeachersEarningsReport {
+  from: string;
+  to: string;
+  teachers: TeacherEarningsReport[];
+  totalEarned: number;
+  totalDeduction: number;
+  netEarned: number;
+  totalPaid: number;
+  pending: number;
+  generatedOn: string;
+}
+
 /** The admin's own switch for the missed-scan-out deduction. */
 export interface PayrollSettings {
   missedScanOutDeductionEnabled: boolean;

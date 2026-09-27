@@ -340,6 +340,16 @@ export const routes: Routes = [
             .then(m => m.PendingPaymentsReportComponent)
       },
       {
+        /* Several teachers' earnings at once, with a PDF. Admin and the front desk
+           only - it lists colleagues' pay, so no Teacher version. */
+        path: 'reports/teachers-earnings',
+        title: 'Teacher earnings · Avijan',
+        canActivate: [roleGuard('Admin', 'Receptionist')],
+        loadComponent: () =>
+          import('./features/reports/teachers-earnings/teachers-earnings-report.component')
+            .then(m => m.TeachersEarningsReportComponent)
+      },
+      {
         /* Cash-versus-bank and who collected it, branch-wise. Admin and the front
            desk only, the same rule as pending-payments — this names who collected
            what. */
