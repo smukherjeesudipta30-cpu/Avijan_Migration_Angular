@@ -149,13 +149,20 @@ interface Honorarium {
             <p-select [options]="yearOptions()" optionLabel="label" optionValue="value"
                       [ngModel]="year()" (ngModelChange)="year.set($event)" appendTo="body" styleClass="ph__year" />
           </label>
+          @if (branchOptions().length > 2) {
+            <label>Branch
+              <p-select [options]="branchOptions()" optionLabel="label" optionValue="value"
+                        [ngModel]="branchFilter()" (ngModelChange)="branchFilter.set($event)" appendTo="body"
+                        styleClass="ph__year" />
+            </label>
+          }
           <span class="app-muted ph__hint">
             Each month is one pay cycle ({{ ordinal(cycleStartDay()) }} to {{ ordinal(cycleEndDay()) }}), named by the
             month it ends in — the same months the Income report charges.
           </span>
         </div>
 
-        <p-table [value]="visibleMonths()" styleClass="p-datatable-sm" [rowTrackBy]="trackMonth">
+        <p-table [value]="displayRows()" styleClass="p-datatable-sm" [rowTrackBy]="trackMonth">
           <ng-template pTemplate="header">
             <tr>
               <th>Month</th>
@@ -166,6 +173,13 @@ interface Honorarium {
             </tr>
           </ng-template>
           <ng-template pTemplate="body" let-r>
+            @if (r.subtotal) {
+              <tr class="ph__subtotal">
+                <td colspan="3">{{ r.month | date: 'MMMM y' }} total <span class="app-muted">· {{ r.branchCount }} branches</span></td>
+                <td class="ph__num">{{ money(r.amount) }}</td>
+                <td></td>
+              </tr>
+            } @else {
             <tr [class.ph__row--zero]="r.amount === 0" [class.ph__row--running]="r.running">
               <td>
                 <strong>{{ r.month | date: 'MMMM y' }}</strong>
@@ -179,6 +193,7 @@ interface Honorarium {
               </td>
               <td class="app-muted">{{ r.note || ('set from ' + (r.from | date: 'MMM y')) }}</td>
             </tr>
+            }
           </ng-template>
           <ng-template pTemplate="footer">
             @if (visibleMonths().length) {
@@ -196,6 +211,19 @@ interface Honorarium {
             <tr><td colspan="5" class="app-muted">No honorarium in this period.</td></tr>
           </ng-template>
         </p-table>
+
+        @if (branchTotals().length > 1) {
+          <h3 class="ph__sub">By branch · {{ year() === 'all' ? 'all years' : year() }}</h3>
+          <ul class="ph__split ph__years">
+            @for (b of branchTotals(); track b.branch) {
+              <li>
+                <span>{{ b.branch || 'Whole institute' }} <span class="app-muted">({{ b.months }} months)</span></span>
+                <strong>{{ money(b.total) }}</strong>
+              </li>
+            }
+            <li class="ph__grand"><span>All branches</span><strong>{{ money(visibleTotal()) }}</strong></li>
+          </ul>
+        }
 
         @if (year() === 'all' && yearTotals().length > 1) {
           <ul class="ph__split ph__years">
@@ -260,6 +288,9 @@ interface Honorarium {
     .ph__tag { margin-left: 0.4rem; padding: 0.05rem 0.4rem; border-radius: 999px; font-size: 0.7rem; background: color-mix(in srgb, var(--app-brand) 12%, transparent); color: var(--app-brand); }
     .ph__total td { font-weight: 700; border-top: 2px solid var(--app-border); }
     .ph__years { max-width: 26rem; }
+    .ph__sub { margin: 1rem 0 0; font-size: 0.9rem; }
+    .ph__subtotal td { font-weight: 700; background: color-mix(in srgb, var(--app-brand) 6%, transparent); }
+    .ph__grand { font-weight: 700; border-top: 1px solid var(--app-border); padding-top: 0.3rem; }
   `
 })
 export class ProprietorHonorariumComponent implements OnInit {
@@ -336,14 +367,60 @@ export class ProprietorHonorariumComponent implements OnInit {
     return [...years.map(y => ({ label: String(y), value: y as number | 'all' })), { label: 'All years', value: 'all' as const }];
   });
 
+  /** '*' = all branches; '' = the whole-institute amount; otherwise a branch name. */
+  readonly branchFilter = signal<string>('*');
+
+  readonly branchOptions = computed(() => {
+    const keys = [...new Set(this.months().map(r => r.branch ?? ''))].sort((a, b) => a.localeCompare(b));
+    return [{ label: 'All branches', value: '*' }, ...keys.map(k => ({ label: k || 'Whole institute', value: k }))];
+  });
+
   readonly visibleMonths = computed(() => {
-    const y = this.year();
-    return y === 'all' ? this.months() : this.months().filter(r => r.month.getFullYear() === y);
+    const y = this.year(), b = this.branchFilter();
+    return this.months().filter(r =>
+      (y === 'all' || r.month.getFullYear() === y) && (b === '*' || (r.branch ?? '') === b));
+  });
+
+  /**
+   * The rows as shown: each month's branches, then — where a month has more than
+   * one — that month's total across them, i.e. what the whole-institute Income
+   * report charges for that cycle.
+   */
+  readonly displayRows = computed<(MonthRow & { subtotal?: boolean; branchCount?: number })[]>(() => {
+    const out: (MonthRow & { subtotal?: boolean; branchCount?: number })[] = [];
+    const rows = this.visibleMonths();
+    for (let i = 0; i < rows.length;) {
+      const t = rows[i].month.getTime();
+      const group = [];
+      while (i < rows.length && rows[i].month.getTime() === t) group.push(rows[i++]);
+      out.push(...group);
+      if (group.length > 1) {
+        out.push({ ...group[0], branch: '__total__', note: null, amount: group.reduce((a, r) => a + r.amount, 0),
+                   subtotal: true, branchCount: group.length });
+      }
+    }
+    return out;
+  });
+
+  /** Each branch's total for the selected year — what that branch's own Income report charges. */
+  readonly branchTotals = computed(() => {
+    const map = new Map<string, { total: number; months: number }>();
+    for (const r of this.visibleMonths()) {
+      if (r.running) continue;
+      const k = r.branch ?? '';
+      const t = map.get(k) ?? { total: 0, months: 0 };
+      t.total += r.amount;
+      if (r.amount > 0) t.months++;
+      map.set(k, t);
+    }
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([k, t]) => ({ branch: k || null, ...t }));
   });
 
   /** The running cycle is not complete, so like the Income report its amount is shown but not totalled. */
   readonly visibleTotal = computed(() => this.visibleMonths().filter(r => !r.running).reduce((a, r) => a + r.amount, 0));
-  readonly paidMonths = computed(() => this.visibleMonths().filter(r => !r.running && r.amount > 0).length);
+  /** Distinct months with anything charged — a month charged to three branches is still one month. */
+  readonly paidMonths = computed(() =>
+    new Set(this.visibleMonths().filter(r => !r.running && r.amount > 0).map(r => r.month.getTime())).size);
 
   readonly yearTotals = computed(() => {
     const map = new Map<number, { total: number; months: number }>();
