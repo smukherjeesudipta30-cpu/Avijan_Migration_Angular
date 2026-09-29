@@ -90,7 +90,10 @@ export interface FeeSaveRequest {
 export interface FeeRecorded {
   id: number;
   billNo: string;
+  /** The share paid to each teacher who takes one. */
   teacherSalaryEach: number;
+  /** How many of the bill's teachers take that share — the proprietor (no fee share) is not counted. */
+  sharingTeachers: number;
 }
 
 export interface FeeReceipt {

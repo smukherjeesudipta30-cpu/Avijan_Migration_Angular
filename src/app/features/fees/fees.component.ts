@@ -311,7 +311,7 @@ export class FeesComponent {
           severity: 'success',
           summary: id === null ? 'Payment saved' : 'Payment updated',
           detail: recorded
-            ? `Bill ${recorded.billNo} · ${this.money(recorded.teacherSalaryEach)} to each teacher.`
+            ? `Bill ${recorded.billNo} · ${this.teacherShareText(recorded)}`
             : response.message ?? 'Saved.',
           life: 7000
         });
@@ -444,6 +444,19 @@ export class FeesComponent {
         }
       }
     });
+  }
+
+  /**
+   * What the teachers get from this bill, as the saved-payment message says it.
+   * A teacher paid another way (the proprietor) is on the bill but takes no
+   * share, so the count comes from the server rather than "each teacher".
+   */
+  teacherShareText(recorded: FeeRecorded): string {
+    const n = recorded.sharingTeachers;
+    if (n === 0) return 'no teacher fee share on this bill.';
+    return n === 1
+      ? `${this.money(recorded.teacherSalaryEach)} teacher share.`
+      : `${this.money(recorded.teacherSalaryEach)} to each of ${n} teachers.`;
   }
 
   money(value?: number | null): string {
