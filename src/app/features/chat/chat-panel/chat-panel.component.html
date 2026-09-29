@@ -56,6 +56,9 @@
               <button type="button" class="chat__call-btn" (click)="startSelecting()" title="Select messages">
                 <i class="pi pi-check-square" aria-hidden="true"></i>
               </button>
+              <button type="button" class="chat__call-btn" (click)="clearSheetOpen.set(true)" title="Clear chat">
+                <i class="pi pi-eraser" aria-hidden="true"></i>
+              </button>
             }
             @if (threadIsDirect()) {
               <button type="button" class="chat__call-btn" (click)="startAudioCall()" title="Voice call">
@@ -239,6 +242,22 @@
           <div class="chat__typing" aria-live="polite">
             <span class="chat__typing-dots" aria-hidden="true"><i></i><i></i><i></i></span>
             {{ typingLabel }}
+          </div>
+        }
+
+        @if (clearSheetOpen()) {
+          <div class="chat__sheet-backdrop" (click)="clearSheetOpen.set(false)"></div>
+          <div class="chat__sheet" role="dialog" aria-label="Clear chat">
+            <strong class="chat__sheet-title">Clear this chat?</strong>
+            <small class="chat__sheet-note">
+              All messages will be removed from your view only. {{ threadTitle() }} will still see them.
+            </small>
+            <button type="button" class="chat__sheet-btn chat__sheet-btn--danger" [disabled]="clearing()" (click)="confirmClear()">
+              <i class="pi pi-eraser" aria-hidden="true"></i> Clear chat
+            </button>
+            <button type="button" class="chat__sheet-btn" [disabled]="clearing()" (click)="clearSheetOpen.set(false)">
+              Cancel
+            </button>
           </div>
         }
 

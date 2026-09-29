@@ -251,6 +251,8 @@ export class CallService implements OnDestroy {
       if (ended.callId !== this.currentCallId) return;
       this.endLocally();
     });
+
+    this.chat.onReconnected.subscribe(() => this.resendInviteIfRinging());
   }
 
   ngOnDestroy(): void {
@@ -293,7 +295,29 @@ export class CallService implements OnDestroy {
     this.chat.setCallStatus(true);
 
     const me = this.auth.user();
-    this.chat.callInvite(targetEmail, this.currentCallId, kind, me?.name ?? me?.email ?? 'Someone');
+    const callId = this.currentCallId;
+    const delivered = await this.chat.callInvite(targetEmail, callId, kind, me?.name ?? me?.email ?? 'Someone');
+
+    // On a slow or dropped connection the invite may never reach the server;
+    // say so plainly instead of ringing out for 45 s to a phone that never rang.
+    if (!delivered && this.currentCallId === callId && this.status() === 'outgoing') {
+      // Not a missed call — the other phone never rang — so nothing is logged in the chat.
+      this.isCaller = false;
+      this.errorMessage.set('Could not place the call — your internet connection is too weak. Try again.');
+      this.endLocally();
+    }
+  }
+
+  /**
+   * The connection came back while still ringing out: send the invite again,
+   * in case the first one was lost with the connection. The callee ignores a
+   * second invite while it is already ringing, so this can never ring twice.
+   */
+  private resendInviteIfRinging(): void {
+    const callId = this.currentCallId, target = this.peerEmail();
+    if (this.status() !== 'outgoing' || !this.isCaller || !callId || !target) return;
+    const me = this.auth.user();
+    void this.chat.callInvite(target, callId, this.kind(), me?.name ?? me?.email ?? 'Someone');
   }
 
   async acceptCall(): Promise<void> {
@@ -383,13 +407,40 @@ export class CallService implements OnDestroy {
     const existing = this.localStream();
     if (existing) return existing;
 
+    // Sized for a phone on mobile data, not a studio: 640x360 at up to 15 fps is
+    // clear enough for a face and far lighter than the 720p a camera offers by
+    // default, which stalled or never connected on a weak connection. Voice
+    // processing keeps audio intelligible at low bitrates.
     const stream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       video: this.kind() === 'video'
+        ? { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 15, max: 15 }, facingMode: 'user' }
+        : false
     });
 
     this.localStream.set(stream);
     return stream;
+  }
+
+  /**
+   * Keeps outgoing video to about 350 kbps, so voice (which WebRTC always
+   * favours) still gets through on a slow connection and the picture degrades
+   * gracefully instead of freezing the call. No effect on an audio call.
+   */
+  private async capVideoBitrate(pc: RTCPeerConnection): Promise<void> {
+    for (const sender of pc.getSenders()) {
+      if (sender.track?.kind !== 'video') continue;
+      try {
+        const params = sender.getParameters();
+        params.encodings = params.encodings?.length ? params.encodings : [{}];
+        params.encodings[0].maxBitrate = 350_000;
+        params.encodings[0].maxFramerate = 15;
+        await sender.setParameters(params);
+      } catch {
+        // Not every browser allows this before negotiation; the camera
+        // constraints above already keep the stream small.
+      }
+    }
   }
 
   private ensurePeerConnection(): RTCPeerConnection {
@@ -449,7 +500,10 @@ export class CallService implements OnDestroy {
     try {
       const stream = await this.ensureLocalMedia();
       const pc = this.ensurePeerConnection();
-      if (pc.getSenders().length === 0) stream.getTracks().forEach(track => pc.addTrack(track, stream));
+      if (pc.getSenders().length === 0) {
+        stream.getTracks().forEach(track => pc.addTrack(track, stream));
+        void this.capVideoBitrate(pc);
+      }
 
       const offer = await pc.createOffer(iceRestart ? { iceRestart: true } : undefined);
       await pc.setLocalDescription(offer);
@@ -483,7 +537,10 @@ export class CallService implements OnDestroy {
     if (type === 'offer') {
       try {
         const stream = await this.ensureLocalMedia();
-        if (pc.getSenders().length === 0) stream.getTracks().forEach(track => pc.addTrack(track, stream));
+        if (pc.getSenders().length === 0) {
+          stream.getTracks().forEach(track => pc.addTrack(track, stream));
+          void this.capVideoBitrate(pc);
+        }
 
         await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(payload)));
         await this.flushPendingIce(pc);

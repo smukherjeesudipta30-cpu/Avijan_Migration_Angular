@@ -110,20 +110,50 @@ export class ChatService {
   private activityCleanup: (() => void) | null = null;
 
   /**
-   * Opens the real-time connection. Safe to call repeatedly — a connection
-   * already open or opening is reused. A failure here is not fatal to the
-   * feature: every read and write still works over REST, just without the
-   * live push until `withAutomaticReconnect` succeeds.
+   * Waits between attempts to bring a dropped connection back — never gives
+   * up, settles at 30 s. Tight at first, so a short blip recovers in seconds:
+   * someone pressing Call during one is waiting on exactly this.
+   */
+  private static readonly RETRY_DELAYS_MS = [0, 1000, 2000, 3000, 5000, 10000, 20000, 30000];
+
+  /** Set by {@link disconnect} (sign-out): the only time the connection is meant to stay down. */
+  private stopped = false;
+  private restartTimer: ReturnType<typeof setTimeout> | null = null;
+  private restartAttempt = 0;
+  private everStarted = false;
+  private wakeListenersAdded = false;
+
+  /**
+   * Opens the real-time connection and keeps it open for as long as the person
+   * is signed in. Safe to call repeatedly. Every read and write still works
+   * over REST without it, but presence ("online") and incoming calls do not —
+   * a person whose connection is down shows offline and is never rung.
+   *
+   * Two gaps used to leave a signed-in person silently offline until they
+   * reloaded: SignalR's own reconnect gives up after 4 tries (about 42
+   * seconds), so a phone asleep in a pocket, a patch of bad signal or a server
+   * restart ended the connection for good; and it never retries a FIRST start
+   * that failed at all. Both are closed here: the retry schedule never ends,
+   * a failed or closed connection is restarted on the same schedule, and coming
+   * back online or back to the screen reconnects at once.
    */
   connect(): Promise<void> {
-    if (this.connection) return Promise.resolve();
-    if (this.connecting) return this.connecting;
+    this.stopped = false;
+    this.addWakeListeners();
+
+    if (this.connection) {
+      this.reconnectNow();
+      return this.connecting ?? Promise.resolve();
+    }
 
     const connection = new signalR.HubConnectionBuilder()
       .withUrl(`${environment.hubBaseUrl}/chat`, {
         accessTokenFactory: () => this.auth.accessToken ?? ''
       })
-      .withAutomaticReconnect()
+      .withAutomaticReconnect({
+        nextRetryDelayInMilliseconds: ctx =>
+          ChatService.RETRY_DELAYS_MS[Math.min(ctx.previousRetryCount, ChatService.RETRY_DELAYS_MS.length - 1)]
+      })
       .build();
 
     connection.on('MessageReceived', (message: ChatMessage) => {
@@ -220,24 +250,73 @@ export class ChatService {
       this.reconnected$.next();
     });
 
-    this.connecting = connection
+    // Closed for good (a start that failed outright, or anything the retry
+    // schedule above could not recover): start again rather than stay offline.
+    connection.onclose(() => this.scheduleRestart());
+
+    this.connection = connection;
+    this.connecting = this.startNow();
+    return this.connecting;
+  }
+
+  /** Starts the connection if it is down; on failure, tries again on the retry schedule. */
+  private startNow(): Promise<void> {
+    const connection = this.connection;
+    if (!connection || this.stopped || connection.state !== signalR.HubConnectionState.Disconnected) {
+      return Promise.resolve();
+    }
+
+    return connection
       .start()
       .then(() => {
-        this.connection = connection;
+        this.restartAttempt = 0;
+        const firstTime = !this.everStarted;
+        this.everStarted = true;
+
         if (this.auth.accessToken) {
           this.loadPresenceSnapshot();
           this.setupActivityTracking(connection);
-          void this.enablePushNotifications();
+          if (firstTime) void this.enablePushNotifications();
         }
+        // A brand-new connection has no conversation groups joined by hand and
+        // has missed anything sent meanwhile — listeners reload, as after a reconnect.
+        if (!firstTime) this.reconnected$.next();
       })
-      .catch(() => {
-        // REST keeps working regardless; withAutomaticReconnect will retry.
-      })
+      .catch(() => this.scheduleRestart())
       .finally(() => {
         this.connecting = null;
       });
+  }
 
-    return this.connecting;
+  private scheduleRestart(): void {
+    if (this.stopped || !this.connection || this.restartTimer) return;
+
+    const delays = ChatService.RETRY_DELAYS_MS;
+    const delay = Math.max(1000, delays[Math.min(this.restartAttempt, delays.length - 1)]);
+    this.restartAttempt++;
+
+    this.restartTimer = setTimeout(() => {
+      this.restartTimer = null;
+      this.connecting = this.startNow();
+    }, delay);
+  }
+
+  /** Back online, or back to the screen: reconnect straight away instead of waiting out the schedule. */
+  private reconnectNow(): void {
+    if (this.stopped || !this.connection || this.connection.state !== signalR.HubConnectionState.Disconnected) return;
+    if (this.restartTimer) clearTimeout(this.restartTimer);
+    this.restartTimer = null;
+    this.restartAttempt = 0;
+    this.connecting = this.startNow();
+  }
+
+  private addWakeListeners(): void {
+    if (this.wakeListenersAdded) return;
+    this.wakeListenersAdded = true;
+    window.addEventListener('online', () => this.reconnectNow());
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) this.reconnectNow();
+    });
   }
 
   /**
@@ -431,6 +510,12 @@ export class ChatService {
   }
 
   disconnect(): void {
+    // Signing out is the one time the connection should stay down.
+    this.stopped = true;
+    if (this.restartTimer) clearTimeout(this.restartTimer);
+    this.restartTimer = null;
+    this.restartAttempt = 0;
+    this.everStarted = false;
     void this.connection?.stop();
     this.connection = null;
     this.onlineEmails.set(new Set());
@@ -461,20 +546,52 @@ export class ChatService {
 
   /* ------------------------------------------------------------- calls */
 
-  callInvite(targetEmail: string, callId: string, kind: 'audio' | 'video', fromName: string): void {
-    this.connection?.invoke('CallInvite', targetEmail, callId, kind, fromName).catch(() => {});
+  /** How long a call message waits for a slow or reconnecting connection before giving up. */
+  private static readonly CALL_SEND_WAIT_MS = 15_000;
+
+  /**
+   * Sends one call message, waiting for the connection if it is still coming
+   * up or reconnecting — on a slow network that is exactly when someone
+   * presses Call. Fire-and-forget used to drop the invite silently then: the
+   * caller heard ringing for 45 s and got "No answer" from a phone that never
+   * rang. Resolves true once the server has it, false if it never got through.
+   */
+  private async sendCallMessage(method: string, ...args: unknown[]): Promise<boolean> {
+    const deadline = Date.now() + ChatService.CALL_SEND_WAIT_MS;
+
+    while (Date.now() < deadline) {
+      const connection = this.connection;
+      if (!connection) {
+        await this.connect();
+      } else if (connection.state === signalR.HubConnectionState.Connected) {
+        try {
+          await connection.invoke(method, ...args);
+          return true;
+        } catch {
+          // Dropped mid-send — fall through, wait for it to come back, try again.
+        }
+      } else {
+        this.reconnectNow();
+      }
+      await new Promise(resolve => setTimeout(resolve, 400));
+    }
+    return false;
   }
 
-  callRespond(targetEmail: string, callId: string, accepted: boolean): void {
-    this.connection?.invoke('CallResponse', targetEmail, callId, accepted).catch(() => {});
+  callInvite(targetEmail: string, callId: string, kind: 'audio' | 'video', fromName: string): Promise<boolean> {
+    return this.sendCallMessage('CallInvite', targetEmail, callId, kind, fromName);
   }
 
-  callSignal(targetEmail: string, callId: string, type: 'offer' | 'answer' | 'ice', payload: string): void {
-    this.connection?.invoke('CallSignal', targetEmail, callId, type, payload).catch(() => {});
+  callRespond(targetEmail: string, callId: string, accepted: boolean): Promise<boolean> {
+    return this.sendCallMessage('CallResponse', targetEmail, callId, accepted);
   }
 
-  callHangup(targetEmail: string, callId: string): void {
-    this.connection?.invoke('CallHangup', targetEmail, callId).catch(() => {});
+  callSignal(targetEmail: string, callId: string, type: 'offer' | 'answer' | 'ice', payload: string): Promise<boolean> {
+    return this.sendCallMessage('CallSignal', targetEmail, callId, type, payload);
+  }
+
+  callHangup(targetEmail: string, callId: string): Promise<boolean> {
+    return this.sendCallMessage('CallHangup', targetEmail, callId);
   }
 
   private params(values: Record<string, unknown>): HttpParams {
@@ -573,6 +690,11 @@ export class ChatService {
 
   markRead(conversationId: number): Observable<ApiResponse<boolean>> {
     return this.http.post<ApiResponse<boolean>>(`${this.base}/conversations/${conversationId}/read`, {});
+  }
+
+  /** Clears the whole conversation from this user's view only; everyone else still sees it. */
+  clearConversation(conversationId: number): Observable<ApiResponse<number>> {
+    return this.http.post<ApiResponse<number>>(`${this.base}/conversations/${conversationId}/clear`, {});
   }
 
   /** For everyone (own messages only — the server enforces it) or just from this user's view. */

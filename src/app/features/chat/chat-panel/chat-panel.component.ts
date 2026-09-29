@@ -250,6 +250,7 @@ export class ChatPanelComponent {
     this.selecting.set(false);
     this.selectedIds.set(new Set());
     this.deleteSheetOpen.set(false);
+    this.clearSheetOpen?.set(false);
   }
 
   toggleSelected(message: ChatMessage): void {
@@ -287,6 +288,33 @@ export class ChatPanelComponent {
   cancelLongPress(): void {
     if (this.longPressTimer) clearTimeout(this.longPressTimer);
     this.longPressTimer = null;
+  }
+
+  /* ------------------------------------------------------- clear chat */
+
+  readonly clearSheetOpen = signal(false);
+  readonly clearing = signal(false);
+
+  /** Empties the open conversation for this user only — the other side keeps every message. */
+  confirmClear(): void {
+    const id = this.activeConversationId();
+    if (id === null || this.clearing()) return;
+
+    this.clearing.set(true);
+    this.chat.clearConversation(id).subscribe({
+      next: () => {
+        this.clearing.set(false);
+        this.clearSheetOpen.set(false);
+        this.cancelSelecting();
+        if (this.activeConversationId() === id) this.messages.set([]);
+        this.refreshConversations();
+        this.toast.add({ severity: 'success', summary: 'Chat cleared', detail: 'Only for you — others still see it.', life: 3000 });
+      },
+      error: () => {
+        this.clearing.set(false);
+        this.toast.add({ severity: 'error', summary: 'Could not clear the chat', detail: 'Please try again.', life: 5000 });
+      }
+    });
   }
 
   openDeleteSheet(): void {
