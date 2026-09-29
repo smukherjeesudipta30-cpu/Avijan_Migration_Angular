@@ -34,7 +34,7 @@
       [ngModelOptions]="{ standalone: true }"
       dateFormat="dd/mm/yy"
       [showIcon]="true"
-      [maxDate]="today"
+      [maxDate]="lastCompletedEnd()"
       appendTo="body"
       styleClass="inc__datepicker" />
   </div>
@@ -48,7 +48,7 @@
       [ngModelOptions]="{ standalone: true }"
       dateFormat="dd/mm/yy"
       [showIcon]="true"
-      [maxDate]="today"
+      [maxDate]="lastCompletedEnd()"
       appendTo="body"
       styleClass="inc__datepicker" />
   </div>

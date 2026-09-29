@@ -21,6 +21,7 @@ import {
 import { formatMoney } from '../../core/format/money';
 import { BranchListItem } from '../../core/models/master.model';
 import { IncomeService } from '../../core/services/income.service';
+import { ReportService } from '../../core/services/report.service';
 import { MasterService } from '../../core/services/master.service';
 import { AboutService } from '../../core/services/about.service';
 import { ContactDetails } from '../../core/models/about.model';
@@ -56,6 +57,7 @@ import { openPendingDocumentWindow, writeDocumentWindow } from '../../core/print
 })
 export class IncomeComponent {
   private readonly income = inject(IncomeService);
+  private readonly reports = inject(ReportService);
   private readonly masters = inject(MasterService);
   private readonly about = inject(AboutService);
   private readonly messages = inject(MessageService);
@@ -84,13 +86,20 @@ export class IncomeComponent {
   readonly from = signal<Date>(this.startOfYear());
   readonly to = signal<Date>(new Date());
 
+  /**
+   * Money is reported only for COMPLETED pay cycles (26th to 25th by default):
+   * while 26 Sep - 25 Oct is running, nothing after 25 Sep can be chosen, and
+   * October's figures appear once its cycle ends. The server enforces the same.
+   */
+  readonly payCycleStartDay = signal(26);
+  readonly lastCompletedEnd = computed(() => this.cycleRange(this.lastCompletedLabel()).end);
   readonly today = new Date();
 
-  /** Quick ranges, so the common cases are one click. */
+  /** Quick ranges, so the common cases are one click - all ending with the last completed cycle. */
   readonly presets = [
-    { label: 'This month', value: 'month' },
+    { label: 'Last pay cycle', value: 'cycle' },
     { label: 'This year', value: 'year' },
-    { label: 'Last 12 months', value: '12m' },
+    { label: 'Last 12 cycles', value: '12m' },
     { label: 'All time', value: 'all' }
   ];
 
@@ -207,7 +216,14 @@ export class IncomeComponent {
   };
 
   constructor() {
-    this.run();
+    // Opens on the last completed pay cycle, once the cycle start day is known.
+    this.reports.payrollSettings().subscribe({
+      next: s => {
+        this.payCycleStartDay.set(s.payCycleStartDay || 26);
+        this.applyPreset('cycle');
+      },
+      error: () => this.applyPreset('cycle')
+    });
 
     this.masters.branches().subscribe({
       next: rows => this.branches.set(rows.filter(b => b.isActive))
@@ -248,29 +264,26 @@ export class IncomeComponent {
   }
 
   applyPreset(preset: string): void {
-    const now = new Date();
+    const label = this.lastCompletedLabel();
+    const end = this.lastCompletedEnd();
 
     switch (preset) {
-      case 'month':
-        this.from.set(new Date(now.getFullYear(), now.getMonth(), 1));
-        this.to.set(now);
+      case 'cycle':
+        this.from.set(this.cycleRange(label).start);
+        this.to.set(end);
         break;
       case 'year':
-        this.from.set(this.startOfYear());
-        this.to.set(now);
+        this.from.set(new Date(end.getFullYear(), 0, 1));
+        this.to.set(end);
         break;
-      case '12m': {
-        const start = new Date(now);
-        start.setMonth(start.getMonth() - 11);
-        start.setDate(1);
-        this.from.set(start);
-        this.to.set(now);
+      case '12m':
+        this.from.set(this.cycleRange(new Date(label.getFullYear(), label.getMonth() - 11, 1)).start);
+        this.to.set(end);
         break;
-      }
       case 'all':
         // Well before the earliest record in the migrated data (2018).
         this.from.set(new Date(2015, 0, 1));
-        this.to.set(now);
+        this.to.set(end);
         break;
     }
 
@@ -491,6 +504,27 @@ export class IncomeComponent {
 
   sectionOf(total: IncomeSectionTotal): IncomeSection {
     return total.section;
+  }
+
+  /** First of the month the last COMPLETED pay cycle ends in (its name). */
+  private lastCompletedLabel(): Date {
+    const startDay = this.payCycleStartDay();
+    const now = new Date();
+    const runningMonth = now.getMonth() + (startDay > 1 && now.getDate() >= startDay ? 1 : 0);
+    return new Date(now.getFullYear(), runningMonth - 1, 1);
+  }
+
+  /** The cycle named by a month: the start day of the month before, to the day before it this month. */
+  private cycleRange(label: Date): { start: Date; end: Date } {
+    const startDay = this.payCycleStartDay();
+    const y = label.getFullYear(), m = label.getMonth();
+    if (startDay <= 1) return { start: new Date(y, m, 1), end: new Date(y, m + 1, 0) };
+    const daysPrev = new Date(y, m, 0).getDate();
+    const daysThis = new Date(y, m + 1, 0).getDate();
+    return {
+      start: new Date(y, m - 1, Math.min(startDay, daysPrev)),
+      end: new Date(y, m, Math.min(startDay - 1, daysThis))
+    };
   }
 
   private startOfYear(): Date {

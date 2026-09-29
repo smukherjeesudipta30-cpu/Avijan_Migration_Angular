@@ -223,20 +223,22 @@ export class DashboardComponent {
   readonly cycleMonth = signal<string | null>(null);
 
   /**
-   * The running cycle and the 23 before it, newest first. A cycle is named by
-   * the month it ends in: from the start day on, today's cycle ends next month.
+   * The last COMPLETED cycle and the 23 before it, newest first. A cycle is
+   * named by the month it ends in, and one still running is not offered: while
+   * October's cycle (26 Sep - 25 Oct) runs, September's is the newest.
    */
   readonly cycleOptions = computed(() => {
     const startDay = this.summary()?.finance.payCycleStartDay ?? 26;
     const today = new Date();
     const running = new Date(today.getFullYear(), today.getMonth() + (startDay > 1 && today.getDate() >= startDay ? 1 : 0), 1);
+    const lastCompleted = new Date(running.getFullYear(), running.getMonth() - 1, 1);
 
     return Array.from({ length: 24 }, (_, i) => {
-      const d = new Date(running.getFullYear(), running.getMonth() - i, 1);
+      const d = new Date(lastCompleted.getFullYear(), lastCompleted.getMonth() - i, 1);
       const label = d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
       return {
         value: i === 0 ? null : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`,
-        label: i === 0 ? `${label} (current)` : label
+        label: i === 0 ? `${label} (latest)` : label
       };
     });
   });
