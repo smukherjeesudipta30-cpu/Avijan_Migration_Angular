@@ -346,3 +346,11 @@
   gap: 0.85rem;
   flex-wrap: wrap;
 }
+
+/* A report reaching into the pay cycle still running: amber, so it reads as a
+   caution rather than the neutral scope note. */
+.inc__provisional {
+  border-left-color: #f59e0b;
+
+  i { color: #f59e0b; }
+}

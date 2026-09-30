@@ -87,17 +87,37 @@ export class IncomeComponent {
   readonly to = signal<Date>(new Date());
 
   /**
-   * Money is reported only for COMPLETED pay cycles (26th to 25th by default):
-   * while 26 Sep - 25 Oct is running, nothing after 25 Sep can be chosen, and
-   * October's figures appear once its cycle ends. The server enforces the same.
+   * Any range can be reported, up to today. Pay cycles run 26th to 25th by
+   * default; a report reaching into the cycle still running (26 Sep - 25 Oct)
+   * is marked provisional rather than blocked. (Only the dashboard is limited
+   * to completed cycles.) The quick ranges still end on the last completed
+   * cycle, except "This pay cycle so far".
    */
   readonly payCycleStartDay = signal(26);
   readonly lastCompletedEnd = computed(() => this.cycleRange(this.lastCompletedLabel()).end);
-  readonly today = new Date();
+  /**
+   * The latest date the pickers allow: the END of today. A plain `new Date()`
+   * taken when the page opened is a moment in the past by the time a range is
+   * chosen, and the picker then silently blanks a "to" of today as out of range.
+   */
+  readonly today = (() => { const d = new Date(); d.setHours(23, 59, 59, 999); return d; })();
 
-  /** Quick ranges, so the common cases are one click - all ending with the last completed cycle. */
+  /** The pay cycle running today, e.g. 26 Sep - 25 Oct. */
+  readonly runningCycle = computed(() => {
+    const label = this.lastCompletedLabel();
+    return this.cycleRange(new Date(label.getFullYear(), label.getMonth() + 1, 1));
+  });
+
+  /** True when the report shown reaches past the last completed cycle, into the running one. */
+  readonly isProvisional = computed(() => {
+    const r = this.report();
+    return !!r && r.to > this.isoDate(this.lastCompletedEnd());
+  });
+
+  /** Quick ranges, so the common cases are one click. */
   readonly presets = [
     { label: 'Last pay cycle', value: 'cycle' },
+    { label: 'This pay cycle so far', value: 'running' },
     { label: 'This year', value: 'year' },
     { label: 'Last 12 cycles', value: '12m' },
     { label: 'All time', value: 'all' }
@@ -272,6 +292,12 @@ export class IncomeComponent {
         this.from.set(this.cycleRange(label).start);
         this.to.set(end);
         break;
+      case 'running': {
+        const now = new Date();
+        this.from.set(this.runningCycle().start);
+        this.to.set(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
+        break;
+      }
       case 'year':
         this.from.set(new Date(end.getFullYear(), 0, 1));
         this.to.set(end);
@@ -504,6 +530,11 @@ export class IncomeComponent {
 
   sectionOf(total: IncomeSectionTotal): IncomeSection {
     return total.section;
+  }
+
+  /** Local yyyy-MM-dd, comparable with the report's own from/to strings. */
+  private isoDate(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
   /** First of the month the last COMPLETED pay cycle ends in (its name). */

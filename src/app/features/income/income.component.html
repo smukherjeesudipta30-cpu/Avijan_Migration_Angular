@@ -34,7 +34,7 @@
       [ngModelOptions]="{ standalone: true }"
       dateFormat="dd/mm/yy"
       [showIcon]="true"
-      [maxDate]="lastCompletedEnd()"
+      [maxDate]="today"
       appendTo="body"
       styleClass="inc__datepicker" />
   </div>
@@ -48,7 +48,7 @@
       [ngModelOptions]="{ standalone: true }"
       dateFormat="dd/mm/yy"
       [showIcon]="true"
-      [maxDate]="lastCompletedEnd()"
+      [maxDate]="today"
       appendTo="body"
       styleClass="inc__datepicker" />
   </div>
@@ -84,6 +84,22 @@
 </section>
 
 @if (report(); as data) {
+
+  @if (isProvisional()) {
+    <!-- Any range can be run, but figures after the last completed pay cycle
+         are still moving: say so rather than let them read as final. -->
+    <section class="app-card inc__scope inc__provisional" role="note">
+      <i class="pi pi-hourglass" aria-hidden="true"></i>
+      <div>
+        <strong>Provisional — includes the pay cycle still in progress
+          ({{ runningCycle().start | date: 'd MMM' }} – {{ runningCycle().end | date: 'd MMM y' }}).</strong>
+        <p>
+          Figures after {{ lastCompletedEnd() | date: 'd MMM y' }} can still change until that cycle ends,
+          and fixed monthly costs for it (such as the honorarium) are only added once it is complete.
+        </p>
+      </div>
+    </section>
+  }
 
   @if (data.branchScoped) {
     <!-- Two lines cannot be branch-attributed, and a P&L that silently omits
