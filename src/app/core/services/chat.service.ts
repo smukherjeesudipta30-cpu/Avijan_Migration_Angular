@@ -564,12 +564,17 @@ export class ChatService {
       if (!connection) {
         await this.connect();
       } else if (connection.state === signalR.HubConnectionState.Connected) {
-        try {
-          await connection.invoke(method, ...args);
-          return true;
-        } catch {
-          // Dropped mid-send — fall through, wait for it to come back, try again.
-        }
+        // Sent on a live connection, the server has the message even if its
+        // reply is slow. Still waiting when time runs out is "sent, reply
+        // pending" — not a failure: reporting it as one told the caller their
+        // connection was too weak while the other phone was ringing.
+        const sent = connection.invoke(method, ...args).then(() => 'ok' as const, () => 'failed' as const);
+        const outcome = await Promise.race([
+          sent,
+          new Promise<'pending'>(resolve => setTimeout(() => resolve('pending'), Math.max(0, deadline - Date.now())))
+        ]);
+        if (outcome !== 'failed') return true;
+        // Dropped mid-send — fall through, wait for it to come back, try again.
       } else {
         this.reconnectNow();
       }
