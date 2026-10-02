@@ -325,17 +325,30 @@ export class CallService implements OnDestroy {
     const target = this.peerEmail();
     if (this.status() !== 'incoming' || !callId || !target) return;
 
+    // Leave 'incoming' on the first tap, before anything slow (ICE servers,
+    // the mic/camera permission). Until then the Accept button stayed on
+    // screen looking ignored and people tapped it two or three times. Moving
+    // off 'incoming' also stops the ring via the status effect.
+    this.status.set('connecting');
+
     await this.loadIceServers();
     try {
       await this.ensureLocalMedia();
     } catch {
+      if (this.currentCallId !== callId) return;
       this.errorMessage.set('Could not access the microphone/camera. Check the browser permission.');
       this.chat.callRespond(target, callId, false);
       this.endLocally();
       return;
     }
 
-    this.status.set('connecting');
+    // The caller hung up while the permission prompt was open: release the
+    // mic/camera that was just opened instead of answering a dead call.
+    if (this.currentCallId !== callId) {
+      if (this.status() === 'idle') this.teardown();
+      return;
+    }
+
     this.chat.callRespond(target, callId, true);
     // The callee never initiates the offer — it waits for CallSignal 'offer'
     // from the caller, which arrives once the caller has made its own.
