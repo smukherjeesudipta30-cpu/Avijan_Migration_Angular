@@ -12,12 +12,42 @@ import { admitCardHtml, certificateHtml } from './legacy-documents';
  * with html2canvas and placed on one A4 page, and the file downloads straight
  * away.
  */
-export async function downloadDocumentPdf(
+export function downloadDocumentPdf(
   html: string,
   fileName: string,
   options: { width: number; landscape?: boolean }
 ): Promise<void> {
-  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
+  return downloadPagesPdf([{ html, ...options }], fileName);
+}
+
+/** Several documents as one PDF, one A4 page each, each in its own orientation. */
+export async function downloadPagesPdf(
+  pages: { html: string; width: number; landscape?: boolean }[],
+  fileName: string
+): Promise<void> {
+  const { jsPDF } = await import('jspdf');
+  let pdf: InstanceType<typeof jsPDF> | null = null;
+
+  for (const page of pages) {
+    const canvas = await renderToCanvas(page.html, page.width);
+    const orientation = page.landscape ? 'landscape' : 'portrait';
+    if (pdf) pdf.addPage('a4', orientation);
+    else pdf = new jsPDF({ orientation, unit: 'mm', format: 'a4' });
+
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const ratio = Math.min(pageW / canvas.width, pageH / canvas.height);
+    const w = canvas.width * ratio;
+    const h = canvas.height * ratio;
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', (pageW - w) / 2, 0, w, h);
+  }
+
+  pdf?.save(fileName);
+}
+
+async function renderToCanvas(html: string, width: number): Promise<HTMLCanvasElement> {
+  const { default: html2canvas } = await import('html2canvas');
+  const options = { width };
 
   const frame = document.createElement('iframe');
   frame.setAttribute('aria-hidden', 'true');
@@ -43,7 +73,7 @@ export async function downloadDocumentPdf(
     const height = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight);
     frame.style.height = `${height}px`;
 
-    const canvas = await html2canvas(doc.body, {
+    return await html2canvas(doc.body, {
       scale: 2,
       useCORS: true,
       backgroundColor: '#ffffff',
@@ -52,16 +82,6 @@ export async function downloadDocumentPdf(
       windowWidth: options.width,
       windowHeight: height
     });
-
-    const pdf = new jsPDF({ orientation: options.landscape ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
-    const pageW = pdf.internal.pageSize.getWidth();
-    const pageH = pdf.internal.pageSize.getHeight();
-    const ratio = Math.min(pageW / canvas.width, pageH / canvas.height);
-    const w = canvas.width * ratio;
-    const h = canvas.height * ratio;
-    pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', (pageW - w) / 2, 0, w, h);
-
-    pdf.save(fileName);
   } finally {
     frame.remove();
   }

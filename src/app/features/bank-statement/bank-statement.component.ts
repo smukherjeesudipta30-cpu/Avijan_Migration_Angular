@@ -10,7 +10,7 @@ import { forkJoin, map } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../../core/models/api-response.model';
-import { downloadDocumentPdf } from '../../core/printing/pdf-download';
+import { downloadDocumentPdf, downloadPagesPdf } from '../../core/printing/pdf-download';
 
 type StockSection = 'raw' | 'semi' | 'finished';
 
@@ -101,8 +101,8 @@ const SECTIONS: { key: StockSection; label: string }[] = [
 
       <section class="app-card bs__card">
         <div class="bs__grid2">
-          <label>Bank branch<input pInputText [(ngModel)]="data().branchName" placeholder="e.g. Garia" /></label>
-          <label>Name of the borrower<input pInputText [(ngModel)]="data().borrowerName" placeholder="Avijan Computer Center" /></label>
+          <label>Bank branch<input pInputText [(ngModel)]="data().branchName" placeholder="Sonarpur" /></label>
+          <label>Name of the borrower<input pInputText [(ngModel)]="data().borrowerName" placeholder="AVIJAN" /></label>
         </div>
       </section>
 
@@ -163,6 +163,7 @@ const SECTIONS: { key: StockSection; label: string }[] = [
 
       <div class="bs__actions">
         <p-button label="Save" icon="pi pi-save" [loading]="saving()" (onClick)="save()" />
+        <p-button label="Download PDF (both pages)" icon="pi pi-file-pdf" severity="secondary" (onClick)="downloadBothPdf()" />
         <p-button label="Stock PDF" icon="pi pi-file-pdf" severity="secondary" [outlined]="true" (onClick)="downloadStockPdf()" />
         <p-button label="Book debt PDF" icon="pi pi-file-pdf" severity="secondary" [outlined]="true" (onClick)="downloadDebtPdf()" />
         <p-button label="Excel (both)" icon="pi pi-file-excel" severity="secondary" [outlined]="true" (onClick)="downloadExcel()" />
@@ -224,7 +225,7 @@ export class BankStatementComponent implements OnInit {
   }
 
   private blank(): StatementData {
-    return { branchName: '', borrowerName: 'Avijan Computer Center', stock: [], creditors: null, sales: null,
+    return { branchName: 'Sonarpur', borrowerName: 'AVIJAN', stock: [], creditors: null, sales: null,
              purchases: null, purchasesDaLc: null, draweeBills: null };
   }
 
@@ -256,6 +257,9 @@ export class BankStatementComponent implements OnInit {
         let parsed: Partial<StatementData> = {};
         try { parsed = JSON.parse(statement.data || '{}'); } catch { /* treat as empty */ }
         this.data.set({ ...this.blank(), ...parsed, stock: (parsed.stock ?? []).map(l => ({ ...l })) });
+        // The bank knows the borrower as AVIJAN; earlier drafts used the long name.
+        if (this.data().borrowerName === 'Avijan Computer Center') this.data().borrowerName = 'AVIJAN';
+        if (!this.data().branchName?.trim()) this.data().branchName = 'Sonarpur';
         this.saved.set(statement.saved);
         this.carriedFrom.set(statement.carriedFrom ? this.monthName(statement.carriedFrom) : null);
         this.debts.set(debts);
@@ -367,7 +371,7 @@ export class BankStatementComponent implements OnInit {
       to the Bank to the full extent of the Bank's advance/s to me / us against these goods and that they are not subject to any lien, claim
       or charge of any sort and on the strength of this declaration of mine / ours the accommodation has been granted. In order to verify our
       above statement the bank is at liberty to get the goods weighed and valued at any time at our expenses.</p>
-      <p class="sig">For ${this.esc(d.borrowerName)}<br><br><br>Signature &amp; Seal</p>`, 794);
+      <div class="sig"><div class="sig__for">For ${this.esc(d.borrowerName)}</div><div class="sig__box"></div><div class="sig__line">Authorised Signatory<br>(Signature &amp; Stamp)</div><div class="sig__date">Date: ________________</div></div>`, 794);
   }
 
   private debtTableHtml(): string {
@@ -402,7 +406,7 @@ export class BankStatementComponent implements OnInit {
       <p>Bills of Small amounts upto Rs.25,000/- may be clubbed<br>
         Total book debts outstanding as on the date Rs. <u>&nbsp;${this.amt(total)}&nbsp;</u><br>
         Bills raised on sister / associate concerns for genuine trade transactions - Rs. <u>&nbsp;Nil&nbsp;</u></p>
-      <p class="sig">For ${this.esc(d.borrowerName)}<br><br><br>Signature &amp; Seal</p>`, 1123);
+      <div class="sig"><div class="sig__for">For ${this.esc(d.borrowerName)}</div><div class="sig__box"></div><div class="sig__line">Authorised Signatory<br>(Signature &amp; Stamp)</div><div class="sig__date">Date: ________________</div></div>`, 1123);
   }
 
   private page(inner: string, width: number): string {
@@ -413,8 +417,20 @@ export class BankStatementComponent implements OnInit {
       table.grid th, table.grid td { border: 1px solid #000; padding: 4px 5px; vertical-align: top; }
       table.grid th { font-weight: normal; text-align: left; }
       table.plain { width: 70%; margin: 10px 0; } table.plain td { padding: 3px 0; }
-      .sig { text-align: right; margin-top: 18px; }
+      .sig { width: 260px; margin: 22px 0 0 auto; text-align: center; }
+      .sig__for { font-weight: bold; }
+      .sig__box { height: 90px; }
+      .sig__line { border-top: 1px solid #000; padding-top: 4px; }
+      .sig__date { margin-top: 10px; text-align: left; }
     </style></head><body>${inner}</body></html>`;
+  }
+
+  /** Both statements in one file: stock (portrait) then book debts (landscape). */
+  async downloadBothPdf(): Promise<void> {
+    await downloadPagesPdf([
+      { html: this.stockHtml(), width: 794 },
+      { html: this.debtHtml(), width: 1123, landscape: true }
+    ], `Bank-statement-${this.fileStem()}.pdf`);
   }
 
   async downloadStockPdf(): Promise<void> {
