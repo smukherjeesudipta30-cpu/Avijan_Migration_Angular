@@ -273,6 +273,14 @@ export const routes: Routes = [
             .then(m => m.HolidaysComponent)
       },
       {
+        path: 'bank-statement',
+        title: 'Bank statement · Avijan',
+        canActivate: [roleGuard('Admin', 'Editor')],
+        loadComponent: () =>
+          import('./features/bank-statement/bank-statement.component')
+            .then(m => m.BankStatementComponent)
+      },
+      {
         path: 'proprietor-honorarium',
         title: 'Proprietor honorarium · Avijan',
         canActivate: [roleGuard('Admin', 'Editor')],

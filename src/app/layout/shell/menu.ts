@@ -71,6 +71,7 @@ export const MENU: MenuSection[] = [
       // Admin, and Receptionist to validate it (proprietor's line named "Administrative expenses" for them).
       { label: 'Income', icon: 'pi pi-chart-line', route: '/income', roles: ['Admin', 'Receptionist'] },
       { label: 'Proprietor Honorarium', icon: 'pi pi-user', route: '/proprietor-honorarium', roles: ['Admin', 'Editor'] },
+      { label: 'Bank Statement', icon: 'pi pi-building-columns', route: '/bank-statement', roles: ['Admin', 'Editor'] },
       // The student's own side: pay this month against the institute's QR code.
       { label: 'Pay My Fees', icon: 'pi pi-indian-rupee', route: '/my-fees', roles: ['Student'] }
     ]
