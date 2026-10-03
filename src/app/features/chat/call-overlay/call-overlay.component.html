@@ -93,6 +93,16 @@
                 [title]="call.cameraOff() ? 'Turn camera on' : 'Turn camera off'">
                 <i class="pi" [class.pi-video]="!call.cameraOff()" [class.pi-eye-slash]="call.cameraOff()"></i>
               </button>
+
+              <button
+                type="button"
+                class="callov__btn callov__btn--ghost"
+                [disabled]="call.switchingCamera() || call.cameraOff()"
+                (click)="call.switchCamera()"
+                [title]="call.facing() === 'user' ? 'Switch to back camera' : 'Switch to front camera'">
+                <i class="pi" [class.pi-sync]="!call.switchingCamera()" [class.pi-spinner]="call.switchingCamera()"
+                   [class.pi-spin]="call.switchingCamera()"></i>
+              </button>
             }
 
             <button

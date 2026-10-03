@@ -168,6 +168,10 @@ export class CallService implements OnDestroy {
   readonly remoteStream = signal<MediaStream | null>(null);
   readonly muted = signal(false);
   readonly cameraOff = signal(false);
+
+  /** Which camera a video call is using: the front one to start with. */
+  readonly facing = signal<'user' | 'environment'>('user');
+  readonly switchingCamera = signal(false);
   readonly errorMessage = signal<string | null>(null);
 
   /**
@@ -378,6 +382,43 @@ export class CallService implements OnDestroy {
     this.muted.set(next);
   }
 
+  /**
+   * Front <-> back camera mid-call. The old camera is released first, since
+   * most phones cannot open both at once, and the new one replaces it on the
+   * live connection — no renegotiation, the other side just sees the new view.
+   * If the other camera will not open, the original one is put back.
+   */
+  async switchCamera(): Promise<void> {
+    const stream = this.localStream();
+    if (!stream || this.kind() !== 'video' || this.switchingCamera()) return;
+
+    const from = this.facing();
+    const to = from === 'user' ? 'environment' : 'user';
+    this.switchingCamera.set(true);
+
+    const open = async (facing: 'user' | 'environment') => {
+      const fresh = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 15, max: 15 }, facingMode: { ideal: facing } }
+      });
+      const track = fresh.getVideoTracks()[0];
+      track.enabled = !this.cameraOff();
+      const sender = this.peerConnection?.getSenders().find(s => s.track?.kind === 'video');
+      await sender?.replaceTrack(track);
+      this.localStream.set(new MediaStream([...stream.getAudioTracks(), track]));
+      this.facing.set(facing);
+    };
+
+    stream.getVideoTracks().forEach(t => t.stop());
+    try {
+      await open(to);
+    } catch {
+      this.errorMessage.set('Could not switch camera.');
+      try { await open(from); } catch { /* left without video; the call itself carries on */ }
+    } finally {
+      this.switchingCamera.set(false);
+    }
+  }
+
   toggleCamera(): void {
     const stream = this.localStream();
     if (!stream || this.kind() !== 'video') return;
@@ -427,7 +468,7 @@ export class CallService implements OnDestroy {
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       video: this.kind() === 'video'
-        ? { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 15, max: 15 }, facingMode: 'user' }
+        ? { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 15, max: 15 }, facingMode: this.facing() }
         : false
     });
 
@@ -654,6 +695,7 @@ export class CallService implements OnDestroy {
   }
 
   private teardown(): void {
+    this.facing.set('user');
     this.clearReconnect();
     this.stopKeepAlive();
     this.peerConnection?.close();
