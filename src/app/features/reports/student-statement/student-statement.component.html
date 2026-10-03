@@ -316,7 +316,7 @@
     <!-- Completion first: the server refuses a certificate to a student still
          enrolled, so the button must not invite a click that cannot succeed. -->
     <p-button
-      label="Download Certificate"
+      label="Download Certificate (PDF + JPEG)"
       icon="pi pi-verified"
       [loading]="certificateLoading()"
       [disabled]="!s.isComplete || s.marks.length === 0"

@@ -113,11 +113,34 @@ export function isNativeApp(): boolean {
   return false;
 }
 
-/** The certificate as a saved PDF - A4 landscape, like the printed one. */
-export function saveCertificatePdf(c: StudentCertificate): Promise<void> {
+/**
+ * The certificate as a PDF (A4 landscape, like the printed one) and the same
+ * picture as a JPEG — both from one issue, since every download is a new
+ * issue and a second one would come out marked DUPLICATE COPY.
+ */
+export async function saveCertificateFiles(c: StudentCertificate): Promise<void> {
   const copy = c.issueNo > 1 ? `copy${c.issueNo}` : null;
-  return downloadDocumentPdf(
-    certificateHtml(c), pdfFileName('Certificate', c.registrationId, copy), { width: 1122, landscape: true });
+  const pdfName = pdfFileName('Certificate', c.registrationId, copy);
+  const jpgName = pdfName.replace(/\.pdf$/, '.jpg');
+
+  const { jsPDF } = await import('jspdf');
+  const canvas = await renderToCanvas(certificateHtml(c), 1122);
+  const jpegData = canvas.toDataURL('image/jpeg', 0.92);
+
+  const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const ratio = Math.min(pageW / canvas.width, pageH / canvas.height);
+  pdf.addImage(jpegData, 'JPEG', (pageW - canvas.width * ratio) / 2, 0, canvas.width * ratio, canvas.height * ratio);
+
+  pdf.save(pdfName);
+
+  const link = document.createElement('a');
+  link.href = jpegData;
+  link.download = jpgName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
 }
 
 /** The admit card as a saved PDF - A4 portrait. */

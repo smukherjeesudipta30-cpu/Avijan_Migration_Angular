@@ -14,7 +14,7 @@ import {
   openPendingDocumentWindow,
   writeDocumentWindow
 } from '../../../core/printing/legacy-documents';
-import { saveCertificatePdf } from '../../../core/printing/pdf-download';
+import { saveCertificateFiles } from '../../../core/printing/pdf-download';
 import { ReportService } from '../../../core/services/report.service';
 import { StudentService } from '../../../core/services/student.service';
 import { downloadCsv, reportFileName } from '../report-utils';
@@ -200,11 +200,11 @@ export class StudentStatementComponent implements OnDestroy {
 
   /** The certificate, in the legacy layout. */
   private openCertificateWindow(c: StudentCertificate, win: Window | null): void {
-    saveCertificatePdf(c).catch(() =>
+    saveCertificateFiles(c).catch(() =>
       this.messages.add({
         severity: 'warn',
-        summary: 'PDF not saved',
-        detail: 'Could not save your certificate as a PDF. Try again.',
+        summary: 'Certificate not saved',
+        detail: 'Could not save your certificate (PDF and JPEG). Try again.',
         life: 6000
       }));
 
