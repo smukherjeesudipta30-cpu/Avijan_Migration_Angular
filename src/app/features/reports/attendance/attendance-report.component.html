@@ -165,7 +165,7 @@
             @if (day.stillOpen) {
               <p-tag severity="info" value="Still in" />
             } @else if (day.countedAsLeave) {
-              <p-tag severity="danger" value="Leave — no scan out" />
+              <p-tag severity="danger" [value]="day.shortHours ? 'Absent — under 3 hours' : 'Leave — no scan out'" />
             } @else {
               <p-tag severity="success" value="Present" />
             }

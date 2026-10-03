@@ -92,6 +92,8 @@ export interface AttendanceDayRow {
   hours?: number;
   missingScanOut: boolean;
   countedAsLeave: boolean;
+  /** A teacher's finished day under the minimum hours (3), counted as absent. */
+  shortHours?: boolean;
   stillOpen: boolean;
   /** Every separate In/Out visit that day. More than one is why "First in" to
    *  "Last out" can span far longer than Hours — the person left and came back. */
