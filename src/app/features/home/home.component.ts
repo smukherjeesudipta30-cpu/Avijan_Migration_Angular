@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -16,11 +16,92 @@ import { AuthService } from '../../core/services/auth.service';
 import { CompetitionPublic } from '../../core/models/competition.model';
 import { CompetitionService } from '../../core/services/competition.service';
 import { FeaturesService } from '../../core/services/features.service';
+import { environment } from '../../../environments/environment';
 
 /** One picture in the Portfolio strip, with the caption the legacy page used. */
 interface PortfolioItem {
   readonly image: string;
   readonly caption: string;
+}
+
+/** One tile in the holiday notice: a closure, or a run of back-to-back ones. */
+interface ClosureGroup {
+  key: string;
+  name: string;
+  days: number;
+  /** "19" or "19–21". */
+  dayLabel: string;
+  monthShort: string;
+  /** "Saturday" or "Mon – Wed". */
+  weekdays: string;
+  state: 'past' | 'today' | 'next' | 'later';
+  /** "Tomorrow" / "In 5 days" — shown on the next closure only. */
+  away: string;
+}
+
+/**
+ * Merges back-to-back closed days into one tile (Durga Puja's Ashtami to
+ * Dashami reads as "19–21", not three tiles), and marks each as over, today,
+ * the next one coming, or later.
+ */
+function groupClosures(days: { date: string; name: string }[]): ClosureGroup[] {
+  const parse = (iso: string) => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d); };
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const dayMs = 86_400_000;
+
+  const base = (n: string) => n.replace(/s*(.*)s*$/, '').trim().toLowerCase();
+  const runs: { start: Date; end: Date; names: string[]; count: number }[] = [];
+  for (const d of days) {
+    const date = parse(d.date);
+    const last = runs[runs.length - 1];
+    const gap = last ? Math.round((date.getTime() - last.end.getTime()) / dayMs) : 0;
+    // Back to back, or the same festival carrying on after a Sunday in between
+    // (Durga Puja: Saturday's Shashthi, then Monday's Ashtami to Dashami).
+    const sundayBetween = gap === 2 && new Date(last!.end.getTime() + dayMs).getDay() === 0
+      && last!.names.some(n => base(n) === base(d.name));
+    if (last && (gap <= 1 || sundayBetween)) {
+      if (gap > 0) last.count++;
+      last.end = date;
+      if (!last.names.includes(d.name)) last.names.push(d.name);
+    } else {
+      runs.push({ start: date, end: date, names: [d.name], count: 1 });
+    }
+  }
+
+  // Durga Puja (Maha Ashtami) + (Maha Nabami) + ... reads better as "Durga Puja".
+  const title = (names: string[]) => {
+    if (names.length === 1) return names[0];
+    const bases = new Set(names.map(n => n.replace(/\s*\(.*\)\s*$/, '').trim()));
+    return bases.size === 1 ? [...bases][0] : names.join(' · ');
+  };
+
+  const weekday = (d: Date, style: 'long' | 'short') => d.toLocaleDateString('en-IN', { weekday: style });
+  let nextMarked = false;
+
+  return runs.map(r => {
+    const start = r.start.getTime();
+    const end = r.end.getTime();
+    const single = start === end;
+
+    let state: ClosureGroup['state'] = 'later';
+    if (end < today) state = 'past';
+    else if (start <= today) state = 'today';
+    else if (!nextMarked) state = 'next';
+    if (state === 'today' || state === 'next') nextMarked = true;
+
+    const daysAway = Math.round((start - today) / dayMs);
+    return {
+      key: r.start.toISOString(),
+      name: title(r.names),
+      days: r.count,
+      dayLabel: single ? `${r.start.getDate()}` : `${r.start.getDate()}–${r.end.getDate()}`,
+      monthShort: r.start.toLocaleDateString('en-IN', { month: 'short' }),
+      weekdays: single ? weekday(r.start, 'long') : `${weekday(r.start, 'short')} – ${weekday(r.end, 'short')}`,
+      state,
+      away: daysAway === 1 ? 'Tomorrow' : `In ${daysAway} days`
+    };
+  });
 }
 
 /**
@@ -245,10 +326,32 @@ export class HomeComponent implements OnDestroy {
     message: ['', [Validators.required, Validators.maxLength(2000)]]
   });
 
+  /* --------------------------------------------------- institute closed */
+
+  private readonly http = inject(HttpClient);
+
+  /** "October 2026" — the month the holiday notice covers. */
+  readonly monthTitle = new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+
+  /** This month's closures, back-to-back days merged; null until the list answers. */
+  readonly closures = signal<ClosureGroup[] | null>(null);
+  readonly closedDayCount = computed(() => (this.closures() ?? []).reduce((n, g) => n + g.days, 0));
+
+  private loadClosures(): void {
+    this.http.get<ApiResponse<{ date: string; name: string }[]>>(`${environment.apiBaseUrl}/holidays/this-month`)
+      .subscribe({
+        next: r => this.closures.set(groupClosures(r.data ?? [])),
+        // An older API without the endpoint: leave the notice off rather than show it empty.
+        error: () => this.closures.set(null)
+      });
+  }
+
   /** The lightbox the legacy page got by linking each thumbnail to its full image. */
   readonly lightbox = signal<PortfolioItem | null>(null);
 
   constructor() {
+    this.loadClosures();
+
     this.about.getAboutPage().subscribe({
       next: page => {
         this.page.set(page);

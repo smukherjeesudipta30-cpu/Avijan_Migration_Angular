@@ -30,6 +30,55 @@
   </div>
 </section>
 
+<!-- ======================================================= institute closed -->
+<!-- This month's closures from the Holiday List (days Admin marked "Institute
+     closed"), straight under the banner so a student checks it before setting
+     out. Hidden until the list has answered, so it never flashes empty. -->
+@if (closures(); as groups) {
+  <section class="hm__closed" aria-labelledby="hm-closed-title">
+    <div class="hm__container">
+      <div class="hm__closed-card">
+        <header class="hm__closed-head">
+          <span class="hm__closed-icon" aria-hidden="true"><i class="pi pi-calendar-times"></i></span>
+          <div>
+            <p class="hm__closed-eyebrow">Holiday notice</p>
+            <h2 id="hm-closed-title">Institute closed in {{ monthTitle }}</h2>
+          </div>
+          @if (groups.length) {
+            <span class="hm__closed-count">{{ closedDayCount() }} {{ closedDayCount() === 1 ? 'day' : 'days' }}</span>
+          }
+        </header>
+
+        @if (groups.length) {
+          <ul class="hm__closed-list">
+            @for (g of groups; track g.key) {
+              <li class="hm__closed-tile" [class.is-past]="g.state === 'past'" [class.is-today]="g.state === 'today'"
+                  [class.is-next]="g.state === 'next'">
+                <div class="hm__closed-date">
+                  <span class="hm__closed-day">{{ g.dayLabel }}</span>
+                  <span class="hm__closed-month">{{ g.monthShort }}</span>
+                </div>
+                <div class="hm__closed-info">
+                  <p class="hm__closed-name">{{ g.name }}</p>
+                  <p class="hm__closed-when">{{ g.weekdays }}</p>
+                </div>
+                @switch (g.state) {
+                  @case ('today') { <span class="hm__closed-tag hm__closed-tag--today">Closed today</span> }
+                  @case ('next') { <span class="hm__closed-tag hm__closed-tag--next">{{ g.away }}</span> }
+                  @case ('past') { <span class="hm__closed-tag">Over</span> }
+                }
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="hm__closed-none"><i class="pi pi-check-circle" aria-hidden="true"></i>
+            No closures in {{ monthTitle }} — classes run as usual.</p>
+        }
+      </div>
+    </div>
+  </section>
+}
+
 <!-- ========================================================= owner's desk -->
 <!-- Straight under the banner and before About Us: the first thing a visitor meets
      after the hero is a person, not a paragraph. Rendered only when a photograph is

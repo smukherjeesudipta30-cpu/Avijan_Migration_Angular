@@ -881,3 +881,146 @@
     outline-offset: 2px;
   }
 }
+
+/* ======================================================= institute closed */
+.hm__closed {
+  position: relative;
+  z-index: 2;
+  /* Lifts the card over the bottom edge of the banner. */
+  margin-top: -3.5rem;
+  padding-bottom: 1rem;
+}
+
+.hm__closed-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 18px 40px -18px rgba(10, 40, 60, 0.45), 0 2px 6px rgba(10, 40, 60, 0.08);
+  border: 1px solid #e6e8ef;
+  overflow: hidden;
+}
+
+.hm__closed-head {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1.1rem 1.4rem;
+  background: linear-gradient(120deg, #0a283c 0%, #12466a 100%);
+  color: #fff;
+
+  h2 {
+    margin: 0;
+    font-size: clamp(1.05rem, 2.6vw, 1.35rem);
+    color: #fff;
+  }
+}
+
+.hm__closed-icon {
+  flex: 0 0 auto;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 1.25rem;
+}
+
+.hm__closed-eyebrow {
+  margin: 0 0 0.1rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #ffd58a;
+}
+
+.hm__closed-count {
+  margin-left: auto;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  background: #ffd58a;
+  color: #0a283c;
+  font-weight: 700;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.hm__closed-list {
+  list-style: none;
+  margin: 0;
+  padding: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 0.75rem;
+}
+
+.hm__closed-tile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid #e6e8ef;
+  background: #f8f9fc;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover { transform: translateY(-2px); box-shadow: 0 8px 18px -12px rgba(10, 40, 60, 0.5); }
+
+  &.is-past { opacity: 0.55; background: #fafafa; }
+  &.is-past .hm__closed-date { background: #c8ccd6; }
+
+  &.is-next { border-color: #12466a; background: #eef4fa; }
+
+  &.is-today { border-color: #d9480f; background: #fff4ec; }
+  &.is-today .hm__closed-date { background: #d9480f; }
+}
+
+.hm__closed-date {
+  flex: 0 0 auto;
+  min-width: 3.6rem;
+  padding: 0.45rem 0.4rem;
+  border-radius: 10px;
+  background: #12466a;
+  color: #fff;
+  text-align: center;
+  line-height: 1.05;
+}
+
+.hm__closed-day { display: block; font-size: 1.35rem; font-weight: 800; }
+.hm__closed-month { display: block; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.85; }
+
+.hm__closed-info { min-width: 0; flex: 1; }
+.hm__closed-name { margin: 0; font-weight: 700; color: #1f2a44; line-height: 1.25; }
+.hm__closed-when { margin: 0.15rem 0 0; font-size: 0.82rem; color: #66708a; }
+
+.hm__closed-tag {
+  position: absolute;
+  top: -0.55rem;
+  right: 0.7rem;
+  padding: 0.12rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: #8a91a5;
+  color: #fff;
+}
+.hm__closed-tag--next { background: #12466a; }
+.hm__closed-tag--today { background: #d9480f; }
+
+.hm__closed-none {
+  margin: 0;
+  padding: 1.1rem 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #2b6a3f;
+  font-weight: 600;
+}
+
+@media (max-width: 560px) {
+  .hm__closed { margin-top: -2rem; }
+  .hm__closed-head { padding: 0.9rem 1rem; }
+  .hm__closed-count { display: none; }
+  .hm__closed-list { padding: 0.9rem 0.75rem; grid-template-columns: 1fr; }
+}
