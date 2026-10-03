@@ -926,8 +926,11 @@ export class StudentsComponent implements OnDestroy {
       return;
     }
 
-    if (!this.allowedPhotoTypes.includes(file.type)) {
-      this.photoError.set('Only PNG, JPEG and GIF images are allowed.');
+    /* A photo straight from the camera can come as HEIC or WebP, or with no
+       type at all on some phones. Any image is taken: one that is not already
+       PNG/JPEG/GIF is converted to JPEG below, alongside the size reduction. */
+    if (file.type && !file.type.startsWith('image/')) {
+      this.photoError.set('Choose a photo (PNG, JPEG or GIF).');
       input.value = '';
       return;
     }
@@ -935,22 +938,23 @@ export class StudentsComponent implements OnDestroy {
     input.value = '';
 
     /* A real phone-camera photo is routinely 2-8 MB — comfortably over the
-       512 KB the server accepts — so most genuine uploads would otherwise
-       bounce off the size check with nothing the person could do about it
-       short of finding a separate compression tool first. Resized down to
-       the limit here instead, automatically, before it ever reaches that
-       check. GIFs pass through untouched (see resizeImageToLimit) and still
-       hit the plain error below if they are themselves too large. */
+       512 KB the server accepts — so it is reduced to the limit here,
+       automatically, before upload. GIFs pass through untouched (see
+       resizeImageToLimit) and still hit the plain error below if too large. */
     let upload = file;
-    if (file.size > this.maxPhotoBytes) {
+    if (file.size > this.maxPhotoBytes || !this.allowedPhotoTypes.includes(file.type)) {
       this.photoUploading.set(true);
       try {
         upload = await resizeImageToLimit(file, this.maxPhotoBytes);
       } catch {
-        // Resizing failed for some reason (a corrupt file, an unsupported
-        // browser API) — fall through to the size check below, which will
-        // report it clearly rather than upload silently failing.
+        // A corrupt file or an image the browser cannot read — reported below.
       }
+    }
+
+    if (!this.allowedPhotoTypes.includes(upload.type)) {
+      this.photoUploading.set(false);
+      this.photoError.set('This photo format could not be read. Please take the photo again or choose a JPEG.');
+      return;
     }
 
     if (upload.size > this.maxPhotoBytes) {

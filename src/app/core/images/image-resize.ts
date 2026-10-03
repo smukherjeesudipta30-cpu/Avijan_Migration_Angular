@@ -16,7 +16,10 @@ export async function resizeImageToLimit(
   maxBytes: number,
   maxDimension = 1200
 ): Promise<File> {
-  if (file.type === 'image/gif' || file.size <= maxBytes) {
+  // Small enough and already a type the server takes: nothing to do. A small
+  // HEIC/WebP camera photo still goes through, to come out as JPEG.
+  const uploadable = file.type === 'image/jpeg' || file.type === 'image/png';
+  if (file.type === 'image/gif' || (file.size <= maxBytes && uploadable)) {
     return file;
   }
 

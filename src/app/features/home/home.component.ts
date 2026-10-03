@@ -50,7 +50,9 @@ function groupClosures(days: { date: string; name: string }[]): ClosureGroup[] {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const dayMs = 86_400_000;
 
-  const base = (n: string) => n.replace(/s*(.*)s*$/, '').trim().toLowerCase();
+  /** "Durga Puja (Maha Ashtami)" and "Additional Durga Puja holiday" both give "durga puja". */
+  const base = (n: string) => n.replace(/\s*\(.*\)\s*$/, '').replace(/^additional\s+/i, '')
+    .replace(/\s+holiday$/i, '').trim().toLowerCase();
   const runs: { start: Date; end: Date; names: string[]; count: number }[] = [];
   for (const d of days) {
     const date = parse(d.date);
@@ -69,11 +71,20 @@ function groupClosures(days: { date: string; name: string }[]): ClosureGroup[] {
     }
   }
 
-  // Durga Puja (Maha Ashtami) + (Maha Nabami) + ... reads better as "Durga Puja".
+  // One short title per tile however Admin named the days: the phrase most of
+  // them share ("Durga Puja" across Maha Shashthi … Dashami, "Additional Durga
+  // Puja holiday" and so on), weighted by length so "Puja" alone never wins.
   const title = (names: string[]) => {
     if (names.length === 1) return names[0];
-    const bases = new Set(names.map(n => n.replace(/\s*\(.*\)\s*$/, '').trim()));
-    return bases.size === 1 ? [...bases][0] : names.join(' · ');
+    const lower = names.map(n => n.toLowerCase());
+    let best = names[0].replace(/\s*\(.*\)\s*$/, '').trim();
+    let bestScore = 0;
+    for (const n of names) {
+      const cand = n.replace(/\s*\(.*\)\s*$/, '').replace(/^additional\s+/i, '').replace(/\s+holiday$/i, '').trim();
+      const score = lower.filter(l => l.includes(cand.toLowerCase())).length * cand.length;
+      if (score > bestScore) { bestScore = score; best = cand; }
+    }
+    return best;
   };
 
   const weekday = (d: Date, style: 'long' | 'short') => d.toLocaleDateString('en-IN', { weekday: style });
@@ -97,7 +108,7 @@ function groupClosures(days: { date: string; name: string }[]): ClosureGroup[] {
       days: r.count,
       dayLabel: single ? `${r.start.getDate()}` : `${r.start.getDate()}–${r.end.getDate()}`,
       monthShort: r.start.toLocaleDateString('en-IN', { month: 'short' }),
-      weekdays: single ? weekday(r.start, 'long') : `${weekday(r.start, 'short')} – ${weekday(r.end, 'short')}`,
+      weekdays: single ? weekday(r.start, 'long') : `${weekday(r.start, 'short')} – ${weekday(r.end, 'short')} · ${r.count} days closed`,
       state,
       away: daysAway === 1 ? 'Tomorrow' : `In ${daysAway} days`
     };

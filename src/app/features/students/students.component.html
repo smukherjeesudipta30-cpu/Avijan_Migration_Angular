@@ -539,7 +539,19 @@
                 <span>{{ photoUploading() ? 'Uploading…' : 'Choose image' }}</span>
                 <input
                   type="file"
-                  accept="image/png,image/jpeg,image/gif"
+                  accept="image/*"
+                  [disabled]="photoUploading()"
+                  (change)="onPhotoSelected($event)" />
+              </label>
+
+              <!-- capture: opens the camera directly on a phone, in the browser and the app. -->
+              <label class="stu__photo-pick stu__photo-pick--camera" [class.stu__photo-pick--busy]="photoUploading()">
+                <i class="pi pi-camera"></i>
+                <span>Take photo</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
                   [disabled]="photoUploading()"
                   (change)="onPhotoSelected($event)" />
               </label>
@@ -556,7 +568,7 @@
               }
             </div>
 
-            <small class="stu__help">PNG, JPEG or GIF · 512 KB maximum.</small>
+            <small class="stu__help">Choose an image or take a photo · reduced to 512 KB automatically.</small>
 
             @if (photoError(); as error) {
               <small class="stu__error">{{ error }}</small>
