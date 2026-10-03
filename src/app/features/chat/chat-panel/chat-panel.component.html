@@ -298,7 +298,19 @@
           <small class="chat__attachment-error">{{ error }}</small>
         }
 
+        @if (emojiOpen()) {
+          <div class="chat__emoji-panel" role="group" aria-label="Emoji">
+            @for (e of emojis; track e) {
+              <button type="button" class="chat__emoji" (click)="addEmoji(e)">{{ e }}</button>
+            }
+          </div>
+        }
+
         <div class="chat__composer">
+          <button type="button" class="chat__attach-btn chat__emoji-toggle" [class.is-open]="emojiOpen()"
+                  (click)="emojiOpen.set(!emojiOpen())" aria-label="Emoji" pTooltip="Emoji" tooltipPosition="top">
+            <i class="pi pi-face-smile" aria-hidden="true"></i>
+          </button>
           <label class="chat__attach-btn" pTooltip="Attach a file" tooltipPosition="top">
             <i class="pi pi-paperclip" aria-hidden="true"></i>
             <input type="file" (change)="onFileSelected($event)" hidden />
@@ -311,7 +323,7 @@
             [ngModel]="messageInput()"
             (ngModelChange)="onComposerInput($event)"
             [ngModelOptions]="{ standalone: true }"
-            (keyup.enter)="sendMessage()"
+            (keyup.enter)="sendMessage(); emojiOpen.set(false)"
             [disabled]="sending()" />
           <p-button
             icon="pi pi-send"

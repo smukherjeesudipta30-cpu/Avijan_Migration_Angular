@@ -169,6 +169,14 @@ export class CallService implements OnDestroy {
   readonly muted = signal(false);
   readonly cameraOff = signal(false);
 
+  /** Emoji reactions floating over the call; each fades after a few seconds. */
+  readonly reactions = signal<{ id: number; emoji: string; mine: boolean }[]>([]);
+  readonly quickReactions = ['👍', '❤️', '😂', '😮', '👏', '🙏'];
+  private reactionSeq = 0;
+
+  /** The call filling the whole screen rather than a card. */
+  readonly fullScreen = signal(false);
+
   /** Which camera a video call is using: the front one to start with. */
   readonly facing = signal<'user' | 'environment'>('user');
   readonly switchingCamera = signal(false);
@@ -248,6 +256,10 @@ export class CallService implements OnDestroy {
 
     this.chat.onCallSignal.subscribe(signal => {
       if (signal.callId !== this.currentCallId) return;
+      if (signal.type === 'reaction') {
+        this.showReaction(signal.payload, false);
+        return;
+      }
       void this.handleSignal(signal.type, signal.payload);
     });
 
@@ -417,6 +429,34 @@ export class CallService implements OnDestroy {
     } finally {
       this.switchingCamera.set(false);
     }
+  }
+
+  /** Sends an emoji to the other person; it floats up on both screens. */
+  sendReaction(emoji: string): void {
+    const target = this.peerEmail();
+    const callId = this.currentCallId;
+    if (!target || !callId || this.status() !== 'active') return;
+    void this.chat.callSignal(target, callId, 'reaction', emoji);
+    this.showReaction(emoji, true);
+  }
+
+  private showReaction(emoji: string, mine: boolean): void {
+    // Only a short emoji is ever shown — the payload comes from the other side.
+    const text = [...emoji].slice(0, 4).join('');
+    if (!text.trim()) return;
+    const id = ++this.reactionSeq;
+    this.reactions.update(list => [...list.slice(-7), { id, emoji: text, mine }]);
+    setTimeout(() => this.reactions.update(list => list.filter(r => r.id !== id)), 3200);
+  }
+
+  toggleFullScreen(): void {
+    const next = !this.fullScreen();
+    this.fullScreen.set(next);
+    // In a browser also take the real screen; the app's WebView simply fills it.
+    try {
+      if (next && !document.fullscreenElement) void document.documentElement.requestFullscreen?.().catch(() => {});
+      if (!next && document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
+    } catch { /* not supported: the full-screen layout alone still applies */ }
   }
 
   toggleCamera(): void {
@@ -623,6 +663,8 @@ export class CallService implements OnDestroy {
   }
 
   private endLocally(): void {
+    this.reactions.set([]);
+    if (this.fullScreen()) this.toggleFullScreen();
     this.logCallOutcome();
 
     // Clear the busy state whether or not the call ever connected, so a missed

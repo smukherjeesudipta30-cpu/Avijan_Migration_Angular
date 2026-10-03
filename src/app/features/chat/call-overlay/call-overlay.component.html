@@ -1,6 +1,14 @@
 @if (call.status() !== 'idle' || call.errorMessage()) {
   <div class="callov__backdrop">
-    <div class="callov__card" [class.callov__card--active]="call.status() === 'active' && call.kind() === 'video'">
+    <div class="callov__card" [class.callov__card--active]="call.status() === 'active' && call.kind() === 'video'"
+         [class.callov__card--full]="call.fullScreen() && call.status() === 'active'">
+
+      <!-- Reactions from either side, floating up over the call. -->
+      <div class="callov__reactions" aria-live="polite">
+        @for (r of call.reactions(); track r.id) {
+          <span class="callov__reaction" [class.callov__reaction--mine]="r.mine">{{ r.emoji }}</span>
+        }
+      </div>
 
       @if (call.status() === 'idle' && call.errorMessage()) {
         <!-- The call already ended (no answer, failed, mic refused) — just the
@@ -74,6 +82,12 @@
             </div>
           }
 
+          <div class="callov__emoji-bar" role="group" aria-label="Send a reaction">
+            @for (e of call.quickReactions; track e) {
+              <button type="button" class="callov__emoji" (click)="call.sendReaction(e)" [title]="'Send ' + e">{{ e }}</button>
+            }
+          </div>
+
           <div class="callov__controls">
             <button
               type="button"
@@ -112,6 +126,15 @@
               (click)="call.toggleSpeaker()"
               [title]="call.speakerOn() ? 'Switch to earpiece' : 'Switch to speaker'">
               <i class="pi" [class.pi-volume-up]="call.speakerOn()" [class.pi-volume-down]="!call.speakerOn()"></i>
+            </button>
+
+            <button
+              type="button"
+              class="callov__btn callov__btn--ghost"
+              [class.callov__btn--on]="call.fullScreen()"
+              (click)="call.toggleFullScreen()"
+              [title]="call.fullScreen() ? 'Exit full screen' : 'Full screen'">
+              <i class="pi" [class.pi-window-maximize]="!call.fullScreen()" [class.pi-window-minimize]="call.fullScreen()"></i>
             </button>
 
             <button type="button" class="callov__btn callov__btn--decline" (click)="call.hangup()" title="Hang up">

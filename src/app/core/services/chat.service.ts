@@ -184,7 +184,7 @@ export class ChatService {
       this.callResponded$.next({ fromEmail, callId, accepted });
     });
 
-    connection.on('CallSignal', (fromEmail: string, callId: string, type: 'offer' | 'answer' | 'ice', payload: string) => {
+    connection.on('CallSignal', (fromEmail: string, callId: string, type: 'offer' | 'answer' | 'ice' | 'reaction', payload: string) => {
       this.callSignal$.next({ fromEmail, callId, type, payload });
     });
 
@@ -591,7 +591,7 @@ export class ChatService {
     return this.sendCallMessage('CallResponse', targetEmail, callId, accepted);
   }
 
-  callSignal(targetEmail: string, callId: string, type: 'offer' | 'answer' | 'ice', payload: string): Promise<boolean> {
+  callSignal(targetEmail: string, callId: string, type: 'offer' | 'answer' | 'ice' | 'reaction', payload: string): Promise<boolean> {
     return this.sendCallMessage('CallSignal', targetEmail, callId, type, payload);
   }
 

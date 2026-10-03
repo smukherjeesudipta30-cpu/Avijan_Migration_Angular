@@ -112,7 +112,7 @@ export interface CallResponded {
 export interface CallSignal {
   fromEmail: string;
   callId: string;
-  type: 'offer' | 'answer' | 'ice';
+  type: 'offer' | 'answer' | 'ice' | 'reaction';
   payload: string;
 }
 

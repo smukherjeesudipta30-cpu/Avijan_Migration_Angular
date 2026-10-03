@@ -66,6 +66,10 @@ export class ChatPanelComponent {
   readonly messages = signal<ChatMessage[]>([]);
   readonly loadingMessages = signal(false);
   readonly messageInput = signal('');
+
+  /** The emoji panel beside the message box. */
+  readonly emojiOpen = signal(false);
+  readonly emojis = ['😀', '😂', '😊', '😍', '🥰', '😎', '🤔', '😮', '😢', '😡', '👍', '👎', '👏', '🙏', '🙌', '💪', '🎉', '❤️', '🔥', '✅', '❌', '⭐', '📚', '✍️', '💻', '📞', '⏰', '👋', '🤝', '🙂'];
   readonly sending = signal(false);
   readonly pendingAttachment = signal<ChatAttachmentUpload | null>(null);
   readonly attachmentError = signal<string | null>(null);
@@ -226,6 +230,11 @@ export class ChatPanelComponent {
   }
 
   /** Called on every change to the composer — the reporter throttles the starts and sends the stop. */
+  /** Adds an emoji to the end of the message being typed; the panel stays open for more. */
+  addEmoji(emoji: string): void {
+    this.onComposerInput(this.messageInput() + emoji);
+  }
+
   onComposerInput(value: string): void {
     this.messageInput.set(value);
 
