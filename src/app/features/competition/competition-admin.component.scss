@@ -252,3 +252,13 @@ label,
 
   input[type='file'] { display: none; }
 }
+
+.cad__batch {
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: #eef4fa;
+  color: #12466a;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}

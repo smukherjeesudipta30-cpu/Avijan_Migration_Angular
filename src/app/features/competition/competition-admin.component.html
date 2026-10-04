@@ -201,8 +201,9 @@
     <section class="cad__card">
       <h2>Divisions and groups</h2>
       <p class="app-muted cad__hint">
-        Drawing is grouped by class and dance by age. A dancer's chest number is
-        issued within their group as they register, so no batch timing is needed.
+        Drawing is grouped by class and dance by age. Each dance group issues chest
+        numbers from its own block, sized by its places, so no number is ever used by
+        two groups — and no batch timing is needed.
       </p>
 
       <div class="cad__two">
@@ -229,6 +230,9 @@
                 <span class="app-muted">
                   @if (g.capacity) { {{ g.capacity }} places } @else { no limit }
                 </span>
+                @if (g.batchFrom) {
+                  <span class="cad__batch">Chest no. {{ g.batchFrom }}{{ g.batchTo ? '–' + g.batchTo : '+' }}</span>
+                }
               </li>
             }
           </ul>

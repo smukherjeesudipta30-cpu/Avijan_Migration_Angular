@@ -186,6 +186,11 @@
           <button type="button" class="cmp__go" (click)="openForm()">
             I have read the rules — register now
           </button>
+        @if (saving() && uploadProgress() !== null) {
+          <div class="cmp__progress" role="progressbar" [attr.aria-valuenow]="uploadProgress()" aria-valuemin="0" aria-valuemax="100">
+            <span [style.width.%]="uploadProgress()"></span>
+          </div>
+        }
         } @else {
           <p class="cmp__closed">
             Registration is closed at the moment.
@@ -494,27 +499,57 @@
         <h3>Documents</h3>
         <p class="cmp__hint">Photographs of the papers are fine. Large pictures are made smaller here before sending.</p>
 
+
+        <!-- One upload: take a photo or choose a file, then a preview with
+             Retake / Remove before anything is sent. -->
+        <ng-template #uploadTile let-slot="slot" let-label="label">
+          <div class="cmp__upload" [class.is-set]="uploadIn(slot)">
+            <span>{{ label }} <em>*</em></span>
+
+            @if (busySlot() === slot) {
+              <small class="cmp__upload-busy"><i class="pi pi-spin pi-spinner"></i> Compressing…</small>
+            } @else {
+            @if (uploadIn(slot); as u) {
+              <div class="cmp__preview">
+                <img [src]="previewOf(u)" [alt]="label" />
+                <div>
+                  <small>{{ u.fileName }} · {{ sizeOf(u) }}</small>
+                  <div class="cmp__upload-actions">
+                    <label class="cmp__upload-btn">
+                      <i class="pi pi-camera"></i> Retake
+                      <input type="file" accept="image/*" capture="environment" (change)="pick($event, slot)" />
+                    </label>
+                    <button type="button" class="cmp__upload-btn cmp__upload-btn--remove" (click)="clearUpload(slot)">
+                      <i class="pi pi-trash"></i> Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+            } @else {
+              <div class="cmp__upload-actions">
+                <label class="cmp__upload-btn">
+                  <i class="pi pi-camera"></i> Take photo
+                  <input type="file" accept="image/*" capture="environment" (change)="pick($event, slot)" />
+                </label>
+                <label class="cmp__upload-btn">
+                  <i class="pi pi-images"></i> Choose file
+                  <input type="file" accept="image/*" (change)="pick($event, slot)" />
+                </label>
+              </div>
+            }
+            }
+          </div>
+        </ng-template>
+
         <div class="cmp__uploads">
-          <label class="cmp__upload" [class.is-set]="photo()">
-            <span>Participant's photograph <em>*</em></span>
-            <input type="file" accept="image/*" (change)="pick($event, 'photo')" />
-            <small>{{ photo() ? photo()!.fileName : 'Choose a file' }}</small>
-          </label>
+          <ng-container *ngTemplateOutlet="uploadTile; context: { slot: 'photo', label: 'Participant\'s photograph' }" />
 
           @if (enterDrawing()) {
-            <label class="cmp__upload" [class.is-set]="schoolId()">
-              <span>School id card <em>*</em></span>
-              <input type="file" accept="image/*" (change)="pick($event, 'schoolId')" />
-              <small>{{ schoolId() ? schoolId()!.fileName : 'Choose a file' }}</small>
-            </label>
+            <ng-container *ngTemplateOutlet="uploadTile; context: { slot: 'schoolId', label: 'School id card' }" />
           }
 
           @if (enterDance()) {
-            <label class="cmp__upload" [class.is-set]="birthCertificate()">
-              <span>Birth certificate <em>*</em></span>
-              <input type="file" accept="image/*" (change)="pick($event, 'birthCertificate')" />
-              <small>{{ birthCertificate() ? birthCertificate()!.fileName : 'Choose a file' }}</small>
-            </label>
+            <ng-container *ngTemplateOutlet="uploadTile; context: { slot: 'birthCertificate', label: 'Birth certificate' }" />
           }
         </div>
 
@@ -580,11 +615,7 @@
                      placeholder="e.g. 481203557712" />
             </label>
 
-            <label class="cmp__upload" [class.is-set]="paymentSlip()">
-              <span>Payment screenshot <em>*</em></span>
-              <input type="file" accept="image/*" (change)="pick($event, 'paymentSlip')" />
-              <small>{{ paymentSlip() ? paymentSlip()!.fileName : 'Choose a file' }}</small>
-            </label>
+            <ng-container *ngTemplateOutlet="uploadTile; context: { slot: 'paymentSlip', label: 'Payment screenshot' }" />
 
             <p class="cmp__hint">
               The office checks every payment against the centre's account before a
@@ -603,7 +634,7 @@
         }
 
         <button type="button" class="cmp__go" [disabled]="saving()" (click)="submit()">
-          {{ saving() ? 'Sending…' : 'Complete registration' }}
+          {{ saving() ? (uploadProgress() !== null ? 'Sending… ' + uploadProgress() + '%' : 'Sending…') : 'Complete registration' }}
         </button>
       </section>
     }

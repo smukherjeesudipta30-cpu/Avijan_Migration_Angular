@@ -693,3 +693,66 @@ label {
   gap: 0.9rem;
   margin-top: 0.8rem;
 }
+
+/* --------------------------------------------- upload: camera, preview */
+.cmp__upload { cursor: default; }
+
+.cmp__upload-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.45rem;
+}
+
+.cmp__upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid #d8d0c2;
+  border-radius: 999px;
+  background: #fff;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #33415c;
+  cursor: pointer;
+
+  &:hover { background: #f7f3ec; }
+  &--remove { color: #b42318; }
+}
+
+.cmp__preview {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  margin-top: 0.45rem;
+
+  img {
+    width: 4.5rem;
+    height: 4.5rem;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #e3ddd2;
+    flex: 0 0 auto;
+  }
+
+  > div { min-width: 0; }
+}
+
+.cmp__upload-busy { display: flex; align-items: center; gap: 0.35rem; }
+
+.cmp__progress {
+  height: 6px;
+  border-radius: 999px;
+  background: #ece6db;
+  overflow: hidden;
+  margin-top: 0.6rem;
+
+  span {
+    display: block;
+    height: 100%;
+    background: #1f7a54;
+    transition: width 0.2s ease;
+  }
+}

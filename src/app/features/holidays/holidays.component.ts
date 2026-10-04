@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
@@ -12,7 +12,7 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
-import { map } from 'rxjs';
+import { map, timeout } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../../core/models/api-response.model';
@@ -86,6 +86,14 @@ interface HolidayForm {
       </label>
     </div>
 
+    @if (offlineCopy()) {
+      <p class="hol__offline" role="status">
+        <i class="pi pi-cloud" aria-hidden="true"></i>
+        Could not reach the server — showing the list saved on this device.
+        <button type="button" (click)="retry()">Try again</button>
+      </p>
+    }
+
     @if (source(); as src) {
       <p class="app-muted hol__source">
         <i class="pi pi-info-circle" aria-hidden="true"></i>
@@ -130,7 +138,17 @@ interface HolidayForm {
       </div>
 
       @if (loading()) {
-        <p class="app-muted hol__empty">Loading…</p>
+        <div class="hol__state" role="status">
+          <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+          <p>Loading holidays for {{ year() }}…</p>
+        </div>
+      } @else if (loadError()) {
+        <!-- A failed load is not "no holidays": say what went wrong and offer a retry. -->
+        <div class="hol__state hol__state--error" role="alert">
+          <i class="pi pi-wifi" aria-hidden="true"></i>
+          <p><strong>{{ loadError() }}</strong></p>
+          <p-button label="Retry" icon="pi pi-refresh" (onClick)="retry()" />
+        </div>
       } @else if (holidays().length === 0) {
         <div class="hol__empty">
           <i class="pi pi-calendar-times" aria-hidden="true"></i>
@@ -261,6 +279,37 @@ interface HolidayForm {
     .hol__mobile-status { display: none; margin-top: 0.3rem; }
 
     /* Phones: drop the Type column; everyone but Admin sees closed/open under the name instead of a column. */
+    .hol__state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 2.5rem 1rem;
+      text-align: center;
+      color: var(--app-text-muted, #66708a);
+    }
+    .hol__state .pi { font-size: 1.8rem; }
+    .hol__state p { margin: 0; }
+    .hol__state--error { color: var(--p-red-600, #c0392b); }
+    .hol__offline {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      padding: 0.6rem 0.8rem;
+      border-radius: 8px;
+      background: color-mix(in srgb, #f59f00 14%, transparent);
+    }
+    .hol__offline button {
+      border: 0;
+      background: none;
+      color: var(--p-primary-color);
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 0;
+    }
+
     @media (max-width: 640px) {
       .hol__col-type { display: none; }
       .hol__col-inst:not(.hol__col-inst--admin) { display: none; }
@@ -286,6 +335,10 @@ export class HolidaysComponent implements OnInit {
   /** Last year through five years ahead — as far as the holiday calendar publishes. */
   readonly yearOptions = Array.from({ length: 7 }, (_, i) => new Date().getFullYear() - 1 + i);
   readonly loading = signal(false);
+  /** Why the list could not be loaded, when there is no saved copy to show instead. */
+  readonly loadError = signal<string | null>(null);
+  /** True while showing the copy saved on this device because the server could not be reached. */
+  readonly offlineCopy = signal(false);
   readonly filter = signal<HolidayFilter>('all');
 
   readonly dialogOpen = signal(false);
@@ -335,18 +388,52 @@ export class HolidaysComponent implements OnInit {
   private load(): void {
     const year = this.year();
     this.loading.set(true);
+    this.loadError.set(null);
+    this.offlineCopy.set(false);
     this.http.get<ApiResponse<HolidayYear>>(this.base, { params: { year } })
-      .pipe(map(r => r.data))
+      // A year opened for the first time is fetched from the calendar feed
+      // server-side, which can take a while — but not forever on a dead signal.
+      .pipe(timeout(30000), map(r => r.data))
       .subscribe({
         next: data => {
           // A slow first-time fetch for one year must not land on top of another the user has since picked.
-          if (data.year !== this.year()) return;
-          this.holidays.set(data.holidays);
+          if (!data || data.year !== this.year()) { this.loading.set(false); return; }
+          this.holidays.set(data.holidays ?? []);
           this.source.set(data.source);
           this.loading.set(false);
+          try { localStorage.setItem(this.cacheKey(year), JSON.stringify(data)); } catch { /* storage full or blocked */ }
         },
-        error: () => this.loading.set(false)
+        error: (err: unknown) => {
+          if (year !== this.year()) return;
+          this.loading.set(false);
+
+          // Offline or the server down: the last list this device loaded is
+          // still right for nearly every day of the year, so show that.
+          let saved: HolidayYear | null = null;
+          try { saved = JSON.parse(localStorage.getItem(this.cacheKey(year)) ?? 'null'); } catch { /* corrupt */ }
+          if (saved?.holidays?.length) {
+            this.holidays.set(saved.holidays);
+            this.source.set(saved.source);
+            this.offlineCopy.set(true);
+            return;
+          }
+
+          this.holidays.set([]);
+          const status = err instanceof HttpErrorResponse ? err.status : -1;
+          this.loadError.set(
+            status === 0 || status === -1 ? 'No internet connection — the holiday list could not be loaded.'
+              : status === 401 ? 'Your session has expired. Please sign in again.'
+              : 'The holiday list could not be loaded right now.');
+        }
       });
+  }
+
+  retry(): void {
+    this.load();
+  }
+
+  private cacheKey(year: number): string {
+    return `avijan.holidays.${year}`;
   }
 
   sourceLabel(src: string): string {

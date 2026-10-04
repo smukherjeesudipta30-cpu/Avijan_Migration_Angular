@@ -1,4 +1,4 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpEvent, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
@@ -33,6 +33,12 @@ export class CompetitionService {
     return this.http
       .get<ApiResponse<CompetitionPublic | null>>(`${this.base}/public`)
       .pipe(map(r => r.data));
+  }
+
+  /** The same registration, reporting upload progress for the progress bar. */
+  registerWithProgress(request: CompetitionRegisterRequest): Observable<HttpEvent<ApiResponse<CompetitionRegistered>>> {
+    return this.http.post<ApiResponse<CompetitionRegistered>>(`${this.base}/register`, request,
+      { reportProgress: true, observe: 'events' });
   }
 
   register(request: CompetitionRegisterRequest): Observable<ApiResponse<CompetitionRegistered>> {

@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpEventType } from '@angular/common/http';
 import { Component, computed, effect, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -26,6 +27,8 @@ type Stage = 'notice' | 'quickstart' | 'form' | 'done';
  * <p>English and Bengali together throughout, because the printed poster is in both
  * and a parent should not have to pick a language to find out the date.</p>
  */
+type UploadSlot = 'photo' | 'schoolId' | 'birthCertificate' | 'paymentSlip';
+
 @Component({
   selector: 'app-competition-portal',
   standalone: true,
@@ -417,11 +420,46 @@ export class CompetitionPortalComponent implements OnInit {
 
   /* ---------------------------------------------------------- the uploads */
 
-  protected async pick(event: Event, into: 'photo' | 'schoolId' | 'birthCertificate' | 'paymentSlip'): Promise<void> {
+  /** Which upload is being compressed right now, for its "Compressing…" note. */
+  protected readonly busySlot = signal<UploadSlot | null>(null);
+  /** Percent of the registration sent so far, while it uploads. */
+  protected readonly uploadProgress = signal<number | null>(null);
+
+  protected uploadIn(slot: UploadSlot): CompetitionUpload | null {
+    switch (slot) {
+      case 'photo': return this.photo();
+      case 'schoolId': return this.schoolId();
+      case 'birthCertificate': return this.birthCertificate();
+      case 'paymentSlip': return this.paymentSlip();
+    }
+  }
+
+  protected previewOf(u: CompetitionUpload): string {
+    return `data:${u.contentType};base64,${u.base64}`;
+  }
+
+  protected sizeOf(u: CompetitionUpload): string {
+    const kb = Math.round(u.base64.length * 0.75 / 1024);
+    return kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`;
+  }
+
+  protected clearUpload(slot: UploadSlot): void {
+    switch (slot) {
+      case 'photo': this.photo.set(null); break;
+      case 'schoolId': this.schoolId.set(null); break;
+      case 'birthCertificate': this.birthCertificate.set(null); break;
+      case 'paymentSlip': this.paymentSlip.set(null); break;
+    }
+  }
+
+  protected async pick(event: Event, into: UploadSlot): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
+    // Cleared so choosing the same file again (a retake) still fires.
+    input.value = '';
     if (!file) return;
 
+    this.busySlot.set(into);
     try {
       const upload = await this.shrink(file);
 
@@ -435,14 +473,17 @@ export class CompetitionPortalComponent implements OnInit {
       this.error.set(null);
     } catch {
       this.error.set(`That file could not be read as an image. Please choose a photo or a scan.`);
+    } finally {
+      this.busySlot.set(null);
     }
   }
 
   /**
-   * Redraws the chosen picture no larger than 1400px on its longest side.
+   * Redraws the chosen picture to fit within 1920x1080 (either way round) as a
+   * JPEG at 80% quality, stepping the quality down until it is under 1.5 MB.
    *
-   * <p>A phone camera file is three or four megabytes; a school id card only has to
-   * be legible. Shrinking here means a parent on a slow connection is not left
+   * <p>A phone camera file is three to eight megabytes; a school id card only has
+   * to be legible. Shrinking here means a parent on a slow connection is not left
    * watching an upload bar having already paid.</p>
    */
   private shrink(file: File): Promise<CompetitionUpload> {
@@ -453,8 +494,9 @@ export class CompetitionPortalComponent implements OnInit {
       image.onload = () => {
         URL.revokeObjectURL(url);
 
-        const edge = 1400;
-        const scale = Math.min(1, edge / Math.max(image.width, image.height));
+        const long = Math.max(image.width, image.height);
+        const short = Math.min(image.width, image.height);
+        const scale = Math.min(1, 1920 / long, 1080 / short);
 
         const canvas = document.createElement('canvas');
         canvas.width = Math.round(image.width * scale);
@@ -463,9 +505,17 @@ export class CompetitionPortalComponent implements OnInit {
         const context = canvas.getContext('2d');
         if (!context) { reject(new Error('no canvas')); return; }
 
+        // White behind a transparent PNG, which JPEG would otherwise turn black.
+        context.fillStyle = '#fff';
+        context.fillRect(0, 0, canvas.width, canvas.height);
         context.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-        const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1] ?? '';
+        const maxBytes = 1.5 * 1024 * 1024;
+        let base64 = '';
+        for (const quality of [0.8, 0.72, 0.62, 0.5, 0.4]) {
+          base64 = canvas.toDataURL('image/jpeg', quality).split(',')[1] ?? '';
+          if (base64.length * 0.75 <= maxBytes) break;
+        }
 
         resolve({
           fileName: file.name.replace(/\.[^.]+$/, '') + '.jpg',
@@ -513,9 +563,18 @@ export class CompetitionPortalComponent implements OnInit {
       draftCode: this.draftCode()
     };
 
-    this.competitions.register(request).subscribe({
-      next: response => {
+    this.uploadProgress.set(0);
+    this.competitions.registerWithProgress(request).subscribe({
+      next: event => {
+        if (event.type === HttpEventType.UploadProgress) {
+          if (event.total) this.uploadProgress.set(Math.round(100 * event.loaded / event.total));
+          return;
+        }
+        if (event.type !== HttpEventType.Response) return;
+
+        const response = event.body!;
         this.saving.set(false);
+        this.uploadProgress.set(null);
 
         if (response.success === false) {
           this.error.set(response.message ?? 'The registration could not be saved.');
@@ -528,6 +587,7 @@ export class CompetitionPortalComponent implements OnInit {
       },
       error: err => {
         this.saving.set(false);
+        this.uploadProgress.set(null);
         this.error.set(err?.error?.message ?? 'The registration could not be saved.');
       }
     });

@@ -12,6 +12,9 @@ export interface CompetitionGroup {
 
   /** How many may enter — 30, 30, 15 for the dance groups. Absent for drawing. */
   capacity?: number;
+  /** Dance only: the block of chest numbers this group issues from, unique across the competition. */
+  batchFrom?: number;
+  batchTo?: number | null;
 
   sortOrder: number;
 }
