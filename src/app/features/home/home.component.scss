@@ -1079,3 +1079,27 @@
     background: #fff; color: #3b2a12; text-decoration: none; border: 1px solid #f3d29a;
   }
 }
+
+/* ================================================================= social */
+.hm__social { background: #f4f6fb; padding: 2rem 0; border-top: 1px solid #e6e8ef; }
+
+.hm__social-inner { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 1.5rem; }
+
+.hm__social-text {
+  h3 { margin: 0 0 0.3rem; color: #0a283c; font-size: 1.15rem; }
+  p { margin: 0 0 0.8rem; color: #5a6478; font-size: 0.92rem; }
+}
+
+.hm__social-follow { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+.hm__follow {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  padding: 0.55rem 1rem; border-radius: 999px; border: 1px solid #d5dae6; background: #fff;
+  color: #1f2a44; font: inherit; font-weight: 600; font-size: 0.9rem; text-decoration: none; cursor: pointer;
+
+  &--ig { background: linear-gradient(45deg, #f58529, #dd2a7b 50%, #8134af); border-color: transparent; color: #fff; }
+  &--fb { background: #1877f2; border-color: #1877f2; color: #fff; }
+  &--wa { background: #25d366; border-color: #25d366; color: #fff; }
+}
+
+.hm__footer-links { display: inline-flex; align-items: center; gap: 1rem; }

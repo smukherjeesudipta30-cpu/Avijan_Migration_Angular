@@ -366,6 +366,19 @@ export class HomeComponent implements OnDestroy {
   readonly facebook = AVIJAN_FACEBOOK;
   /** Open vacancies; the "We're hiring" strip shows only while there are any. */
   readonly hiring = signal<Vacancy[]>([]);
+  /** The whole site, ready to share; the tag lets "Website visitors" count it. */
+  readonly shareWhatsApp = `https://wa.me/?text=${encodeURIComponent('Computer courses at Avijan, Rajpur — have a look: https://www.avijan.in/?utm_source=whatsapp')}`;
+  readonly shareFacebook = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent('https://www.avijan.in/?utm_source=facebook')}`;
+  readonly siteLinkCopied = signal(false);
+
+  async copySiteLink(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText('https://www.avijan.in/');
+      this.siteLinkCopied.set(true);
+      setTimeout(() => this.siteLinkCopied.set(false), 2500);
+    } catch { /* clipboard blocked: the WhatsApp and Facebook buttons still share it */ }
+  }
+
   readonly hiringBranches = computed(() => [...new Set(this.hiring().map(v => v.branch))].join(', '));
 
   /** The lightbox the legacy page got by linking each thumbnail to its full image. */

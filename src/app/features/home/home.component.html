@@ -426,10 +426,43 @@
   </div>
 </section>
 
+<!-- ============================================================ social -->
+<!-- Follow Avijan, and share the whole site — the one place on the page that
+     asks a visitor to pass it on. -->
+<section class="hm__social" aria-label="Follow and share Avijan">
+  <div class="hm__container hm__social-inner">
+    <div class="hm__social-text">
+      <h3>Follow Avijan</h3>
+      <p>New batches, results, holidays and vacancies are posted on our pages first.</p>
+      <div class="hm__social-follow">
+        <a class="hm__follow hm__follow--ig" [href]="instagram" target="_blank" rel="noopener"><i class="pi pi-instagram"></i> Instagram</a>
+        <a class="hm__follow hm__follow--fb" [href]="facebook" target="_blank" rel="noopener"><i class="pi pi-facebook"></i> Facebook</a>
+      </div>
+    </div>
+    <div class="hm__social-text">
+      <h3>Share Avijan</h3>
+      <p>Know someone looking for a computer course? Send them our website.</p>
+      <div class="hm__social-follow">
+        <a class="hm__follow hm__follow--wa" [href]="shareWhatsApp" target="_blank" rel="noopener"><i class="pi pi-whatsapp"></i> WhatsApp</a>
+        <a class="hm__follow hm__follow--fb" [href]="shareFacebook" target="_blank" rel="noopener"><i class="pi pi-facebook"></i> Share</a>
+        <button type="button" class="hm__follow" (click)="copySiteLink()">
+          <i class="pi" [class.pi-link]="!siteLinkCopied()" [class.pi-check]="siteLinkCopied()"></i>
+          {{ siteLinkCopied() ? 'Copied' : 'Copy link' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
 <footer class="hm__footer">
   <div class="hm__container">
     <span>&copy; {{ 2026 }} Avijan &mdash; An Unit of Computer Professionals &amp; Learners</span>
-    <a routerLink="/login">Staff &amp; student login</a>
+    <span class="hm__footer-links">
+      <a [href]="instagram" target="_blank" rel="noopener" aria-label="Instagram"><i class="pi pi-instagram"></i></a>
+      <a [href]="facebook" target="_blank" rel="noopener" aria-label="Facebook"><i class="pi pi-facebook"></i></a>
+      <a routerLink="/careers">Careers</a>
+      <a routerLink="/login">Staff &amp; student login</a>
+    </span>
   </div>
 </footer>
 
