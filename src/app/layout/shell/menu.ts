@@ -72,6 +72,8 @@ export const MENU: MenuSection[] = [
       { label: 'Income', icon: 'pi pi-chart-line', route: '/income', roles: ['Admin', 'Receptionist'] },
       { label: 'Proprietor Honorarium', icon: 'pi pi-user', route: '/proprietor-honorarium', roles: ['Admin', 'Editor'] },
       { label: 'Bank Statement', icon: 'pi pi-building-columns', route: '/bank-statement', roles: ['Admin', 'Editor'] },
+      { label: 'Careers', icon: 'pi pi-briefcase', route: '/careers-admin', roles: ['Admin', 'Editor'] },
+      { label: 'Website Visitors', icon: 'pi pi-chart-bar', route: '/site-visits', roles: ['Admin', 'Editor'] },
       // The student's own side: pay this month against the institute's QR code.
       { label: 'Pay My Fees', icon: 'pi pi-indian-rupee', route: '/my-fees', roles: ['Student'] }
     ]

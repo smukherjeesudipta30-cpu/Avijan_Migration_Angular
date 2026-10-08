@@ -17,6 +17,8 @@ import { CompetitionPublic } from '../../core/models/competition.model';
 import { CompetitionService } from '../../core/services/competition.service';
 import { FeaturesService } from '../../core/services/features.service';
 import { environment } from '../../../environments/environment';
+import { AVIJAN_FACEBOOK, AVIJAN_INSTAGRAM, Vacancy } from '../../core/models/career.model';
+import { CareerService } from '../../core/services/career.service';
 
 /** One picture in the Portfolio strip, with the caption the legacy page used. */
 interface PortfolioItem {
@@ -357,10 +359,20 @@ export class HomeComponent implements OnDestroy {
       });
   }
 
+  /* ------------------------------------------------------------ careers */
+
+  private readonly careers = inject(CareerService);
+  readonly instagram = AVIJAN_INSTAGRAM;
+  readonly facebook = AVIJAN_FACEBOOK;
+  /** Open vacancies; the "We're hiring" strip shows only while there are any. */
+  readonly hiring = signal<Vacancy[]>([]);
+  readonly hiringBranches = computed(() => [...new Set(this.hiring().map(v => v.branch))].join(', '));
+
   /** The lightbox the legacy page got by linking each thumbnail to its full image. */
   readonly lightbox = signal<PortfolioItem | null>(null);
 
   constructor() {
+    this.careers.open().subscribe({ next: v => this.hiring.set(v), error: () => this.hiring.set([]) });
     this.loadClosures();
 
     this.about.getAboutPage().subscribe({

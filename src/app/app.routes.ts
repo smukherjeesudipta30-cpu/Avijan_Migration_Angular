@@ -26,6 +26,14 @@ export const routes: Routes = [
     redirectTo: ''
   },
   {
+    /* Public careers page: Receptionist vacancies and the Apply pop-up. Outside
+       the shell and the sign-in — it is the page shared on Facebook and Instagram. */
+    path: 'careers',
+    title: 'Careers at Avijan',
+    loadComponent: () =>
+      import('./features/careers/careers-page.component').then(m => m.CareersPageComponent)
+  },
+  {
     /* The public competition portal. Outside the shell and outside the sign-in:
        entrants are children from any school with no account here, and the owner
        asked for it to be reachable straight from the landing page. */
@@ -271,6 +279,22 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/holidays/holidays.component')
             .then(m => m.HolidaysComponent)
+      },
+      {
+        path: 'site-visits',
+        title: 'Website visitors · Avijan',
+        canActivate: [roleGuard('Admin', 'Editor')],
+        loadComponent: () =>
+          import('./features/site-visits/site-visits.component')
+            .then(m => m.SiteVisitsComponent)
+      },
+      {
+        path: 'careers-admin',
+        title: 'Careers · Avijan',
+        canActivate: [roleGuard('Admin', 'Editor')],
+        loadComponent: () =>
+          import('./features/careers/careers-admin.component')
+            .then(m => m.CareersAdminComponent)
       },
       {
         path: 'bank-statement',

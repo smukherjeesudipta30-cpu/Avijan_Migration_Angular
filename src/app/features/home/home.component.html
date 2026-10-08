@@ -79,6 +79,30 @@
   </section>
 }
 
+<!-- ============================================================= careers -->
+<!-- Shown only while a vacancy is open: what, where, and the way to apply. -->
+@if (hiring().length) {
+  <section class="hm__hiring" aria-label="We are hiring">
+    <div class="hm__container">
+      <div class="hm__hiring-card">
+        <div class="hm__hiring-text">
+          <span class="hm__hiring-eyebrow"><i class="pi pi-briefcase" aria-hidden="true"></i> We're hiring</span>
+          <h2>{{ hiring().length === 1 ? hiring()[0].title : 'Receptionists' }} wanted
+            <span>— {{ hiringBranches() }}</span></h2>
+          <p>Shift timings and qualifications are on the careers page. Apply online with your CV and photo.</p>
+        </div>
+        <div class="hm__hiring-actions">
+          <a class="hm__hiring-apply" routerLink="/careers">Apply now <i class="pi pi-arrow-right" aria-hidden="true"></i></a>
+          <div class="hm__hiring-social">
+            <a [href]="instagram" target="_blank" rel="noopener" aria-label="Avijan on Instagram"><i class="pi pi-instagram"></i></a>
+            <a [href]="facebook" target="_blank" rel="noopener" aria-label="Avijan on Facebook"><i class="pi pi-facebook"></i></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+}
+
 <!-- ========================================================= owner's desk -->
 <!-- Straight under the banner and before About Us: the first thing a visitor meets
      after the hero is a person, not a paragraph. Rendered only when a photograph is

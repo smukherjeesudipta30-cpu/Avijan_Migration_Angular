@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Router, RouterOutlet } from '@angular/router';
 import { ToastModule } from 'primeng/toast';
 
 import { GuestWidgetComponent } from './features/chat/guest-widget/guest-widget.component';
 import { AuthService } from './core/services/auth.service';
 import { FeaturesService } from './core/services/features.service';
+import { SiteVisitService } from './core/services/site-visit.service';
 
 @Component({
   selector: 'app-root',
@@ -25,10 +26,15 @@ import { FeaturesService } from './core/services/features.service';
 export class AppComponent {
   private readonly features = inject(FeaturesService);
   readonly auth = inject(AuthService);
+  private readonly visits = inject(SiteVisitService);
+  private readonly router = inject(Router);
 
   constructor() {
     // Asked once at start-up, so the menu knows what to show before the first
     // navigation. Anything not yet answered counts as off.
     this.features.load();
+
+    // Visits to the public pages, for Admin's "Website visitors" report.
+    this.visits.start(this.router, 'Web');
   }
 }

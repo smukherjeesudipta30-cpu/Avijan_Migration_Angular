@@ -1,0 +1,12 @@
+# The public pages are the home page, careers and the competition portal.
+# Everything behind the sign-in is for staff and students only.
+User-agent: *
+Allow: /$
+Allow: /careers
+Allow: /competition
+Allow: /images/
+Disallow: /api/
+Disallow: /login
+Disallow: /dashboard
+
+Sitemap: https://www.avijan.in/sitemap.xml
