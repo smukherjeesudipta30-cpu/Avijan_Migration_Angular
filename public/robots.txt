@@ -1,11 +1,12 @@
 # The public pages are the home page, careers and the competition portal.
 # Everything behind the sign-in is for staff and students only.
+#
+# /api/ is NOT blocked: Google loads these pages the way a browser does, and the
+# vacancies, holiday notice and courses arrive from the API. Blocking it would
+# leave Google with empty pages and no jobs for Google for Jobs. Private data is
+# protected by sign-in, not by robots.txt.
 User-agent: *
-Allow: /$
-Allow: /careers
-Allow: /competition
-Allow: /images/
-Disallow: /api/
+Allow: /
 Disallow: /login
 Disallow: /dashboard
 
