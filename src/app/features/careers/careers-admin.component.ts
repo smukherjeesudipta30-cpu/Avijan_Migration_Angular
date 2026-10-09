@@ -17,7 +17,7 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
 
 import { BranchLookup } from '../../core/models/student.model';
 import {
-  AVIJAN_FACEBOOK, AVIJAN_INSTAGRAM, CAREERS_URL, JobApplication, JobApplicationStatus, Vacancy, VacancySave, shiftLabel
+  AVIJAN_FACEBOOK, AVIJAN_INSTAGRAM, CAREERS_URL, JOB_POSTS, JobApplication, JobApplicationStatus, SALARY_NORMS, Vacancy, VacancySave, shiftLabel
 } from '../../core/models/career.model';
 import { CareerService } from '../../core/services/career.service';
 import { StudentService } from '../../core/services/student.service';
@@ -42,7 +42,7 @@ interface VacancyForm {
 const STATUSES: JobApplicationStatus[] = ['New', 'Shortlisted', 'Interviewed', 'Hired', 'Rejected'];
 
 /**
- * Careers, Admin's and Editor's side: Receptionist vacancies per branch (shift
+ * Careers, Admin's and Editor's side: vacancies (Teacher, Receptionist, …) per branch (shift
  * timing, academic criteria), and the applications that come in from the
  * public careers page — with the CV and photograph to download.
  */
@@ -59,7 +59,7 @@ const STATUSES: JobApplicationStatus[] = ['New', 'Shortlisted', 'Interviewed', '
       <div>
         <span class="app-eyebrow">Careers</span>
         <h1>Vacancies &amp; applications</h1>
-        <p class="app-muted">Open a Receptionist vacancy for a branch and it appears on
+        <p class="app-muted">Open a Teacher or Receptionist vacancy for a branch and it appears on
           <a [href]="careersUrl" target="_blank" rel="noopener">avijan.in/careers</a> — share that link on
           <a [href]="instagram" target="_blank" rel="noopener">Instagram</a> and
           <a [href]="facebook" target="_blank" rel="noopener">Facebook</a>.</p>
@@ -78,7 +78,7 @@ const STATUSES: JobApplicationStatus[] = ['New', 'Shortlisted', 'Interviewed', '
           <tr>
             <td><strong>{{ v.title }}</strong><div class="app-muted ca__sub">{{ v.branch }} · {{ v.openings }} {{ v.openings === 1 ? 'post' : 'posts' }}</div></td>
             <td class="ca__sub">{{ shift(v) || '—' }}@if (v.workingDays) { <div class="app-muted">{{ v.workingDays }}</div> }</td>
-            <td class="ca__sub">{{ v.qualification }}</td>
+            <td class="ca__sub">{{ v.qualification }}<div class="app-muted">Salary: {{ v.salary || salaryNorms }}</div></td>
             <td class="ca__sub">{{ v.closesOn ? (v.closesOn | date: 'd MMM y') : 'Until filled' }}</td>
             <td>
               <button type="button" class="ca__count" (click)="filterTo(v.id)">
@@ -139,7 +139,10 @@ const STATUSES: JobApplicationStatus[] = ['New', 'Shortlisted', 'Interviewed', '
     <p-dialog [header]="form().id ? 'Edit vacancy' : 'New vacancy'" [visible]="dialogOpen()" (visibleChange)="dialogOpen.set($event)"
               [modal]="true" [style]="{ width: 'min(40rem, 96vw)' }" appendTo="body">
       <div class="ca__form">
-        <label>Post<input pInputText [(ngModel)]="form().title" maxlength="100" /></label>
+        <label><span>Post <em>*</em></span>
+          <p-select [options]="posts" [(ngModel)]="form().title" [editable]="true" placeholder="Receptionist / Teacher" appendTo="body" />
+          <small class="app-muted">Choose, or type another post (e.g. Teacher — Tally).</small>
+        </label>
         <label><span>Branch <em>*</em></span>
           <p-select [options]="branches()" [(ngModel)]="form().branch" optionLabel="name" optionValue="name" placeholder="Choose branch" appendTo="body" />
         </label>
@@ -150,7 +153,8 @@ const STATUSES: JobApplicationStatus[] = ['New', 'Shortlisted', 'Interviewed', '
         <label class="ca__wide"><span>Academic qualification required <em>*</em></span>
           <input pInputText [(ngModel)]="form().qualification" placeholder="e.g. Graduate (any stream), basic computer knowledge" maxlength="300" /></label>
         <label>Experience<input pInputText [(ngModel)]="form().experience" placeholder="Freshers welcome" maxlength="200" /></label>
-        <label>Salary<input pInputText [(ngModel)]="form().salary" placeholder="e.g. ₹8,000 – ₹10,000 / month" maxlength="100" /></label>
+        <label>Salary<input pInputText [(ngModel)]="form().salary" placeholder="Leave blank to show “{{ salaryNorms }}”" maxlength="100" />
+          <small class="app-muted">Blank shows “{{ salaryNorms }}” on the website.</small></label>
         <label>Number of posts<p-inputnumber [(ngModel)]="form().openings" [min]="1" [max]="50" [showButtons]="true" /></label>
         <label>Applications close on<p-datepicker [(ngModel)]="form().closesOn" dateFormat="dd/mm/yy" [showIcon]="true" [showClear]="true" appendTo="body" /></label>
         <label class="ca__wide">Description<textarea pTextarea rows="3" [(ngModel)]="form().description" maxlength="2000"
@@ -216,6 +220,8 @@ export class CareersAdminComponent implements OnInit {
   readonly instagram = AVIJAN_INSTAGRAM;
   readonly facebook = AVIJAN_FACEBOOK;
   readonly statuses = STATUSES;
+  readonly posts = JOB_POSTS;
+  readonly salaryNorms = SALARY_NORMS;
   readonly shift = (v: Vacancy) => shiftLabel(v);
 
   readonly vacancies = signal<Vacancy[]>([]);

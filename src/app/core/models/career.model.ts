@@ -82,6 +82,23 @@ export const CAREERS_URL = 'https://www.avijan.in/careers';
 export const AVIJAN_INSTAGRAM = 'https://www.instagram.com/avijan.c/';
 export const AVIJAN_FACEBOOK = 'https://www.facebook.com/share/1brUSoLU58/';
 
+/** The posts Admin usually advertises; any other can be typed in. */
+export const JOB_POSTS = ['Receptionist', 'Teacher'];
+
+/** Shown when Admin leaves the salary blank — no figure is advertised. */
+export const SALARY_NORMS = 'As per institute norms';
+
+/**
+ * What is open, for headlines: "Teacher" for a single vacancy, otherwise the
+ * posts in plural — "Teachers & Receptionists".
+ */
+export function hiringHeadline(list: Pick<Vacancy, 'title'>[]): string {
+  const posts = [...new Set(list.map(v => v.title.trim()))];
+  if (list.length === 1) return posts[0];
+  const plural = posts.map(p => (/s$/i.test(p) ? p : p + 's'));
+  return plural.length > 1 ? plural.slice(0, -1).join(', ') + ' & ' + plural[plural.length - 1] : plural[0];
+}
+
 /** "09:00:00" -> "9:00 AM". */
 export function shiftTime(t?: string | null): string {
   if (!t) return '';

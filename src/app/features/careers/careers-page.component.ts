@@ -10,7 +10,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 
 import {
-  AVIJAN_FACEBOOK, AVIJAN_INSTAGRAM, CAREERS_URL, CareerUpload, JobApply, Vacancy, shiftLabel
+  AVIJAN_FACEBOOK, AVIJAN_INSTAGRAM, CAREERS_URL, CareerUpload, JobApply, SALARY_NORMS, Vacancy, hiringHeadline, shiftLabel
 } from '../../core/models/career.model';
 import { resizeImageToLimit } from '../../core/images/image-resize';
 import { CareerService } from '../../core/services/career.service';
@@ -23,7 +23,7 @@ const CV_TYPES = [
 ];
 
 /**
- * The public careers page — Receptionist vacancies Admin has opened, per branch,
+ * The public careers page — the vacancies (Teacher, Receptionist, …) Admin has opened, per branch,
  * with an Apply pop-up that takes a CV and a photograph. Outside the sign-in, and
  * the page that is shared on Avijan's Facebook and Instagram. A link with
  * <c>?v=&lt;id&gt;</c> opens that vacancy's form straight away.
@@ -38,7 +38,7 @@ const CV_TYPES = [
         <a routerLink="/" class="cr__logo"><img src="images/logo.png" alt="Avijan" /></a>
         <span class="cr__eyebrow">Careers at Avijan</span>
         <h1>Join our team</h1>
-        <p>We are hiring Receptionists for our branches. Choose a vacancy below and apply in two minutes —
+        <p>We are hiring{{ vacancies().length ? ' ' + headline() : '' }} for our branches. Choose a vacancy below and apply in two minutes —
           keep your CV and a photograph ready.</p>
         <div class="cr__social">
           <a [href]="instagram" target="_blank" rel="noopener"><i class="pi pi-instagram"></i> Instagram</a>
@@ -77,7 +77,7 @@ const CV_TYPES = [
                   @if (v.workingDays) { <li><i class="pi pi-calendar"></i><span>{{ v.workingDays }}</span></li> }
                   <li><i class="pi pi-book"></i><span><strong>Qualification:</strong> {{ v.qualification }}</span></li>
                   @if (v.experience) { <li><i class="pi pi-star"></i><span><strong>Experience:</strong> {{ v.experience }}</span></li> }
-                  @if (v.salary) { <li><i class="pi pi-wallet"></i><span><strong>Salary:</strong> {{ v.salary }}</span></li> }
+                  <li><i class="pi pi-wallet"></i><span><strong>Salary:</strong> {{ v.salary || salaryNorms }}</span></li>
                 </ul>
                 @if (v.description) { <p class="cr__desc">{{ v.description }}</p> }
 
@@ -259,7 +259,7 @@ export class CareersPageComponent implements OnInit, OnDestroy {
   readonly instagram = AVIJAN_INSTAGRAM;
   readonly facebook = AVIJAN_FACEBOOK;
   readonly facebookShareLink = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(CAREERS_URL)}`;
-  readonly whatsAppLink = `https://wa.me/?text=${encodeURIComponent('Avijan is hiring Receptionists — apply here: ' + CAREERS_URL)}`;
+  readonly whatsAppLink = `https://wa.me/?text=${encodeURIComponent('Avijan is hiring — see the vacancies and apply here: ' + CAREERS_URL)}`;
   readonly canShare = typeof navigator !== 'undefined' && !!navigator.share;
 
   readonly vacancies = signal<Vacancy[]>([]);
@@ -278,13 +278,15 @@ export class CareersPageComponent implements OnInit, OnDestroy {
   form = this.blank();
 
   readonly shift = (v: Vacancy) => shiftLabel(v);
+  readonly salaryNorms = SALARY_NORMS;
+  readonly headline = () => hiringHeadline(this.vacancies());
 
   ngOnInit(): void {
     // Search results: this page's own title and summary.
-    this.title.setTitle('Careers at Avijan — Receptionist vacancies, Kolkata');
+    this.title.setTitle('Careers at Avijan — Teacher & Receptionist jobs, Kolkata');
     this.meta.updateTag({
       name: 'description',
-      content: 'Avijan is hiring Receptionists at its Kolkata branches. See shift timings and qualifications, and apply online with your CV.'
+      content: 'Jobs at Avijan, Kolkata: Teacher and Receptionist vacancies at our branches. See shift timings and qualifications, and apply online with your CV.'
     });
     this.meta.updateTag({ property: 'og:url', content: CAREERS_URL });
     this.load();
@@ -296,7 +298,7 @@ export class CareersPageComponent implements OnInit, OnDestroy {
 
   /**
    * Google for Jobs: each open vacancy as a schema.org JobPosting, so a search
-   * for receptionist jobs nearby can show it with its branch and shift.
+   * for teacher or receptionist jobs nearby can show it with its branch and shift.
    */
   private publishJobPostings(list: Vacancy[]): void {
     this.jobPostingScript?.remove();
@@ -484,7 +486,7 @@ export class CareersPageComponent implements OnInit, OnDestroy {
 
   async nativeShare(): Promise<void> {
     try {
-      await navigator.share({ title: 'Avijan is hiring', text: 'Receptionist vacancies at Avijan — apply online:', url: CAREERS_URL });
+      await navigator.share({ title: 'Avijan is hiring', text: 'Vacancies at Avijan — apply online:', url: CAREERS_URL });
     } catch { /* cancelled */ }
   }
 }
