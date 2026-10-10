@@ -1,3 +1,4 @@
+import { downloadBlob } from '../../../core/printing/download-file';
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -227,12 +228,7 @@ export class TeachersEarningsReportComponent implements OnInit {
     this.error.set(null);
     this.reports.teachersEarningsFile(kind, this.selected(), range.from, range.to).subscribe({
       next: blob => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Teacher_Earnings_${range.from}_to_${range.to}.${kind === 'pdf' ? 'pdf' : 'xlsx'}`;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        void downloadBlob(blob, `Teacher_Earnings_${range.from}_to_${range.to}.${kind === 'pdf' ? 'pdf' : 'xlsx'}`);
         this.downloading.set(null);
       },
       error: () => {

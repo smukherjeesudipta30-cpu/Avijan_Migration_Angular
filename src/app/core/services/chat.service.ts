@@ -1,3 +1,4 @@
+import { downloadBlob } from '../printing/download-file';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
@@ -729,20 +730,7 @@ function norm(email: string): string {
 }
 
 function saveBlob(blob: Blob, fileName: string): void {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  link.style.display = 'none';
-  // Attached, and the URL kept alive a moment: some browsers ignore a click on
-  // a detached link, and revoking straight after the click can cancel the
-  // download before it has started.
-  document.body.appendChild(link);
-  link.click();
-  setTimeout(() => {
-    link.remove();
-    URL.revokeObjectURL(url);
-  }, 30_000);
+  void downloadBlob(blob, fileName);
 }
 
 /** The VAPID public key arrives as URL-safe base64 text; PushManager wants raw bytes. */

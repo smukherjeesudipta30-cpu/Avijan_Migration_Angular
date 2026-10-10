@@ -1,3 +1,4 @@
+import { downloadBlob } from '../../core/printing/download-file';
 import { CommonModule } from '@angular/common';
 import { HttpEventType } from '@angular/common/http';
 import { Component, computed, effect, inject, signal, OnInit } from '@angular/core';
@@ -698,14 +699,7 @@ export class CompetitionPortalComponent implements OnInit {
       next: blob => {
         this.lookupBusy.set(false);
 
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `chest-number-${number.replace(/\//g, '-')}.pdf`;
-        link.click();
-
-        // Freed on the next tick; revoking at once can cancel the download.
-        setTimeout(() => URL.revokeObjectURL(url), 10_000);
+        void downloadBlob(blob, `chest-number-${number.replace(/\//g, '-')}.pdf`);
       },
       error: async err => {
         this.lookupBusy.set(false);

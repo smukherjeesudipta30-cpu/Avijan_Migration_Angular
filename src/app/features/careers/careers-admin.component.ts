@@ -1,3 +1,4 @@
+import { downloadBlob } from '../../core/printing/download-file';
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
@@ -395,12 +396,7 @@ export class CareersAdminComponent implements OnInit {
   }
 
   protected saveBlob(blob: Blob, fileName: string): void {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    void downloadBlob(blob, fileName);
   }
 
   private toast(severity: 'success' | 'info' | 'warn' | 'error', summary: string, detail?: string): void {

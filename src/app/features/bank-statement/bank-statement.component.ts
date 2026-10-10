@@ -1,3 +1,4 @@
+import { downloadBlob } from '../../core/printing/download-file';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
@@ -447,11 +448,6 @@ export class BankStatementComponent implements OnInit {
     const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
       <head><meta charset="utf-8"><style>td,th{border:1px solid #000;} .r{text-align:right}</style></head>
       <body>${strip(this.stockHtml())}<br><br>${strip(this.debtHtml())}</body></html>`;
-    const url = URL.createObjectURL(new Blob(['﻿' + html], { type: 'application/vnd.ms-excel' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Bank-statement-${this.fileStem()}.xls`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    void downloadBlob(new Blob(['﻿' + html], { type: 'application/vnd.ms-excel' }), `Bank-statement-${this.fileStem()}.xls`);
   }
 }

@@ -1,3 +1,4 @@
+import { downloadBlob } from '../../core/printing/download-file';
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -513,14 +514,7 @@ export class IncomeComponent {
 
     const csv = [header.join(','), ...body].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `income-${this.activeSection()}-${this.report()?.from}-to-${this.report()?.to}.csv`;
-    link.click();
-
-    URL.revokeObjectURL(url);
+    void downloadBlob(blob, `income-${this.activeSection()}-${this.report()?.from}-to-${this.report()?.to}.csv`);
   }
 
   /* ----------------------------------------------------------- helpers */

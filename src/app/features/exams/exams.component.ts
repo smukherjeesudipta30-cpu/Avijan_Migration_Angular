@@ -1,3 +1,4 @@
+import { downloadBlob } from '../../core/printing/download-file';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
@@ -809,16 +810,13 @@ export class ExamsComponent {
 
     this.exams.answerCopyFile(copy.id).subscribe({
       next: blob => {
-        const url = URL.createObjectURL(blob);
         if (win) {
+          const url = URL.createObjectURL(blob);
           win.location.href = url;
+          setTimeout(() => URL.revokeObjectURL(url), 60_000);
         } else {
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = copy.fileName;
-          a.click();
+          void downloadBlob(blob, copy.fileName);
         }
-        setTimeout(() => URL.revokeObjectURL(url), 60_000);
       },
       error: () => win?.close()
     });
@@ -886,14 +884,7 @@ export class ExamsComponent {
   }
 
   private saveBlob(blob: Blob, filename: string): void {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-
-    link.href = url;
-    link.download = filename;
-    link.click();
-
-    URL.revokeObjectURL(url);
+    void downloadBlob(blob, filename);
   }
 
   private toIso(date: Date | null): string | null {

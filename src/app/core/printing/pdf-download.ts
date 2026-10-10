@@ -1,3 +1,4 @@
+import { downloadBlob, downloadDataUrl } from './download-file';
 import { AdmitCard } from '../models/exam.model';
 import { StudentCertificate } from '../models/report.model';
 import { admitCardHtml, certificateHtml } from './legacy-documents';
@@ -42,7 +43,7 @@ export async function downloadPagesPdf(
     pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', (pageW - w) / 2, 0, w, h);
   }
 
-  pdf?.save(fileName);
+  if (pdf) await downloadBlob(pdf.output('blob'), fileName);
 }
 
 async function renderToCanvas(html: string, width: number): Promise<HTMLCanvasElement> {
@@ -133,14 +134,10 @@ export async function saveCertificateFiles(c: StudentCertificate): Promise<void>
   const ratio = Math.min(pageW / canvas.width, pageH / canvas.height);
   pdf.addImage(jpegData, 'JPEG', (pageW - canvas.width * ratio) / 2, 0, canvas.width * ratio, canvas.height * ratio);
 
-  pdf.save(pdfName);
-
-  const link = document.createElement('a');
-  link.href = jpegData;
-  link.download = jpgName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
+  // One after the other: a phone browser follows one download address at a time.
+  await downloadBlob(pdf.output('blob'), pdfName);
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  await downloadDataUrl(jpegData, jpgName);
 }
 
 /** The admit card as a saved PDF - A4 portrait. */

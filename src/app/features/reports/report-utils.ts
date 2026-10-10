@@ -54,18 +54,11 @@ export function downloadCsv(
     type: 'text/csv;charset=utf-8;'
   });
 
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-
-  link.href = url;
-  link.download = fileName.endsWith('.csv') ? fileName : `${fileName}.csv`;
-  link.click();
-
-  // Revoked on the next tick so the click has taken the URL first.
-  setTimeout(() => URL.revokeObjectURL(url), 0);
+  void downloadBlob(blob, fileName.endsWith('.csv') ? fileName : `${fileName}.csv`);
 }
 
 /** `report-name-2026-08-23.csv` */
 export function reportFileName(prefix: string): string {
   return `${prefix}-${toIsoDate(new Date())}.csv`;
-}
+}import { downloadBlob } from '../../core/printing/download-file';
+
