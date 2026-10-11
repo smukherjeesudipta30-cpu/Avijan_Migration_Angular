@@ -122,11 +122,13 @@ export class CallService implements OnDestroy {
       this.reconnectTimer = null;
       if (pc !== this.peerConnection || pc.connectionState === 'connected') return;
       if (this.restartAttempts >= 3) {
+        this.diagOutcome = 'lost-after-restarts';
         this.errorMessage.set('The call was lost. Please call again.');
         this.hangup();
         return;
       }
       this.restartAttempts++;
+      this.diagRestarts++;
       if (this.isCaller) void this.createOfferAndSend(true);
       else pc.restartIce?.();
       this.onPathLost(pc);
@@ -159,6 +161,15 @@ export class CallService implements OnDestroy {
   private conversationId: number | null = null;
   private connectedAt: number | null = null;
   private wasConnected = false;
+
+  /* Call diagnostics: what this device saw of the network path, sent to the
+     server log once when the call ends (see reportDiagnostics). host/srflx
+     candidates are a direct path; relay is the TURN server. */
+  private diagOutcome: string | null = null;
+  private diagLocalTypes = new Set<string>();
+  private diagRemoteTypes = new Set<string>();
+  private diagSelectedPath: string | null = null;
+  private diagRestarts = 0;
 
   readonly status = signal<CallStatus>('idle');
   readonly kind = signal<CallKind>('audio');
@@ -265,6 +276,7 @@ export class CallService implements OnDestroy {
 
     this.chat.onCallEnded.subscribe(ended => {
       if (ended.callId !== this.currentCallId) return;
+      this.diagOutcome ??= 'other-side-hung-up';
       this.endLocally();
     });
 
@@ -383,6 +395,7 @@ export class CallService implements OnDestroy {
     const callId = this.currentCallId;
     const target = this.peerEmail();
     if (callId && target) this.chat.callHangup(target, callId);
+    this.diagOutcome ??= 'hung-up';
     this.endLocally();
   }
 
@@ -545,6 +558,7 @@ export class CallService implements OnDestroy {
     pc.onicecandidate = event => {
       const target = this.peerEmail();
       const callId = this.currentCallId;
+      if (event.candidate?.type) this.diagLocalTypes.add(event.candidate.type);
       if (event.candidate && target && callId) {
         this.chat.callSignal(target, callId, 'ice', JSON.stringify(event.candidate));
       }
@@ -559,6 +573,7 @@ export class CallService implements OnDestroy {
         this.status.set('active');
         if (!this.wasConnected) {
           this.wasConnected = true;
+          void this.recordSelectedPath(pc);
           this.startKeepAlive();
           this.connectedAt = Date.now();
           this.startDurationTimer();
@@ -575,6 +590,7 @@ export class CallService implements OnDestroy {
       }
       if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
         if (this.status() !== 'idle') {
+          this.diagOutcome ??= pc.connectionState === 'failed' ? 'failed-before-connect' : 'closed';
           this.errorMessage.set(
             pc.connectionState === 'failed' ? 'The call could not connect. Try again.' : null);
           this.endLocally();
@@ -615,6 +631,8 @@ export class CallService implements OnDestroy {
 
     if (type === 'ice') {
       const candidate = JSON.parse(payload) as RTCIceCandidateInit;
+      const remoteType = / typ (\w+)/.exec(candidate.candidate ?? '')?.[1];
+      if (remoteType) this.diagRemoteTypes.add(remoteType);
       const pc = this.peerConnection;
       // The offer/answer may not have arrived yet — queue until it has, the
       // same "glare" ICE candidates need on either side of any WebRTC call.
@@ -666,6 +684,7 @@ export class CallService implements OnDestroy {
     this.reactions.set([]);
     if (this.fullScreen()) this.toggleFullScreen();
     this.logCallOutcome();
+    this.reportDiagnostics();
 
     // Clear the busy state whether or not the call ever connected, so a missed
     // or declined call never leaves someone stuck showing as "in call".
@@ -715,6 +734,57 @@ export class CallService implements OnDestroy {
     this.chat.send(this.conversationId, text).subscribe({
       error: () => { /* the call itself still ended cleanly either way */ }
     });
+  }
+
+  /** Which candidate pair actually carried the call, e.g. "relay>srflx/udp". */
+  private async recordSelectedPath(pc: RTCPeerConnection): Promise<void> {
+    try {
+      const stats = await pc.getStats();
+      let pair: any = null;
+      stats.forEach((s: any) => {
+        if (s.type === 'transport' && s.selectedCandidatePairId) pair = stats.get(s.selectedCandidatePairId);
+      });
+      if (!pair) stats.forEach((s: any) => { if (s.type === 'candidate-pair' && s.nominated && s.state === 'succeeded') pair = s; });
+      if (!pair) return;
+      const local: any = stats.get(pair.localCandidateId);
+      const remote: any = stats.get(pair.remoteCandidateId);
+      this.diagSelectedPath = `${local?.candidateType ?? '?'}>${remote?.candidateType ?? '?'}/${local?.protocol ?? '?'}`;
+    } catch {
+      // Diagnostics only.
+    }
+  }
+
+  /**
+   * One line in the server log per call that got as far as setting up a
+   * connection (a missed or declined call has no network path to report).
+   */
+  private reportDiagnostics(): void {
+    const pc = this.peerConnection;
+    if (pc && this.currentCallId) {
+      const conn = (navigator as any).connection;
+      this.chat.callDiagnostics({
+        callId: this.currentCallId,
+        role: this.isCaller ? 'caller' : 'callee',
+        kind: this.kind(),
+        outcome: this.diagOutcome ?? 'ended',
+        wasConnected: this.wasConnected,
+        durationSeconds: this.connectedAt ? Math.round((Date.now() - this.connectedAt) / 1000) : 0,
+        connectionState: pc.connectionState,
+        iceState: pc.iceConnectionState,
+        turnConfigured: this.iceServers.some(s => [s.urls].flat().some(u => String(u).startsWith('turn'))),
+        localCandidates: [...this.diagLocalTypes].join(',') || 'none',
+        remoteCandidates: [...this.diagRemoteTypes].join(',') || 'none',
+        selectedPath: this.diagSelectedPath ?? 'none',
+        restarts: this.diagRestarts,
+        network: conn ? `${conn.type ?? ''} ${conn.effectiveType ?? ''}`.trim() : null,
+        device: navigator.userAgent
+      });
+    }
+    this.diagOutcome = null;
+    this.diagLocalTypes = new Set();
+    this.diagRemoteTypes = new Set();
+    this.diagSelectedPath = null;
+    this.diagRestarts = 0;
   }
 
   private clearRingTimer(): void {

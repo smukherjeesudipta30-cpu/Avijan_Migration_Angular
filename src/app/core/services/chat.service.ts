@@ -501,6 +501,11 @@ export class ChatService {
       this.http.get<ApiResponse<RTCIceServer[]>>(`${this.base}/ice-servers`).pipe(map(r => r.data)));
   }
 
+  /** One line in the server log describing how a call went on this device; best-effort, never retried. */
+  callDiagnostics(report: Record<string, unknown>): void {
+    this.http.post(`${this.base}/call-diagnostics`, report).subscribe({ error: () => {} });
+  }
+
   setCallStatus(inCall: boolean): void {
     this.localInCall = inCall;
     // A call leaves the screen as the device found it: if it is off or the
