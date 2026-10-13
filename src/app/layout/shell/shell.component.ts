@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { MenuModule } from 'primeng/menu';
@@ -13,6 +13,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ChatUiService } from '../../core/services/chat-ui.service';
 import { FeaturesService } from '../../core/services/features.service';
 import { LoadingService } from '../../core/services/loading.service';
+import { ReportService } from '../../core/services/report.service';
 import { MENU, MenuSection } from './menu';
 
 @Component({
@@ -38,6 +39,11 @@ export class ShellComponent {
   private readonly loading = inject(LoadingService);
   private readonly router = inject(Router);
   readonly chatUi = inject(ChatUiService);
+  private readonly reports = inject(ReportService);
+
+  /** A signed-in student's own photo for the account circle; initials until (or unless) there is one. */
+  readonly myPhotoUrl = signal<string | null>(null);
+  private photoFor: string | null = null;
 
   readonly user = this.auth.user;
   readonly isLoading = this.loading.isLoading;
@@ -110,6 +116,24 @@ export class ShellComponent {
   ];
 
   constructor() {
+    // Fetched once per signed-in student, from their own-photo route (the
+    // office's photo endpoint is closed to students). Freed on sign-out.
+    effect(() => {
+      const user = this.user();
+      const isStudent = !!user && (user.role === 'Student' || (user.roles ?? []).includes('Student'));
+      const key = isStudent ? user!.email : null;
+      if (key === this.photoFor) return;
+      this.photoFor = key;
+      const old = this.myPhotoUrl();
+      if (old) URL.revokeObjectURL(old);
+      this.myPhotoUrl.set(null);
+      if (!key) return;
+      this.reports.myPhoto().subscribe({
+        next: blob => { if (this.photoFor === key && blob.size) this.myPhotoUrl.set(URL.createObjectURL(blob)); },
+        error: () => { /* no photo on file: the initials stay */ }
+      });
+    });
+
     /* Rotating a phone, or dragging a desktop window narrow, changes which of the
        two layouts applies - so the open state has to be re-decided, not left at
        whatever it happened to be. */

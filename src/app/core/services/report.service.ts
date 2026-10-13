@@ -197,6 +197,11 @@ export class ReportService {
    * returns the next numbered duplicate, so this must not be something a refresh
    * or a cache can repeat on its own.
    */
+  /** The signed-in student's own photograph (the office's photo endpoint is closed to students). */
+  myPhoto(): Observable<Blob> {
+    return this.http.get(`${this.base}/my-photo`, { responseType: 'blob' });
+  }
+
   issueMyCertificate(): Observable<StudentCertificate> {
     return this.http
       .post<ApiResponse<StudentCertificate>>(`${this.base}/my-certificate`, {})

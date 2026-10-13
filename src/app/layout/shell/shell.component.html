@@ -81,7 +81,13 @@
         class="shell__account"
         (click)="account.toggle($event)"
         aria-haspopup="true">
-        <span class="shell__avatar" aria-hidden="true">{{ initials() }}</span>
+        <span class="shell__avatar" aria-hidden="true">
+          @if (myPhotoUrl(); as photo) {
+            <img class="shell__avatar-photo" [src]="photo" alt="" />
+          } @else {
+            {{ initials() }}
+          }
+        </span>
         <span class="shell__account-text">
           <strong>{{ user()?.name }}</strong>
           <small>{{ user()?.role }}</small>

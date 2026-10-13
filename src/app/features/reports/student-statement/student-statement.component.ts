@@ -16,7 +16,6 @@ import {
 } from '../../../core/printing/legacy-documents';
 import { saveCertificateFiles } from '../../../core/printing/pdf-download';
 import { ReportService } from '../../../core/services/report.service';
-import { StudentService } from '../../../core/services/student.service';
 import { downloadCsv, reportFileName } from '../report-utils';
 import { FeaturesService } from '../../../core/services/features.service';
 import { OrgChartComponent } from '../../org/org-chart.component';
@@ -51,7 +50,6 @@ export class StudentStatementComponent implements OnDestroy {
   protected readonly features = inject(FeaturesService);
 
   private readonly reports = inject(ReportService);
-  private readonly students = inject(StudentService);
   private readonly messages = inject(MessageService);
 
   readonly statement = signal<StudentStatement | null>(null);
@@ -77,7 +75,7 @@ export class StudentStatementComponent implements OnDestroy {
         this.loading.set(false);
 
         if (statement.hasPhoto && statement.registrationId) {
-          this.loadPhoto(statement.registrationId);
+          this.loadPhoto();
         }
       },
       error: (error: unknown) => {
@@ -100,8 +98,9 @@ export class StudentStatementComponent implements OnDestroy {
   }
 
   /** An `<img src>` cannot carry the bearer token, so the photo comes as a blob. */
-  private loadPhoto(registrationId: string): void {
-    this.students.photoBlob(registrationId).subscribe({
+  private loadPhoto(): void {
+    // The student's own photo route: the office's photo endpoint refuses students.
+    this.reports.myPhoto().subscribe({
       next: blob => this.photoUrl.set(URL.createObjectURL(blob)),
       error: () => this.photoUrl.set(null)
     });

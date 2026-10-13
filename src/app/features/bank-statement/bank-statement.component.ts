@@ -24,7 +24,10 @@ interface StockLine {
   remarks: string;
 }
 
-/** What is stored per month. Book debts are not stored: they are worked out from the fee ledger. */
+/**
+ * What is stored per month. Book debts are worked out from the fee ledger;
+ * `debtRows` holds them only when Admin has edited that month's figures by hand.
+ */
 interface StatementData {
   branchName: string;
   borrowerName: string;
@@ -34,6 +37,8 @@ interface StatementData {
   purchases: number | null;
   purchasesDaLc: number | null;
   draweeBills: number | null;
+  /** Hand-edited book debts for this month; absent means "use the calculated figures". */
+  debtRows?: BookDebtRow[] | null;
 }
 
 interface StatementDto {
@@ -68,9 +73,10 @@ const SECTIONS: { key: StockSection; label: string }[] = [
 /**
  * Bank of Maharashtra monthly statements (Appendix 6): stock and book debts.
  * Admin keeps the stock list here; a new month opens with the last saved
- * month's list, so only what changed needs editing. Book debts are not typed
- * in at all — they are the students' unpaid fees per branch, worked out from
- * the fee ledger. Both download in the bank's own layout, as PDF or Excel.
+ * month's list, so only what changed needs editing. Book debts are the
+ * students' unpaid fees per branch, worked out from the fee ledger — and can be
+ * edited by hand for a month when needed. Both download in the bank's own
+ * layout, as PDF or Excel.
  */
 @Component({
   selector: 'app-bank-statement',
@@ -143,23 +149,65 @@ const SECTIONS: { key: StockSection; label: string }[] = [
       </section>
 
       <section class="app-card bs__card">
-        <h2>Book debt statement</h2>
-        <p class="app-muted">Filled automatically from Avijan: students' unpaid monthly fees per branch as on {{ monthEndLabel() }}.
-          Aged from each student's last payment. Nothing to type here.</p>
-        <div class="bs__table-wrap">
-          <table class="bs__table bs__table--ro">
-            <thead><tr><th>Drawee</th><th>Opening</th><th>Raised</th><th>Received</th><th>Net</th><th>≤90 days</th><th>90–120</th><th>120–180</th><th>&gt;180</th></tr></thead>
-            <tbody>
-              @for (r of debts(); track r.drawee) {
-                <tr><td>{{ r.drawee }} ({{ r.students }})</td><td>{{ amt(r.opening) }}</td><td>{{ amt(r.raised) }}</td>
-                  <td>{{ amt(r.received) }}</td><td><strong>{{ amt(r.net) }}</strong></td><td>{{ amt(r.upto90) }}</td>
-                  <td>{{ amt(r.days90To120) }}</td><td>{{ amt(r.days120To180) }}</td><td>{{ amt(r.above180) }}</td></tr>
-              } @empty {
-                <tr><td colspan="9" class="app-muted">No unpaid fees for this month.</td></tr>
-              }
-            </tbody>
-          </table>
+        <div class="bs__debt-head">
+          <h2>Book debt statement</h2>
+          @if (data().debtRows) {
+            <p-button label="Use calculated figures" icon="pi pi-replay" severity="secondary" [text]="true" (onClick)="resetDebts()" />
+          } @else {
+            <p-button label="Edit figures" icon="pi pi-pencil" severity="secondary" [outlined]="true" (onClick)="editDebts()" />
+          }
         </div>
+
+        @if (data().debtRows; as rows) {
+          <p class="bs__note bs__note--warn"><i class="pi pi-pencil"></i>
+            Edited by hand for {{ monthLabel() }} — these figures go on the PDF and Excel. Save to keep them.
+            Calculated total was ₹{{ amt(calculatedNet()) }}.</p>
+          <div class="bs__table-wrap">
+            <table class="bs__table">
+              <thead><tr><th>Drawee</th><th>Opening</th><th>Raised</th><th>Received</th><th>Returned</th><th>Net</th>
+                <th>≤90 days</th><th>90–120</th><th>120–180</th><th>&gt;180</th><th></th></tr></thead>
+              <tbody>
+                @for (r of rows; track $index) {
+                  <tr [class.bs__row-bad]="!ageingMatches(r)">
+                    <td><input pInputText [(ngModel)]="r.drawee" (ngModelChange)="touch()" /></td>
+                    <td><input pInputText type="number" [(ngModel)]="r.opening" (ngModelChange)="recalc(r)" class="bs__num" /></td>
+                    <td><input pInputText type="number" [(ngModel)]="r.raised" (ngModelChange)="recalc(r)" class="bs__num" /></td>
+                    <td><input pInputText type="number" [(ngModel)]="r.received" (ngModelChange)="recalc(r)" class="bs__num" /></td>
+                    <td><input pInputText type="number" [(ngModel)]="r.returned" (ngModelChange)="recalc(r)" class="bs__num" /></td>
+                    <td class="bs__val"><strong>{{ amt(r.net) }}</strong></td>
+                    <td><input pInputText type="number" [(ngModel)]="r.upto90" (ngModelChange)="touch()" class="bs__num" /></td>
+                    <td><input pInputText type="number" [(ngModel)]="r.days90To120" (ngModelChange)="touch()" class="bs__num" /></td>
+                    <td><input pInputText type="number" [(ngModel)]="r.days120To180" (ngModelChange)="touch()" class="bs__num" /></td>
+                    <td><input pInputText type="number" [(ngModel)]="r.above180" (ngModelChange)="touch()" class="bs__num" /></td>
+                    <td><p-button icon="pi pi-trash" severity="danger" [text]="true" (onClick)="removeDebtRow(r)" ariaLabel="Remove" /></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          @if (debtMismatch()) {
+            <p class="bs__warn"><i class="pi pi-exclamation-triangle"></i>
+              On the highlighted rows the four ageing columns do not add up to Net — the bank will notice.</p>
+          }
+          <p-button label="Add row" icon="pi pi-plus" [text]="true" (onClick)="addDebtRow()" />
+        } @else {
+          <p class="app-muted">Filled automatically from Avijan: students' unpaid monthly fees per branch as on {{ monthEndLabel() }}.
+            Aged from each student's last payment. Use “Edit figures” to change them for this month.</p>
+          <div class="bs__table-wrap">
+            <table class="bs__table bs__table--ro">
+              <thead><tr><th>Drawee</th><th>Opening</th><th>Raised</th><th>Received</th><th>Net</th><th>≤90 days</th><th>90–120</th><th>120–180</th><th>&gt;180</th></tr></thead>
+              <tbody>
+                @for (r of calculatedDebts(); track r.drawee) {
+                  <tr><td>{{ r.drawee }} ({{ r.students }})</td><td>{{ amt(r.opening) }}</td><td>{{ amt(r.raised) }}</td>
+                    <td>{{ amt(r.received) }}</td><td><strong>{{ amt(r.net) }}</strong></td><td>{{ amt(r.upto90) }}</td>
+                    <td>{{ amt(r.days90To120) }}</td><td>{{ amt(r.days120To180) }}</td><td>{{ amt(r.above180) }}</td></tr>
+                } @empty {
+                  <tr><td colspan="9" class="app-muted">No unpaid fees for this month.</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
       </section>
 
       <div class="bs__actions">
@@ -189,6 +237,14 @@ const SECTIONS: { key: StockSection; label: string }[] = [
     .bs__val { text-align: right; white-space: nowrap; }
     .bs__table--ro td:not(:first-child), .bs__table--ro th:not(:first-child) { text-align: right; }
     .bs__total { text-align: right; margin: .75rem 0 0; }
+    .bs__debt-head ~ .bs__table-wrap .bs__table:not(.bs__table--ro) { min-width: 1150px; }
+    .bs__debt-head ~ .bs__table-wrap .bs__table:not(.bs__table--ro) .bs__num { min-width: 6.5rem; }
+    .bs__debt-head ~ .bs__table-wrap .bs__table:not(.bs__table--ro) td:first-child input { min-width: 12rem; }
+    .bs__debt-head { display: flex; justify-content: space-between; align-items: center; gap: .75rem; flex-wrap: wrap; }
+    .bs__debt-head h2 { margin: 0; }
+    .bs__note--warn { background: color-mix(in srgb, #f59f00 16%, transparent); margin: .6rem 0; }
+    .bs__row-bad td { background: color-mix(in srgb, #e03131 10%, transparent); }
+    .bs__warn { color: #c92a2a; font-size: .85rem; display: flex; gap: .4rem; align-items: center; }
     .bs__actions { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 2rem; }
   `]
 })
@@ -204,7 +260,9 @@ export class BankStatementComponent implements OnInit {
   readonly saved = signal(false);
   readonly carriedFrom = signal<string | null>(null);
   readonly data = signal<StatementData>(this.blank());
-  readonly debts = signal<BookDebtRow[]>([]);
+  /** Book debts as calculated from the fee ledger. */
+  readonly calculatedDebts = signal<BookDebtRow[]>([]);
+  readonly calculatedNet = computed(() => this.calculatedDebts().reduce((s, r) => s + r.net, 0));
   /** Bumped on every edit so the computed totals re-read the (mutated) lines. */
   private readonly version = signal(0);
 
@@ -263,12 +321,60 @@ export class BankStatementComponent implements OnInit {
         if (!this.data().branchName?.trim()) this.data().branchName = 'Sonarpur';
         this.saved.set(statement.saved);
         this.carriedFrom.set(statement.carriedFrom ? this.monthName(statement.carriedFrom) : null);
-        this.debts.set(debts);
+        this.calculatedDebts.set(debts);
+        // Hand edits belong to the month they were saved for. A month opened
+        // from last month's statement starts again from the calculated figures.
+        if (!statement.saved) this.data().debtRows = null;
         this.touch();
         this.loading.set(false);
       },
       error: () => this.loading.set(false)
     });
+  }
+
+  /** What the statement shows and prints: the hand-edited rows when there are any. */
+  debts(): BookDebtRow[] {
+    this.version();
+    return this.data().debtRows ?? this.calculatedDebts();
+  }
+
+  editDebts(): void {
+    this.data().debtRows = this.calculatedDebts().map(r => ({ ...r }));
+    this.touch();
+  }
+
+  resetDebts(): void {
+    this.data().debtRows = null;
+    this.touch();
+  }
+
+  addDebtRow(): void {
+    this.data().debtRows?.push({ drawee: 'Sundry debtors', students: 0, opening: 0, raised: 0, received: 0, returned: 0,
+      net: 0, upto90: 0, days90To120: 0, days120To180: 0, above180: 0 });
+    this.touch();
+  }
+
+  removeDebtRow(row: BookDebtRow): void {
+    const rows = this.data().debtRows;
+    if (rows) rows.splice(rows.indexOf(row), 1);
+    this.touch();
+  }
+
+  /** Net is the bank's own formula: (opening + raised) − received − returned. */
+  recalc(row: BookDebtRow): void {
+    const n = (v: unknown) => Number(v) || 0;
+    row.net = Math.round((n(row.opening) + n(row.raised) - n(row.received) - n(row.returned)) * 100) / 100;
+    this.touch();
+  }
+
+  ageingMatches(row: BookDebtRow): boolean {
+    const n = (v: unknown) => Number(v) || 0;
+    return Math.abs(n(row.upto90) + n(row.days90To120) + n(row.days120To180) + n(row.above180) - n(row.net)) < 0.5;
+  }
+
+  debtMismatch(): boolean {
+    this.version();
+    return (this.data().debtRows ?? []).some(r => !this.ageingMatches(r));
   }
 
   linesOf(section: StockSection): StockLine[] {
