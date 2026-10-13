@@ -477,21 +477,8 @@ export function certificateHtml(c: StudentCertificate): string {
     cursor: pointer;
   }
 
-  /* The signatory's name and title, laid over the "Branch-In-Charge" printed
-     in the artwork; the signature (and stamp) sit above the dotted line. */
-  .sig-cover {
-    position: absolute;
-    left: 730px;
-    top: 618px;
-    width: 272px;
-    height: 44px;
-    background: #fff;
-    text-align: center;
-    font-family: Arial, Helvetica, sans-serif;
-    line-height: 1.25;
-  }
-  .sig-cover strong { display: block; font-size: 14px; color: #1f2a44; }
-  .sig-cover span { font-size: 12px; color: #444; }
+  /* The signature (and stamp) above the dotted line; the artwork's own
+     "Branch-In-Charge" stays as printed beneath it. */
   .sig-box {
     position: absolute;
     left: 727px;
@@ -513,21 +500,13 @@ export function certificateHtml(c: StudentCertificate): string {
     opacity: 0.9;
   }
 
-  /* Number, download date and the QR code anyone can scan to check it. */
+  /* The QR code alone; scanning it shows the number, issue date and details. */
   .verify {
     position: absolute;
     left: 150px;
-    top: 588px;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 11px;
-    line-height: 1.45;
-    color: #333;
+    top: 584px;
   }
-  .verify svg { width: 72px; height: 72px; background: #fff; flex: 0 0 auto; }
-  .verify strong { color: #1f2a44; font-size: 12px; }
+  .verify svg { width: 76px; height: 76px; background: #fff; display: block; }
 
   .provisional {
     width: 1122px;
@@ -558,23 +537,11 @@ export function certificateHtml(c: StudentCertificate): string {
         : ''}
     </div>` : ''}
 
-    ${c.signatoryName ? `
-    <div class="sig-cover">
-      <strong>${e(c.signatoryName)}</strong>
-      <span>${e(c.signatoryTitle || 'Proprietor')}, Avijan</span>
-    </div>` : ''}
     ${c.signatureDataUrl ? `<div class="sig-box"><img src="${c.signatureDataUrl}" alt="Signature"></div>` : ''}
     ${c.stampDataUrl ? `<img class="stamp-img" src="${c.stampDataUrl}" alt="">` : ''}
 
     ${c.verifyCode ? `
-    <div class="verify">
-      ${qrSvg(verifyUrl(c.verifyCode))}
-      <div>
-        <strong>Certificate No. ${e(c.certificateNo)}</strong><br>
-        Issued online on ${issuedStamp(c.generatedOn)}<br>
-        Verify: avijan.in/verify/${e(c.verifyCode)}
-      </div>
-    </div>` : ''}
+    <div class="verify" title="Scan to verify this certificate">${qrSvg(verifyUrl(c.verifyCode))}</div>` : ''}
 
     <div id="certificatedescribtion">
       <table>
@@ -973,15 +940,6 @@ export function honorariumPayslipHtml(slip: HonorariumPayslip): string {
 /** The public page a certificate's QR code opens. */
 export function verifyUrl(code: string): string {
   return `https://www.avijan.in/verify/${encodeURIComponent(code)}`;
-}
-
-/** "13 Oct 2026, 8:05 PM" — when this copy was downloaded. */
-function issuedStamp(value?: string | null): string {
-  if (!value) return '';
-  const d = new Date(value);
-  return Number.isNaN(d.getTime())
-    ? escapeHtml(value)
-    : d.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
 /**

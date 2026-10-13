@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, DestroyRef, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -24,14 +24,14 @@ interface CleanImage { contentType: string; base64: string; dataUrl: string; }
     <div class="app-page-head">
       <span class="app-eyebrow">Certificates</span>
       <h1>Certificate signature</h1>
-      <p class="app-muted">The signature printed on every completion certificate, with the download date and a QR code
-        anyone can scan to check the certificate is genuine.</p>
+      <p class="app-muted">The signature printed above "Branch-In-Charge" on every completion certificate. Each certificate
+        also carries a QR code — scanning it shows the certificate's number, issue date and details, so anyone can check it is genuine.</p>
     </div>
 
     <div class="cs__grid">
       <section class="app-card cs__form">
-        <label>Signatory's name <em>*</em><input pInputText [ngModel]="name()" (ngModelChange)="name.set($event)" maxlength="100" placeholder="Anindita Mukherjee" /></label>
-        <label>Title <em>*</em><input pInputText [ngModel]="title()" (ngModelChange)="title.set($event)" maxlength="100" placeholder="Proprietor" /></label>
+        <label>Who signs <small class="app-muted">(for the office's record — the certificate itself reads "Branch-In-Charge")</small>
+          <input pInputText [ngModel]="name()" (ngModelChange)="name.set($event)" maxlength="100" placeholder="Anindita Mukherjee" /></label>
 
         <div class="cs__upload">
           <span>Signature <small>— sign in dark ink on plain white paper, then photograph or scan it</small></span>
@@ -63,8 +63,8 @@ interface CleanImage { contentType: string; base64: string; dataUrl: string; }
 
       <section class="app-card cs__preview">
         <h2>Preview</h2>
-        <p class="app-muted">A sample certificate with this signature, the download date and a QR code.</p>
-        <div class="cs__frame-wrap"><iframe #frame title="Certificate preview" [attr.srcdoc]="previewHtml()"></iframe></div>
+        <p class="app-muted">A sample certificate with this signature and its QR code.</p>
+        <div class="cs__frame-wrap"><iframe #frame title="Certificate preview"></iframe></div>
       </section>
     </div>
   `,
@@ -93,7 +93,8 @@ export class CertificateSettingsComponent implements OnInit {
   private readonly frame = viewChild<ElementRef<HTMLIFrameElement>>('frame');
 
   readonly name = signal('');
-  readonly title = signal('Proprietor');
+  /** Fixed: the certificate's artwork reads "Branch-In-Charge". */
+  private readonly title = 'Branch-In-Charge';
   private readonly destroyRef = inject(DestroyRef);
   readonly signature = signal<string | null>(null);
   readonly stamp = signal<string | null>(null);
@@ -114,16 +115,29 @@ export class CertificateSettingsComponent implements OnInit {
       dateOfJoining: '2025-10-01', examDate: '2026-09-30', totalFullMarks: 300, totalObtainedMarks: 240,
       percentScored: 80, grade: 'A', isComplete: true, generatedOn: new Date().toISOString(),
       issueNo: 1, isDuplicate: false, certificateNo: 'AVI-C-000000', verifyCode: 'sample',
-      signatoryName: this.name().trim() || 'Signatory name', signatoryTitle: this.title().trim() || 'Proprietor',
+      signatoryName: this.name().trim(), signatoryTitle: this.title,
       signatureDataUrl: this.signature(), stampDataUrl: this.stamp()
     } as StudentCertificate;
     return certificateHtml(sample).replace(/<button class="print-btn"[\s\S]*?<\/button>/, '');
   });
 
+  constructor() {
+    // Written into the frame directly: a srcdoc binding loses the certificate's own styles.
+    effect(() => {
+      const html = this.previewHtml();
+      const frame = this.frame()?.nativeElement;
+      const doc = frame?.contentDocument;
+      if (!doc) return;
+      doc.open();
+      doc.write(html);
+      doc.close();
+      this.fit();
+    });
+  }
+
   ngOnInit(): void {
     this.certificates.settings().subscribe(s => {
       this.name.set(s.signatoryName);
-      this.title.set(s.signatoryTitle || 'Proprietor');
       this.signature.set(s.signatureDataUrl);
       this.stamp.set(s.stampDataUrl);
       this.modifiedOn.set(s.modifiedOn);
@@ -131,13 +145,15 @@ export class CertificateSettingsComponent implements OnInit {
     });
     // The preview is drawn full size and scaled to fit its box.
     const observer = new ResizeObserver(() => this.fit());
+    const box = this.frame()?.nativeElement.parentElement;
+    if (box) observer.observe(box);
     observer.observe(document.body);
     this.destroyRef.onDestroy(() => observer.disconnect());
     setTimeout(() => this.fit());
   }
 
   /** Scales the full-size certificate down to the preview box. */
-  private fit(): void {
+  fit(): void {
     const frame = this.frame()?.nativeElement;
     const box = frame?.parentElement;
     if (frame && box) frame.style.transform = `scale(${box.clientWidth / 1122})`;
@@ -162,14 +178,10 @@ export class CertificateSettingsComponent implements OnInit {
   }
 
   save(): void {
-    if (!this.name().trim() || !this.title().trim()) {
-      this.messages.add({ severity: 'warn', summary: 'Enter the signatory\'s name and title', life: 4000 });
-      return;
-    }
     this.saving.set(true);
     this.certificates.save({
       signatoryName: this.name().trim(),
-      signatoryTitle: this.title().trim(),
+      signatoryTitle: this.title,
       signatureContentType: this.signatureNew?.contentType ?? null,
       signatureBase64: this.signatureNew?.base64 ?? null,
       stampContentType: this.stampNew?.contentType ?? null,
