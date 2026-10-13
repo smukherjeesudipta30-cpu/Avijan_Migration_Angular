@@ -1,3 +1,5 @@
+import { create as createQr } from 'qrcode';
+
 import { AdmitCard } from '../models/exam.model';
 import { FeeReceipt } from '../models/fee.model';
 import { HonorariumPayslip, StudentCertificate } from '../models/report.model';
@@ -475,6 +477,58 @@ export function certificateHtml(c: StudentCertificate): string {
     cursor: pointer;
   }
 
+  /* The signatory's name and title, laid over the "Branch-In-Charge" printed
+     in the artwork; the signature (and stamp) sit above the dotted line. */
+  .sig-cover {
+    position: absolute;
+    left: 730px;
+    top: 618px;
+    width: 272px;
+    height: 44px;
+    background: #fff;
+    text-align: center;
+    font-family: Arial, Helvetica, sans-serif;
+    line-height: 1.25;
+  }
+  .sig-cover strong { display: block; font-size: 14px; color: #1f2a44; }
+  .sig-cover span { font-size: 12px; color: #444; }
+  .sig-box {
+    position: absolute;
+    left: 727px;
+    top: 534px;
+    width: 252px;
+    height: 72px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .sig-box img { max-width: 230px; max-height: 70px; }
+  .stamp-img {
+    position: absolute;
+    left: 620px;
+    top: 540px;
+    width: 96px;
+    height: 96px;
+    object-fit: contain;
+    opacity: 0.9;
+  }
+
+  /* Number, download date and the QR code anyone can scan to check it. */
+  .verify {
+    position: absolute;
+    left: 150px;
+    top: 588px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11px;
+    line-height: 1.45;
+    color: #333;
+  }
+  .verify svg { width: 72px; height: 72px; background: #fff; flex: 0 0 auto; }
+  .verify strong { color: #1f2a44; font-size: 12px; }
+
   .provisional {
     width: 1122px;
     margin: 0 auto;
@@ -502,6 +556,24 @@ export function certificateHtml(c: StudentCertificate): string {
       ${c.originalIssuedOn
         ? `<span>Original issued ${shortDate(c.originalIssuedOn)}</span>`
         : ''}
+    </div>` : ''}
+
+    ${c.signatoryName ? `
+    <div class="sig-cover">
+      <strong>${e(c.signatoryName)}</strong>
+      <span>${e(c.signatoryTitle || 'Proprietor')}, Avijan</span>
+    </div>` : ''}
+    ${c.signatureDataUrl ? `<div class="sig-box"><img src="${c.signatureDataUrl}" alt="Signature"></div>` : ''}
+    ${c.stampDataUrl ? `<img class="stamp-img" src="${c.stampDataUrl}" alt="">` : ''}
+
+    ${c.verifyCode ? `
+    <div class="verify">
+      ${qrSvg(verifyUrl(c.verifyCode))}
+      <div>
+        <strong>Certificate No. ${e(c.certificateNo)}</strong><br>
+        Issued online on ${issuedStamp(c.generatedOn)}<br>
+        Verify: avijan.in/verify/${e(c.verifyCode)}
+      </div>
     </div>` : ''}
 
     <div id="certificatedescribtion">
@@ -894,4 +966,38 @@ export function honorariumPayslipHtml(slip: HonorariumPayslip): string {
 
   <a class="print-link" href="javascript:window.print()">Click to Print This Page</a>
 </body></html>`;
+}
+
+/* ------------------------------------------------- certificate helpers */
+
+/** The public page a certificate's QR code opens. */
+export function verifyUrl(code: string): string {
+  return `https://www.avijan.in/verify/${encodeURIComponent(code)}`;
+}
+
+/** "13 Oct 2026, 8:05 PM" — when this copy was downloaded. */
+function issuedStamp(value?: string | null): string {
+  if (!value) return '';
+  const d = new Date(value);
+  return Number.isNaN(d.getTime())
+    ? escapeHtml(value)
+    : d.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
+/**
+ * A QR code as inline SVG, drawn synchronously from the code's module matrix
+ * so the certificate's HTML can be built in one go (print window and PDF alike).
+ */
+export function qrSvg(text: string): string {
+  const qr = createQr(text, { errorCorrectionLevel: 'M' });
+  const size = qr.modules.size;
+  const quiet = 2;
+  let path = '';
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      if (qr.modules.get(x, y)) path += `M${x + quiet} ${y + quiet}h1v1h-1z`;
+    }
+  }
+  const box = size + quiet * 2;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${box} ${box}" shape-rendering="crispEdges"><rect width="${box}" height="${box}" fill="#fff"/><path d="${path}" fill="#000"/></svg>`;
 }

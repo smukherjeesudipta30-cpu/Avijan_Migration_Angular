@@ -26,6 +26,13 @@ export const routes: Routes = [
     redirectTo: ''
   },
   {
+    /* Public check behind the QR code printed on every certificate. */
+    path: 'verify/:code',
+    title: 'Certificate verification · Avijan',
+    loadComponent: () =>
+      import('./features/certificate-verify/certificate-verify.component').then(m => m.CertificateVerifyComponent)
+  },
+  {
     /* Public careers page: Receptionist vacancies and the Apply pop-up. Outside
        the shell and the sign-in — it is the page shared on Facebook and Instagram. */
     path: 'careers',
@@ -279,6 +286,14 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/holidays/holidays.component')
             .then(m => m.HolidaysComponent)
+      },
+      {
+        path: 'certificate-settings',
+        title: 'Certificate signature · Avijan',
+        canActivate: [roleGuard('Admin')],
+        loadComponent: () =>
+          import('./features/certificate-settings/certificate-settings.component')
+            .then(m => m.CertificateSettingsComponent)
       },
       {
         path: 'site-visits',

@@ -421,6 +421,16 @@ export interface StudentCertificate {
 
   /** When the original was taken. Null on the original itself. */
   originalIssuedOn?: string;
+
+  /** "AVI-C-000123", printed on the certificate. */
+  certificateNo?: string | null;
+  /** What the QR code carries; checked at avijan.in/verify/{code}. */
+  verifyCode?: string | null;
+  /** The signatory Admin set, and the signature and stamp as data: URLs. */
+  signatoryName?: string | null;
+  signatoryTitle?: string | null;
+  signatureDataUrl?: string | null;
+  stampDataUrl?: string | null;
 }
 
 /* ============================================================ pay slip */
