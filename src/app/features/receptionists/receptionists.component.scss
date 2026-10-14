@@ -189,4 +189,4 @@
   .rec__pay { flex-direction: column; align-items: stretch; }
 }
 
-.rec__who strong { margin-left: .5rem; vertical-align: middle; }
+.rec__who { display: flex; align-items: center; gap: .6rem; }
