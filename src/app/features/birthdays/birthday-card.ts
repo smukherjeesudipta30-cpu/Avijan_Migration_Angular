@@ -155,11 +155,16 @@ export function wishText(name: string): string {
 
 /** wa.me wants the number with country code and digits only; 10-digit numbers are Indian. */
 export function whatsAppUrl(phone: string | null, text: string): string {
-  let digits = (phone || '').replace(/\D/g, '');
-  if (digits.startsWith('0')) digits = digits.replace(/^0+/, '');
-  if (digits.length === 10) digits = '91' + digits;
+  const digits = whatsAppNumber(phone);
   const msg = encodeURIComponent(text);
-  return digits.length >= 11 ? `https://wa.me/${digits}?text=${msg}` : `https://wa.me/?text=${msg}`;
+  return digits ? `https://wa.me/${digits}?text=${msg}` : `https://wa.me/?text=${msg}`;
+}
+
+/** The number as WhatsApp knows it: country code and digits only, or null. */
+export function whatsAppNumber(phone: string | null): string | null {
+  let digits = (phone || '').replace(/\D/g, '').replace(/^0+/, '');
+  if (digits.length === 10) digits = '91' + digits;
+  return digits.length >= 11 ? digits : null;
 }
 
 export function loadImage(src: string): Promise<HTMLImageElement | null> {

@@ -88,14 +88,13 @@ const KINDS: BirthdayKind[] = ['Student', 'Teacher', 'Receptionist', 'Technical 
     <p-dialog [visible]="!!selected()" (visibleChange)="!$event && selected.set(null)" [modal]="true"
               [header]="'Birthday card — ' + (selected()?.name || '')" [style]="{ width: 'min(30rem, 96vw)' }">
       <canvas #card class="bd__canvas"></canvas>
-      <p class="app-muted bd__hint">Share the card, then pick WhatsApp. Or send the message straight to their number.</p>
       <div class="bd__dialog-actions">
-        <p-button label="Share card" icon="pi pi-share-alt" (onClick)="share()" [loading]="busy()" />
+        <button type="button" class="bd__wa bd__wa--big" (click)="sendWhatsApp()" [disabled]="busy()">
+          <i class="pi" [class.pi-whatsapp]="!busy()" [class.pi-spin]="busy()" [class.pi-spinner]="busy()"></i> Send card on WhatsApp
+        </button>
         <p-button label="Download" icon="pi pi-download" severity="secondary" (onClick)="download()" />
-        @if (selected(); as p) {
-          <a class="bd__wa" [href]="waLink(p)" target="_blank" rel="noopener"><i class="pi pi-whatsapp"></i> Send wish</a>
-        }
       </div>
+      <p class="app-muted bd__hint">{{ sendHint }}</p>
     </p-dialog>
   `,
   styles: [`
@@ -130,6 +129,8 @@ const KINDS: BirthdayKind[] = ['Student', 'Teacher', 'Receptionist', 'Technical 
     .bd__empty { text-align: center; padding: 3rem 1rem; color: #66708a; }
     .bd__empty .pi { font-size: 2rem; }
     .bd__canvas { width: 100%; height: auto; border-radius: 12px; display: block; }
+    button.bd__wa { border: 0; cursor: pointer; font: inherit; }
+    .bd__wa--big { padding: .6rem 1rem; font-size: .95rem; }
     .bd__hint { font-size: .82rem; margin: .6rem 0 0; }
   `]
 })
@@ -208,20 +209,39 @@ export class BirthdaysComponent implements OnInit {
     });
   }
 
-  async share(): Promise<void> {
-    const blob = await this.cardBlob();
-    if (!blob) return;
-    const file = new File([blob], this.fileName(), { type: 'image/png' });
+  readonly sendHint = isPhone()
+    ? 'Pick WhatsApp, then their chat — the card and message are attached.'
+    : 'Their WhatsApp chat opens with the message; the card is copied — press Ctrl+V in the chat, then Send.';
+
+  /**
+   * On a phone the card goes through the share sheet (WhatsApp, then the chat).
+   * On a computer a web page cannot attach a picture to WhatsApp, so the card is
+   * copied and the person's chat opened with the message; one Ctrl+V adds it.
+   */
+  async sendWhatsApp(): Promise<void> {
     const p = this.selected();
+    const blob = await this.cardBlob();
+    if (!p || !blob) return;
+    const file = new File([blob], this.fileName(), { type: 'image/png' });
     this.busy.set(true);
     try {
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], text: wishText(p?.name ?? '') });
-      } else {
+      if (isPhone() && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], text: wishText(p.name ?? '') });
+        return;
+      }
+      let copied = false;
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        copied = true;
+      } catch {
         await downloadBlob(blob, file.name);
       }
+      window.open(this.waLink(p), '_blank', 'noopener');
+      this.messages.add(copied
+        ? { severity: 'success', summary: 'Card copied', detail: 'Click in the WhatsApp chat, press Ctrl+V, then Send.', life: 8000 }
+        : { severity: 'info', summary: 'Card downloaded', detail: 'Attach it in the WhatsApp chat that just opened.', life: 8000 });
     } catch {
-      // Cancelled by the user.
+      // Share cancelled.
     } finally {
       this.busy.set(false);
     }
@@ -253,4 +273,8 @@ export class BirthdaysComponent implements OnInit {
       return null;
     }
   }
+}
+
+function isPhone(): boolean {
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 }
