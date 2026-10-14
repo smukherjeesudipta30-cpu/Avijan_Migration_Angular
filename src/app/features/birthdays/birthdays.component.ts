@@ -1,16 +1,19 @@
 import { DatePipe } from '@angular/common';
 import { Component, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { FormsModule } from '@angular/forms';
+import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
 import { DialogModule } from 'primeng/dialog';
 
 import { downloadBlob } from '../../core/printing/download-file';
-import { BirthdayKind, BirthdayPerson, BirthdayService } from '../../core/services/birthday.service';
+import { BirthdayKind, BirthdayPerson, BirthdayService, ProprietorProfile } from '../../core/services/birthday.service';
 import { StudentService } from '../../core/services/student.service';
 import { drawBirthdayCard, loadImage, whatsAppUrl, wishText } from './birthday-card';
 
 type Window = 0 | 7 | 30;
-const KINDS: BirthdayKind[] = ['Student', 'Teacher', 'Receptionist', 'Technical Staff', 'Editor', 'Admin', 'SuperAdmin'];
+const KINDS: BirthdayKind[] = ['Student', 'Teacher', 'Receptionist', 'Technical Staff', 'Editor', 'Admin', 'SuperAdmin', 'Proprietor'];
 
 /**
  * Today's and upcoming birthdays of students and staff (wherever a date of birth
@@ -19,7 +22,7 @@ const KINDS: BirthdayKind[] = ['Student', 'Teacher', 'Receptionist', 'Technical 
 @Component({
   selector: 'app-birthdays',
   standalone: true,
-  imports: [DatePipe, ButtonModule, DialogModule],
+  imports: [DatePipe, FormsModule, ButtonModule, DialogModule, InputTextModule],
   template: `
     <section class="bd">
       <header class="bd__head">
@@ -33,6 +36,17 @@ const KINDS: BirthdayKind[] = ['Student', 'Teacher', 'Receptionist', 'Technical 
           }
         </div>
       </header>
+
+      <details class="bd__prop">
+        <summary><i class="pi pi-star"></i> Proprietor's birthday
+          <span class="app-muted">— announced to Admin, SuperAdmin and Editor</span></summary>
+        <div class="bd__prop-form">
+          <label>Name<input pInputText [(ngModel)]="prop.name" maxlength="100" /></label>
+          <label>Date of birth<input pInputText type="date" [(ngModel)]="prop.dateOfBirth" [max]="todayIso" /></label>
+          <label>Phone<input pInputText [(ngModel)]="prop.phone" maxlength="20" inputmode="tel" /></label>
+          <p-button label="Save" icon="pi pi-check" size="small" (onClick)="saveProprietor()" [loading]="savingProp()" />
+        </div>
+      </details>
 
       <div class="bd__chips">
         <button type="button" [class.on]="kind() === null" (click)="kind.set(null)">All ({{ inRange().length }})</button>
@@ -107,6 +121,12 @@ const KINDS: BirthdayKind[] = ['Student', 'Teacher', 'Receptionist', 'Technical 
     .bd__actions, .bd__dialog-actions { display: flex; gap: .5rem; align-items: center; margin-top: .5rem; flex-wrap: wrap; }
     .bd__wa { display: inline-flex; align-items: center; gap: .35rem; background: #25d366; color: #fff; text-decoration: none;
       border-radius: 8px; padding: .4rem .8rem; font-weight: 600; font-size: .88rem; }
+    .bd__prop { margin: 1rem 0 0; background: #fff; border: 1px solid #ece6f7; border-radius: 12px; padding: .7rem 1rem; }
+    .bd__prop summary { cursor: pointer; font-weight: 600; color: #5a189a; }
+    .bd__prop summary .app-muted { font-weight: 400; font-size: .85rem; }
+    .bd__prop-form { display: flex; flex-wrap: wrap; gap: .7rem; align-items: flex-end; margin-top: .7rem; }
+    .bd__prop-form label { display: flex; flex-direction: column; gap: .25rem; font-size: .85rem; color: #66708a; }
+    .bd__kind[data-kind="Proprietor"] { background: #fff3c4; color: #8a5a00; }
     .bd__empty { text-align: center; padding: 3rem 1rem; color: #66708a; }
     .bd__empty .pi { font-size: 2rem; }
     .bd__canvas { width: 100%; height: auto; border-radius: 12px; display: block; }
@@ -116,6 +136,7 @@ const KINDS: BirthdayKind[] = ['Student', 'Teacher', 'Receptionist', 'Technical 
 export class BirthdaysComponent implements OnInit {
   private readonly birthdays = inject(BirthdayService);
   private readonly students = inject(StudentService);
+  private readonly messages = inject(MessageService);
   private readonly canvas = viewChild<ElementRef<HTMLCanvasElement>>('card');
 
   readonly windows: { value: Window; label: string }[] = [
@@ -128,11 +149,33 @@ export class BirthdaysComponent implements OnInit {
   readonly range = signal<Window>(7);
   readonly kind = signal<BirthdayKind | null>(null);
   readonly selected = signal<BirthdayPerson | null>(null);
+  readonly savingProp = signal(false);
+  readonly todayIso = new Date().toISOString().slice(0, 10);
+  prop: ProprietorProfile = { name: '', dateOfBirth: null, phone: null };
 
   readonly inRange = computed(() => this.all().filter(p => p.daysAway <= this.range()));
   readonly shown = computed(() => this.inRange().filter(p => !this.kind() || p.kind === this.kind()));
 
   ngOnInit(): void {
+    this.load();
+    this.birthdays.proprietor().subscribe(p => this.prop = { ...p, dateOfBirth: p.dateOfBirth?.slice(0, 10) ?? null });
+  }
+
+  saveProprietor(): void {
+    this.savingProp.set(true);
+    this.birthdays.saveProprietor({
+      name: this.prop.name?.trim() ?? '', dateOfBirth: this.prop.dateOfBirth || null, phone: this.prop.phone?.trim() || null
+    }).subscribe({
+      next: () => {
+        this.savingProp.set(false);
+        this.messages.add({ severity: 'success', summary: 'Proprietor\x27s birthday saved', life: 3000 });
+        this.load();
+      },
+      error: () => this.savingProp.set(false)
+    });
+  }
+
+  private load(): void {
     this.birthdays.upcoming(30).subscribe({
       next: list => {
         this.all.set(list);
