@@ -495,3 +495,13 @@
 
   i { margin-right: 0.3rem; }
 }
+
+.dash__notice-bday {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.4rem 0;
+  color: #b4236b;
+
+  a { margin-left: auto; font-weight: 600; color: #b4236b; }
+}

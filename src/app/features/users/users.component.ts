@@ -141,6 +141,9 @@ export class UsersComponent {
   });
 
   constructor() {
+    // Date of birth is required for every role except Student (a student's
+    // comes from the student record); birthday alerts read it.
+    this.form.controls.roles.valueChanges.subscribe(() => this.updateDobRule());
     this.users.roles().subscribe({
       next: data => this.roleOptions.set(data),
       error: () => this.roleOptions.set(['Admin', 'Editor', 'Teacher', 'Student', 'Receptionist'])
@@ -560,6 +563,18 @@ export class UsersComponent {
       detail: 'Allow popups for this site to open the letter.',
       life: 6000
     });
+  }
+
+  /** True when the chosen role needs a date of birth — anything but Student alone. */
+  dobRequired(): boolean {
+    const roles = (this.form.controls.roles.value ?? '').split(/[,&]/).map(r => r.trim().toLowerCase()).filter(Boolean);
+    return roles.length > 0 && !roles.every(r => r === 'student');
+  }
+
+  private updateDobRule(): void {
+    const dob = this.form.controls.dateOfBirth;
+    dob.setValidators(this.dobRequired() ? Validators.required : null);
+    dob.updateValueAndValidity({ emitEvent: false });
   }
 
   /* ----------------------------------------------------------- helpers */

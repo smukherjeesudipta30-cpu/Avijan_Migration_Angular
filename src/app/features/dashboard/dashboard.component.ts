@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -40,7 +41,7 @@ interface StatCard {
  */
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule, FormsModule, CardModule, ChartModule, TableModule, TagModule, ButtonModule, SelectModule, SkeletonModule, OrgChartComponent],
+  imports: [CommonModule, FormsModule, CardModule, ChartModule, TableModule, TagModule, ButtonModule, SelectModule, SkeletonModule, OrgChartComponent, RouterLink],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
 })

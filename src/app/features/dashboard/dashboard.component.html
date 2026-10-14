@@ -310,6 +310,12 @@
                 <small class="app-muted">{{ note.createdOn | date: 'd MMM y, h:mm a' }}</small>
               </div>
 
+              @if (note.type === 'Birthday') {
+                <p class="dash__notice-bday">
+                  <i class="pi pi-gift"></i> {{ note.courseName }}
+                  <a routerLink="/birthdays">Send a birthday wish</a>
+                </p>
+              } @else {
               <dl class="dash__notice-grid">
                 @if (note.registrationId) {
                   <dt>Registration id</dt><dd>{{ note.registrationId }}</dd>
@@ -339,6 +345,7 @@
                   </dd>
                 }
               </dl>
+              }
 
               @if (!note.isRead) {
                 <p-button

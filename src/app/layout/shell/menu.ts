@@ -74,6 +74,7 @@ export const MENU: MenuSection[] = [
       { label: 'Bank Statement', icon: 'pi pi-building-columns', route: '/bank-statement', roles: ['Admin', 'Editor'] },
       { label: 'Careers', icon: 'pi pi-briefcase', route: '/careers-admin', roles: ['Admin', 'Editor'] },
       { label: 'Website Visitors', icon: 'pi pi-chart-bar', route: '/site-visits', roles: ['Admin', 'Editor'] },
+      { label: 'Birthdays', icon: 'pi pi-gift', route: '/birthdays', roles: ['Admin'] },
       { label: 'Certificate Signature', icon: 'pi pi-pen-to-square', route: '/certificate-settings', roles: ['Admin'] },
       // The student's own side: pay this month against the institute's QR code.
       { label: 'Pay My Fees', icon: 'pi pi-indian-rupee', route: '/my-fees', roles: ['Student'] }

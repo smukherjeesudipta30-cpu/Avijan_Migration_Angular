@@ -288,6 +288,14 @@ export const routes: Routes = [
             .then(m => m.HolidaysComponent)
       },
       {
+        path: 'birthdays',
+        title: 'Birthdays · Avijan',
+        canActivate: [roleGuard('Admin')],
+        loadComponent: () =>
+          import('./features/birthdays/birthdays.component')
+            .then(m => m.BirthdaysComponent)
+      },
+      {
         path: 'certificate-settings',
         title: 'Certificate signature · Avijan',
         canActivate: [roleGuard('Admin')],
