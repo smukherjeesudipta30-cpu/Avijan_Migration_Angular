@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, OnDestroy, effect, inject, input, signal } from '@angular/core';
+import { Component, OnDestroy, effect, inject, input, signal, untracked } from '@angular/core';
 
 import { environment } from '../../environments/environment';
 
@@ -30,9 +30,11 @@ export class StaffAvatarComponent implements OnDestroy {
   readonly url = signal<string | null>(null);
 
   constructor() {
+    // Only loginId is tracked: setUrl reads url(), and tracking that made every
+    // arriving photo re-run this effect, clear itself and fetch again, forever.
     effect(() => {
       const login = this.loginId()?.trim();
-      this.setUrl(null);
+      untracked(() => this.setUrl(null));
       if (!login) return;
       this.http.get(`${environment.apiBaseUrl}/users/staff-photo`, { params: { loginId: login }, responseType: 'blob' })
         .subscribe({ next: b => { if (b?.size) this.setUrl(URL.createObjectURL(b)); }, error: () => {} });
