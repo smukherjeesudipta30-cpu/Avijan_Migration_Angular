@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { StaffAvatarComponent } from '../../shared/staff-avatar.component';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -46,6 +47,7 @@ import { PayCycleNoticeComponent } from '../../shared/pay-cycle/pay-cycle-notice
 @Component({
   selector: 'app-receptionists',
   imports: [
+    StaffAvatarComponent,
     CommonModule,
     PayCycleNoticeComponent,
     FormsModule,

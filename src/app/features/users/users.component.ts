@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, effect, inject, signal } from '@angular/core';
+import { UserPhotoComponent } from './user-photo.component';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -44,6 +45,7 @@ type StatusFilter = 'all' | 'active' | 'inactive';
 @Component({
   selector: 'app-users',
   imports: [
+    UserPhotoComponent,
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
@@ -563,6 +565,11 @@ export class UsersComponent {
       detail: 'Allow popups for this site to open the letter.',
       life: 6000
     });
+  }
+
+  /** Teacher, Receptionist and Editor get a photo (for their birthday card). */
+  photoRole(): boolean {
+    return /teacher|receptionist|editor/i.test(this.form.controls.roles.value ?? '');
   }
 
   /** True when the chosen role needs a date of birth — anything but Student alone. */

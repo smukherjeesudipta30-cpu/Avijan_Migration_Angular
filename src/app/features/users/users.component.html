@@ -122,6 +122,14 @@
       </div>
     </div>
 
+    @if (photoRole()) {
+      @if (editingId(); as id) {
+        <app-user-photo [userId]="id" />
+      } @else {
+        <p class="app-muted usr__photo-note"><i class="pi pi-camera"></i> Save the user first, then open it again to take their photo.</p>
+      }
+    }
+
     <div class="usr__checks">
       <label class="usr__check">
         <p-checkbox formControlName="isActive" [binary]="true" inputId="isActive" />

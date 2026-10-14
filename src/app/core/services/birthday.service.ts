@@ -18,6 +18,8 @@ export interface BirthdayPerson {
   nextBirthday: string;
   daysAway: number;
   turningAge: number;
+  /** Hierarchy chart box whose photo goes on the card (Technical Staff, Proprietor). */
+  orgNodeId?: number | null;
 }
 
 export interface ProprietorProfile {
@@ -42,5 +44,15 @@ export class BirthdayService {
 
   saveProprietor(body: ProprietorProfile): Observable<ApiResponse<ProprietorProfile>> {
     return this.http.put<ApiResponse<ProprietorProfile>>(`${this.base}/proprietor`, body);
+  }
+
+  /** A staff member's photo: the User form photo, else their Hierarchy photo (empty when none). */
+  staffPhoto(loginId: string): Observable<Blob> {
+    return this.http.get(`${environment.apiBaseUrl}/users/staff-photo`, { params: { loginId }, responseType: 'blob' });
+  }
+
+  /** The photo on a Hierarchy chart box. */
+  orgPhoto(nodeId: number): Observable<Blob> {
+    return this.http.get(`${environment.apiBaseUrl}/org/nodes/${nodeId}/photo`, { responseType: 'blob' });
   }
 }

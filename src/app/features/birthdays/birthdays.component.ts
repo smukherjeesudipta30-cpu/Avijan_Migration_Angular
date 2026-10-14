@@ -262,9 +262,15 @@ export class BirthdaysComponent implements OnInit {
   }
 
   private async photoFor(p: BirthdayPerson): Promise<HTMLImageElement | null> {
-    if (!p.registrationId) return null;
+    // Technical Staff and the Proprietor: their Hierarchy chart photo. Students:
+    // their student photo. Other staff: the User form photo, else their Hierarchy photo.
+    if (!p.orgNodeId && !p.registrationId && !p.loginId) return null;
     try {
-      const blob = await firstValueFrom(this.students.photoBlob(p.registrationId));
+      const blob = await firstValueFrom(p.orgNodeId
+        ? this.birthdays.orgPhoto(p.orgNodeId)
+        : p.registrationId
+          ? this.students.photoBlob(p.registrationId)
+          : this.birthdays.staffPhoto(p.loginId!));
       if (!blob?.size) return null;
       const url = URL.createObjectURL(blob);
       const img = await loadImage(url);

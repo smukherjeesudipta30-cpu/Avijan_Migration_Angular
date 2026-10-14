@@ -165,7 +165,8 @@
 
     <ng-template pTemplate="body" let-person>
       <tr [class.rec__row--inactive]="!person.isActive">
-        <td>
+        <td class="rec__who">
+          <app-staff-avatar [loginId]="person.loginId" [name]="person.name" />
           <strong>{{ person.name }}</strong>
           @if (!person.isActive) {
             <p-tag value="inactive" severity="secondary" styleClass="rec__tag" />
