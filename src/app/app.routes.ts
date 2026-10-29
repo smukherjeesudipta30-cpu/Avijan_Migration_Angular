@@ -41,6 +41,13 @@ export const routes: Routes = [
       import('./features/careers/careers-page.component').then(m => m.CareersPageComponent)
   },
   {
+    /* The privacy policy. Public: Google Play links to it from the store listing. */
+    path: 'privacy',
+    title: 'Privacy Policy · Avijan',
+    loadComponent: () =>
+      import('./features/privacy/privacy-page.component').then(m => m.PrivacyPageComponent)
+  },
+  {
     /* The public competition portal. Outside the shell and outside the sign-in:
        entrants are children from any school with no account here, and the owner
        asked for it to be reachable straight from the landing page. */
