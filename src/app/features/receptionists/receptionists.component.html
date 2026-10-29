@@ -378,7 +378,7 @@
       [scrollable]="true"
       scrollHeight="20rem"
       styleClass="p-datatable-sm"
-      [tableStyle]="{ 'min-width': '34rem' }">
+      [tableStyle]="{ 'min-width': '42rem' }">
 
       <ng-template pTemplate="header">
         <tr>
@@ -386,6 +386,7 @@
           <th class="rec__num" style="width: 8rem">Amount</th>
           <th class="rec__num" style="width: 8rem">Bonus</th>
           <th class="rec__num" style="width: 8rem">Referral</th>
+          <th class="rec__num" style="width: 8rem">Total paid</th>
           <th style="width: 9rem">Paid on</th>
           <th>Note</th>
           <th style="width: 4rem"></th>
@@ -403,6 +404,7 @@
           <td class="rec__num">
             @if (payment.referralBonus) { {{ money(payment.referralBonus) }} } @else { &mdash; }
           </td>
+          <td class="rec__num"><strong>{{ money(paidTotal(payment)) }}</strong></td>
           <td>{{ payment.paidOn ? (payment.paidOn | date: 'd MMM y') : '&mdash;' }}</td>
           <td class="rec__sub">
             {{ payment.notes || '&mdash;' }}

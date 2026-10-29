@@ -334,8 +334,13 @@ export class ReceptionistsComponent {
    */
   readonly payDate = signal<Date | null>(new Date());
 
+  /** Everything handed over for one month: the pay itself plus the covered-shift and referral bonuses. */
+  paidTotal(p: ReceptionistPayment): number {
+    return (p.amount ?? 0) + (p.extraShiftBonus ?? 0) + (p.referralBonus ?? 0);
+  }
+
   readonly paymentsTotal = computed(() =>
-    this.payments().reduce((sum, p) => sum + (p.amount ?? 0) + (p.extraShiftBonus ?? 0), 0));
+    this.payments().reduce((sum, p) => sum + this.paidTotal(p), 0));
 
   openPayments(person: ReceptionistListItem): void {
     this.payFor.set(person);
