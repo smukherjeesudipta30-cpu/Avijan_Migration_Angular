@@ -73,6 +73,8 @@ export const MENU: MenuSection[] = [
       { label: 'Proprietor Honorarium', icon: 'pi pi-user', route: '/proprietor-honorarium', roles: ['Admin', 'Editor'] },
       { label: 'Bank Statement', icon: 'pi pi-building-columns', route: '/bank-statement', roles: ['Admin', 'Editor'] },
       { label: 'Careers', icon: 'pi pi-briefcase', route: '/careers-admin', roles: ['Admin', 'Editor'] },
+      // The "30% OFF" ribbon on the front page: its percentage and how many days it shows.
+      { label: 'Admission Offer', icon: 'pi pi-percentage', route: '/offer-settings', roles: ['Admin', 'Receptionist'] },
       { label: 'Website Visitors', icon: 'pi pi-chart-bar', route: '/site-visits', roles: ['Admin', 'Editor'] },
       { label: 'Birthdays', icon: 'pi pi-gift', route: '/birthdays', roles: ['Admin'] },
       { label: 'Certificate Signature', icon: 'pi pi-pen-to-square', route: '/certificate-settings', roles: ['Admin'] },

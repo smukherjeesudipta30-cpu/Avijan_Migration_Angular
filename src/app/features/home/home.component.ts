@@ -19,6 +19,7 @@ import { FeaturesService } from '../../core/services/features.service';
 import { environment } from '../../../environments/environment';
 import { AVIJAN_FACEBOOK, AVIJAN_INSTAGRAM, Vacancy, hiringHeadline } from '../../core/models/career.model';
 import { CareerService } from '../../core/services/career.service';
+import { OfferPublic, OfferService } from '../../core/services/offer.service';
 
 /** One picture in the Portfolio strip, with the caption the legacy page used. */
 interface PortfolioItem {
@@ -382,12 +383,19 @@ export class HomeComponent implements OnDestroy {
   readonly hiringTitle = computed(() => hiringHeadline(this.hiring()));
   readonly hiringBranches = computed(() => [...new Set(this.hiring().map(v => v.branch))].join(', '));
 
+  /* ------------------------------------------------------------- offer */
+
+  private readonly offers = inject(OfferService);
+  /** The corner ribbon's offer, set by Admin/Receptionist; null hides the ribbon. */
+  readonly offer = signal<OfferPublic | null>(null);
+
   /** The lightbox the legacy page got by linking each thumbnail to its full image. */
   readonly lightbox = signal<PortfolioItem | null>(null);
 
   constructor() {
     this.careers.open().subscribe({ next: v => this.hiring.set(v), error: () => this.hiring.set([]) });
     this.loadClosures();
+    this.offers.publicOffer().subscribe({ next: o => this.offer.set(o), error: () => this.offer.set(null) });
 
     this.about.getAboutPage().subscribe({
       next: page => {

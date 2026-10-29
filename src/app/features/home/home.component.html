@@ -184,7 +184,10 @@
   <div class="hm__about-split">
     <div class="hm__about-copy">
       <!-- The corner ribbon and scrolling admission banner from the legacy page. -->
-      <div class="hm__ribbon">30% OFF</div>
+      <!-- The ribbon's percentage and days come from the Admission Offer screen (Admin/Receptionist). -->
+      @if (offer(); as o) {
+        <div class="hm__ribbon" [title]="'Offer valid till ' + (o.endsOn | date: 'd MMM y')">{{ o.percentage }}% OFF</div>
+      }
 
       <div class="hm__admission">
         <span>&#128227; Admission going on, join Avijan today &#128227;</span>

@@ -304,6 +304,14 @@ export const routes: Routes = [
             .then(m => m.CertificateSettingsComponent)
       },
       {
+        path: 'offer-settings',
+        title: 'Admission offer · Avijan',
+        canActivate: [roleGuard('Admin', 'Receptionist')],
+        loadComponent: () =>
+          import('./features/offer-settings/offer-settings.component')
+            .then(m => m.OfferSettingsComponent)
+      },
+      {
         path: 'site-visits',
         title: 'Website visitors · Avijan',
         canActivate: [roleGuard('Admin', 'Editor')],
