@@ -48,6 +48,13 @@ export const routes: Routes = [
       import('./features/privacy/privacy-page.component').then(m => m.PrivacyPageComponent)
   },
   {
+    /* How to ask for account deletion. Public: the Play Data safety form links to it. */
+    path: 'delete-account',
+    title: 'Delete your account · Avijan',
+    loadComponent: () =>
+      import('./features/privacy/delete-account-page.component').then(m => m.DeleteAccountPageComponent)
+  },
+  {
     /* The public competition portal. Outside the shell and outside the sign-in:
        entrants are children from any school with no account here, and the owner
        asked for it to be reachable straight from the landing page. */

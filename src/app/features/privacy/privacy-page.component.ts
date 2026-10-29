@@ -85,8 +85,8 @@ import { RouterLink } from '@angular/router';
 
         <h2>7. Your choices and rights</h2>
         <p>You can ask us to see, correct or delete your personal information, or to close your account, by emailing
-          <a href="mailto:mail.avijan@gmail.com">mail.avijan&#64;gmail.com</a> or visiting any branch. We will reply
-          within 30 days. Some records, such as fee receipts, may have to be kept to meet legal requirements; we will
+          <a href="mailto:mail.avijan@gmail.com">mail.avijan&#64;gmail.com</a> or visiting any branch
+          (<a routerLink="/delete-account">how to ask for deletion</a>). We will reply within 30 days. Some records, such as fee receipts, may have to be kept to meet legal requirements; we will
           tell you if so. You can turn off notifications and location for the app at any time in your phone's
           settings.</p>
 
