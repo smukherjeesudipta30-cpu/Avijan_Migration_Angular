@@ -88,16 +88,35 @@ async function renderToCanvas(html: string, width: number): Promise<HTMLCanvasEl
   }
 }
 
-/** Resolves once every image has loaded or failed - capped, so a dead image cannot hang the download. */
+/**
+ * Resolves once every image has loaded (or failed) and been decoded, and the
+ * fonts are ready - capped, so a dead image cannot hang the download.
+ *
+ * The cap is generous on purpose. The certificate artwork is a ~300 KB photo:
+ * on a first visit over a phone connection it can take several seconds, and a
+ * short cap captured the certificate before it arrived - which is why the
+ * first download came out wrong and a second one (from the cache) came out
+ * right. Decoding matters too: an image can report "loaded" before it is ready
+ * to paint, and html2canvas then draws it blank.
+ */
 function waitForImages(doc: Document): Promise<void> {
-  const pending = Array.from(doc.images).filter(img => !img.complete);
+  const images = Array.from(doc.images);
   const loaded = Promise.all(
-    pending.map(img => new Promise<void>(resolve => {
-      img.addEventListener('load', () => resolve());
-      img.addEventListener('error', () => resolve());
-    }))
+    images.map(img => {
+      const arrived = img.complete
+        ? Promise.resolve()
+        : new Promise<void>(resolve => {
+            img.addEventListener('load', () => resolve(), { once: true });
+            img.addEventListener('error', () => resolve(), { once: true });
+          });
+      return arrived.then(() => (img.naturalWidth ? img.decode().catch(() => undefined) : undefined));
+    })
   );
-  return Promise.race([loaded.then(() => undefined), new Promise<void>(r => setTimeout(r, 4000))]);
+  const fonts = (doc as Document & { fonts?: FontFaceSet }).fonts?.ready.catch(() => undefined);
+  const settled = Promise.all([loaded, fonts])
+    // One more frame, so the decoded images are laid out before the capture.
+    .then(() => new Promise<void>(r => requestAnimationFrame(() => r())));
+  return Promise.race([settled, new Promise<void>(r => setTimeout(r, 20000))]);
 }
 
 /** A file name safe on Windows and Android alike. */
