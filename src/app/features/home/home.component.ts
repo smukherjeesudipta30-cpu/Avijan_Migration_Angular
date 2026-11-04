@@ -179,7 +179,7 @@ export class HomeComponent implements OnDestroy {
 
   /** The Champahati branch, shared with Avijan PreSchool (address from the rent agreement). */
   readonly champahatiBranch =
-    'First Floor, beside Champahati-Baruipur Main Road, Mouza Haral, Champahati, P.S. Baruipur, South 24 Parganas, West Bengal';
+    'First Floor, beside Champahati-Baruipur Main Road, Mouza Haral, Champahati, P.S. Baruipur, South 24 Parganas, West Bengal - 743330';
 
   /** The Computer Centre's own Champahati number; the office number is shared with the PreSchool and comes from its settings. */
   readonly champahatiPhone = '62908 91537';
@@ -406,7 +406,7 @@ export class HomeComponent implements OnDestroy {
   /** The opening day the PreSchool admin set for Champahati ("yyyy-MM-dd"); the branch shares the building. */
   readonly champahatiOpensOn = signal<string | null>(null);
   /** The Champahati office number, shared with the PreSchool; this until its settings answer. */
-  readonly champahatiOffice = signal('68287 74395');
+  readonly champahatiOffice = signal('094778 89645');
   /** "Coming soon" until the opening day has come, and while the answer is still on its way. */
   readonly champahatiSoon = computed(() => isComingSoon(this.champahatiOpensOn()));
 
