@@ -15,6 +15,9 @@ export const PRESCHOOL_STAFF: UserRole[] = ['PreSchoolHead', 'PreSchoolFrontDesk
 /** Every PreSchool role, parents included. */
 export const PRESCHOOL_ROLES: UserRole[] = [...PRESCHOOL_STAFF, 'Parent'];
 
+/** Every Computer Centre role. SuperAdmin belongs to both schools and is in neither list. */
+export const COMPUTER_CENTRE_ROLES: UserRole[] = ['Admin', 'Editor', 'Student', 'Teacher', 'Receptionist'];
+
 export interface AuthUser {
   id: number;
   name: string;

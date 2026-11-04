@@ -16,7 +16,7 @@ import { ChatUiService } from '../../core/services/chat-ui.service';
 import { FeaturesService } from '../../core/services/features.service';
 import { LoadingService } from '../../core/services/loading.service';
 import { ReportService } from '../../core/services/report.service';
-import { ROLE_LABELS } from '../../core/models/auth.model';
+import { COMPUTER_CENTRE_ROLES, PRESCHOOL_ROLES, ROLE_LABELS } from '../../core/models/auth.model';
 import { MENU, MenuSection, School } from './menu';
 
 @Component({
@@ -80,8 +80,17 @@ export class ShellComponent {
    */
   readonly school = computed<School>(() => this.url().startsWith('/preschool') ? 'preschool' : 'computer');
 
-  /** Only a SuperAdmin works in both schools, so only they get the switcher. */
-  readonly canSwitchSchool = computed(() => (this.user()?.roles ?? []).includes('SuperAdmin'));
+  /**
+   * Who gets the school switcher: anyone who actually works in both schools.
+   * A SuperAdmin always does; so does an account holding roles on both sides,
+   * such as an Admin who is also the PreSchool's head. Without this they saw
+   * one merged drawer instead of two schools they could move between.
+   */
+  readonly canSwitchSchool = computed(() => {
+    const held = this.user()?.roles ?? [];
+    if (held.includes('SuperAdmin')) return true;
+    return held.some(r => PRESCHOOL_ROLES.includes(r)) && held.some(r => COMPUTER_CENTRE_ROLES.includes(r));
+  });
 
   readonly roleLabel = computed(() => {
     const role = this.user()?.role;
@@ -108,9 +117,11 @@ export class ShellComponent {
     const school = this.school();
 
     return MENU
-      // Everyone else sees only their own school's sections already, through
-      // the roles; a SuperAdmin holds every role, so the switcher decides.
-      .filter(section => !isSuperAdmin || (section.school ?? 'computer') === school)
+      // The drawer shows one school at a time, always. Role filtering alone used
+      // to be relied on for everyone but a SuperAdmin, which held only while an
+      // account's roles sat in a single school: an Admin who was also the
+      // PreSchool's head got both schools' sections in one merged drawer.
+      .filter(section => (section.school ?? 'computer') === school)
       .map(section => ({
         ...section,
         items: section.items.filter(item =>
