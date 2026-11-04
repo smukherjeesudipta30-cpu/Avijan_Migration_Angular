@@ -115,10 +115,19 @@ export const MENU: MenuSection[] = [
     school: 'preschool',
     items: [
       { label: 'Dashboard', icon: 'pi pi-home', route: '/preschool/dashboard', roles: ['PreSchoolHead', 'PreSchoolFrontDesk', 'PreSchoolTutor'] },
+      { label: 'Students & Fees', icon: 'pi pi-users', route: '/preschool/students', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] },
       { label: 'Classes & Fees', icon: 'pi pi-book', route: '/preschool/classes', roles: ['PreSchoolHead', 'PreSchoolFrontDesk', 'PreSchoolTutor'] },
       { label: 'Admission Enquiries', icon: 'pi pi-comments', route: '/preschool/enquiries', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] },
       { label: 'Holiday Notices', icon: 'pi pi-calendar', route: '/preschool/holidays', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] },
       { label: 'School Settings', icon: 'pi pi-cog', route: '/preschool/settings', roles: ['PreSchoolHead'] }
+    ]
+  },
+  {
+    title: 'PreSchool Reports',
+    school: 'preschool',
+    items: [
+      { label: 'Pending Fees', icon: 'pi pi-exclamation-circle', route: '/preschool/reports/pending-fees', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] },
+      { label: 'Admissions by Month', icon: 'pi pi-user-plus', route: '/preschool/reports/admissions', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] }
     ]
   },
   {

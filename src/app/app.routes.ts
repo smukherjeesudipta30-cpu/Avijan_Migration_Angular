@@ -567,6 +567,46 @@ export const routes: Routes = [
             .then(m => m.PreSchoolEnquiriesComponent)
       },
       {
+        path: 'preschool/students',
+        title: 'PreSchool students · Avijan',
+        canActivate: [roleGuard('PreSchoolHead', 'PreSchoolFrontDesk')],
+        loadComponent: () =>
+          import('./features/preschool/students/preschool-students.component')
+            .then(m => m.PreSchoolStudentsComponent)
+      },
+      {
+        path: 'preschool/students/new',
+        title: 'PreSchool admission · Avijan',
+        canActivate: [roleGuard('PreSchoolHead', 'PreSchoolFrontDesk')],
+        loadComponent: () =>
+          import('./features/preschool/students/preschool-student.component')
+            .then(m => m.PreSchoolStudentComponent)
+      },
+      {
+        path: 'preschool/students/:id',
+        title: 'PreSchool student · Avijan',
+        canActivate: [roleGuard('PreSchoolHead', 'PreSchoolFrontDesk')],
+        loadComponent: () =>
+          import('./features/preschool/students/preschool-student.component')
+            .then(m => m.PreSchoolStudentComponent)
+      },
+      {
+        path: 'preschool/reports/pending-fees',
+        title: 'PreSchool pending fees · Avijan',
+        canActivate: [roleGuard('PreSchoolHead', 'PreSchoolFrontDesk')],
+        loadComponent: () =>
+          import('./features/preschool/reports/preschool-pending-fees.component')
+            .then(m => m.PreSchoolPendingFeesComponent)
+      },
+      {
+        path: 'preschool/reports/admissions',
+        title: 'PreSchool admissions by month · Avijan',
+        canActivate: [roleGuard('PreSchoolHead', 'PreSchoolFrontDesk')],
+        loadComponent: () =>
+          import('./features/preschool/reports/preschool-admissions-report.component')
+            .then(m => m.PreSchoolAdmissionsReportComponent)
+      },
+      {
         path: 'preschool/holidays',
         title: 'PreSchool holidays · Avijan',
         canActivate: [roleGuard('PreSchoolHead', 'PreSchoolFrontDesk')],
