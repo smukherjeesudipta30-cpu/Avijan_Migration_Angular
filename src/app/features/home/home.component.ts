@@ -20,6 +20,7 @@ import { environment } from '../../../environments/environment';
 import { AVIJAN_FACEBOOK, AVIJAN_INSTAGRAM, Vacancy, hiringHeadline } from '../../core/models/career.model';
 import { CareerService } from '../../core/services/career.service';
 import { OfferPublic, OfferService } from '../../core/services/offer.service';
+import { SchoolTabsComponent } from '../../shared/school-tabs/school-tabs.component';
 
 /** One picture in the Portfolio strip, with the caption the legacy page used. */
 interface PortfolioItem {
@@ -135,7 +136,8 @@ function groupClosures(days: { date: string; name: string }[]): ClosureGroup[] {
     ButtonModule,
     InputTextModule,
     TableModule,
-    TextareaModule
+    TextareaModule,
+    SchoolTabsComponent
   ],
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss'

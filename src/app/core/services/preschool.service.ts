@@ -6,7 +6,8 @@ import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
 import {
   PreSchoolClass, PreSchoolClassSave, PreSchoolFeeHead, PreSchoolFeeHeadSave, PreSchoolGradeBand,
-  PreSchoolGradeBandSave, PreSchoolOverview, PreSchoolSettings, PreSchoolSettingsSave, PreSchoolSubject,
+  PreSchoolEnquiry, PreSchoolEnquirySave, PreSchoolGradeBandSave, PreSchoolOverview, PreSchoolPublic, PreSchoolSettings,
+  PreSchoolSettingsSave, PreSchoolSubject,
   PreSchoolSubjectSave
 } from '../models/preschool.model';
 
@@ -47,5 +48,25 @@ export class PreSchoolService {
 
   saveSettings(body: PreSchoolSettingsSave): Observable<PreSchoolSettings> {
     return this.http.put<ApiResponse<PreSchoolSettings>>(`${this.base}/settings`, body).pipe(map(r => r.data));
+  }
+
+  // ------------------------------------------------ public page and enquiries
+
+  publicPage(): Observable<PreSchoolPublic> {
+    return this.http.get<ApiResponse<PreSchoolPublic>>(`${this.base}/public`).pipe(map(r => r.data));
+  }
+
+  sendEnquiry(body: PreSchoolEnquirySave): Observable<string> {
+    return this.http.post<ApiResponse<boolean>>(`${this.base}/public/enquiries`, body).pipe(map(r => r.message ?? ''));
+  }
+
+  enquiries(includeHandled: boolean): Observable<PreSchoolEnquiry[]> {
+    return this.http.get<ApiResponse<PreSchoolEnquiry[]>>(`${this.base}/enquiries`, { params: { includeHandled } })
+      .pipe(map(r => r.data));
+  }
+
+  setEnquiryHandled(id: number, handled: boolean): Observable<PreSchoolEnquiry> {
+    return this.http.put<ApiResponse<PreSchoolEnquiry>>(`${this.base}/enquiries/${id}/handled`, null, { params: { handled } })
+      .pipe(map(r => r.data));
   }
 }

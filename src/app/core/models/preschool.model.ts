@@ -102,3 +102,44 @@ export function ageLabel(months: number | null | undefined): string {
   return [years ? `${years} yr${years === 1 ? '' : 's'}` : '', rest ? `${rest} mth${rest === 1 ? '' : 's'}` : '']
     .filter(Boolean).join(' ') || '0 mths';
 }
+
+/** The public PreSchool page's data: active classes only, no staff details. */
+export interface PreSchoolPublicClass {
+  name: string;
+  minAgeMonths?: number | null;
+  maxAgeMonths?: number | null;
+  admissionFee: number;
+  monthlyTotal: number;
+  subjects: string[];
+}
+
+export interface PreSchoolPublic {
+  schoolName: string;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  mapUrl?: string | null;
+  uniformShopName?: string | null;
+  uniformShopAddress?: string | null;
+  uniformShopPhone?: string | null;
+  uniformShopMapUrl?: string | null;
+  classes: PreSchoolPublicClass[];
+}
+
+export interface PreSchoolEnquirySave {
+  childName: string;
+  childDateOfBirth: string | null;
+  parentName: string;
+  phone: string;
+  email: string | null;
+  classWanted: string | null;
+  message: string | null;
+}
+
+export interface PreSchoolEnquiry extends PreSchoolEnquirySave {
+  id: number;
+  createdOn: string;
+  isHandled: boolean;
+  handledBy?: string | null;
+  handledOn?: string | null;
+}

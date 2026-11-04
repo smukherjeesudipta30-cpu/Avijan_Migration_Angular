@@ -33,6 +33,16 @@ export const routes: Routes = [
       import('./features/certificate-verify/certificate-verify.component').then(m => m.CertificateVerifyComponent)
   },
   {
+    /* Avijan PreSchool's public home page. Outside the shell and the sign-in,
+       like the Computer Centre's front page; its staff pages live under
+       /preschool/... inside the shell. */
+    path: 'preschool',
+    pathMatch: 'full',
+    title: 'Avijan PreSchool, Champahati — Pre-Nursery, Nursery, KG-1 and KG-2',
+    loadComponent: () =>
+      import('./features/preschool/public/preschool-home.component').then(m => m.PreSchoolHomeComponent)
+  },
+  {
     /* Public careers page: Receptionist vacancies and the Apply pop-up. Outside
        the shell and the sign-in — it is the page shared on Facebook and Instagram. */
     path: 'careers',
@@ -547,6 +557,14 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/preschool/classes/preschool-classes.component')
             .then(m => m.PreSchoolClassesComponent)
+      },
+      {
+        path: 'preschool/enquiries',
+        title: 'PreSchool admission enquiries · Avijan',
+        canActivate: [roleGuard('PreSchoolHead', 'PreSchoolFrontDesk')],
+        loadComponent: () =>
+          import('./features/preschool/enquiries/preschool-enquiries.component')
+            .then(m => m.PreSchoolEnquiriesComponent)
       },
       {
         path: 'preschool/settings',
