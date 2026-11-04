@@ -1,10 +1,10 @@
-import { DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { PreSchoolPublic } from '../../../core/models/preschool.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { PreSchoolService } from '../../../core/services/preschool.service';
+import { PreSchoolClosuresComponent } from '../../../shared/preschool-closures/preschool-closures.component';
 
 /**
  * Where a parent lands after signing in. Their child's fees, report cards and
@@ -14,7 +14,7 @@ import { PreSchoolService } from '../../../core/services/preschool.service';
 @Component({
   selector: 'app-preschool-parent',
   standalone: true,
-  imports: [DatePipe, RouterLink],
+  imports: [RouterLink, PreSchoolClosuresComponent],
   template: `
     @if (!isParent()) {
       <p class="psp__preview"><i class="pi pi-eye" aria-hidden="true"></i> Preview: this is the page a parent sees after signing in.</p>
@@ -41,14 +41,8 @@ import { PreSchoolService } from '../../../core/services/preschool.service';
       </section>
     </div>
 
-    @if (school()?.holidays?.length) {
-      <section class="app-card psp__contact">
-        <h2><i class="pi pi-calendar" aria-hidden="true"></i> Holiday notices</h2>
-        @for (h of school()!.holidays; track h.id) {
-          <p><strong>{{ h.fromDate | date: 'd MMM' }}@if (h.toDate !== h.fromDate) { – {{ h.toDate | date: 'd MMM' }}}</strong>
-            {{ h.title }}@if (h.note) { · {{ h.note }}}</p>
-        }
-      </section>
+    @if (school(); as s) {
+      <div class="psp__closures"><app-preschool-closures [holidays]="s.holidays" /></div>
     }
 
     @if (school(); as s) {
@@ -75,6 +69,7 @@ import { PreSchoolService } from '../../../core/services/preschool.service';
     .psp__card h2 { margin: 0 0 0.3rem; font-size: 1rem; display: flex; gap: 0.45rem; align-items: center; }
     .psp__card h2 i { color: #6d28d9; }
     .psp__card p { margin: 0; font-size: 0.85rem; }
+    .psp__closures { max-width: 46rem; margin: 1rem auto 0; }
     .psp__contact { max-width: 46rem; margin: 1rem auto 0; }
     .psp__contact h2 { margin: 0 0 0.5rem; font-size: 1.05rem; }
     .psp__contact p { margin: 0.3rem 0; display: flex; gap: 0.45rem; align-items: flex-start; }

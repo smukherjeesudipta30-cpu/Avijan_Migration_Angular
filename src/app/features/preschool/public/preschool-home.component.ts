@@ -6,6 +6,7 @@ import { RouterLink } from '@angular/router';
 import { PreSchoolEnquirySave, PreSchoolPublic, ageLabel, isComingSoon } from '../../../core/models/preschool.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { PreSchoolService } from '../../../core/services/preschool.service';
+import { PreSchoolClosuresComponent } from '../../../shared/preschool-closures/preschool-closures.component';
 import { SchoolTabsComponent } from '../../../shared/school-tabs/school-tabs.component';
 
 /** One colour per class card, in class order; repeats after four. */
@@ -28,7 +29,7 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
 @Component({
   selector: 'app-preschool-home',
   standalone: true,
-  imports: [DatePipe, FormsModule, RouterLink, SchoolTabsComponent],
+  imports: [DatePipe, FormsModule, RouterLink, SchoolTabsComponent, PreSchoolClosuresComponent],
   template: `
     <app-school-tabs current="preschool" />
 
@@ -71,6 +72,10 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
       </div>
     </section>
 
+    @if (info(); as i) {
+      <div class="ph__closures" id="holidays"><app-preschool-closures [holidays]="i.holidays" /></div>
+    }
+
     <section class="ph__section" id="classes">
       <h2>Our classes</h2>
       <p class="ph__lead">Admissions are open all year. Ask us about fees and seats in each class.</p>
@@ -112,20 +117,6 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
         <li><span aria-hidden="true">🏡</span>Home time</li>
       </ol>
     </section>
-
-    @if (info()?.holidays?.length) {
-      <section class="ph__section" id="holidays">
-        <h2>Holiday notices</h2>
-        <ul class="ph__holidays">
-          @for (h of info()!.holidays; track h.id) {
-            <li>
-              <span class="ph__hdate">{{ h.fromDate | date: 'd MMM' }}@if (h.toDate !== h.fromDate) { – {{ h.toDate | date: 'd MMM' }}}</span>
-              <span><strong>{{ h.title }}</strong>@if (h.note) { · {{ h.note }}}</span>
-            </li>
-          }
-        </ul>
-      </section>
-    }
 
     @if (info()?.uniformShopName; as shop) {
       <section class="ph__section">
@@ -217,10 +208,7 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
       font-weight: 700; font-size: 0.85rem; }
     .ph__soon { display: table; margin: 0.8rem 0 0; padding: 0.45rem 0.9rem;
       border-radius: 14px; background: #fff1d6; color: #7a4a00; font-weight: 600; font-size: 0.95rem; }
-    .ph__holidays { list-style: none; padding: 0; margin: 1.2rem auto 0; max-width: 40rem; display: flex; flex-direction: column; gap: 0.6rem; }
-    .ph__holidays li { display: flex; gap: 1rem; align-items: baseline; padding: 0.8rem 1.1rem; border-radius: 16px; background: #fff;
-      border: 2px dashed #c9e4ff; }
-    .ph__hdate { min-width: 7rem; font-weight: 800; color: #1d5fa8; }
+    .ph__closures { max-width: 1150px; margin: 0 auto; padding: 0 1.25rem 0.5rem; }
     .ph__hero h1 { margin: 0.9rem 0; font-size: clamp(2.3rem, 5vw, 3.6rem); line-height: 1.05; letter-spacing: -0.02em; }
     .ph__hero h1 span { color: #ff6b8b; }
     .ph__hero p { font-size: 1.1rem; line-height: 1.6; max-width: 32rem; color: #4a5068; }
