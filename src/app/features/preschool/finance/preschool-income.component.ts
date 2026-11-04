@@ -1,5 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
+import { ChartModule } from 'primeng/chart';
 
 import { formatMoney } from '../../../core/format/money';
 import { PreSchoolIncomeReport } from '../../../core/models/preschool-finance.model';
@@ -15,7 +16,7 @@ import { PreSchoolFinanceService } from '../../../core/services/preschool-financ
 @Component({
   selector: 'app-preschool-income',
   standalone: true,
-  imports: [ButtonModule],
+  imports: [ButtonModule, ChartModule],
   template: `
     <div class="pin-head">
       <div class="app-page-head">
@@ -38,6 +39,11 @@ import { PreSchoolFinanceService } from '../../../core/services/preschool-financ
         <div><span>Salaries paid</span><strong>{{ money(r.salaries) }}</strong></div>
         <div><span>Other expenses</span><strong>{{ money(r.expenses) }}</strong></div>
         <div><span>Net {{ r.net < 0 ? 'loss' : 'profit' }}</span><strong [class.pin-red]="r.net < 0" [class.pin-green]="r.net >= 0">{{ money(r.net) }}</strong></div>
+      </div>
+
+      <div class="app-card pin-chart">
+        <h2>Month by month</h2>
+        <p-chart type="bar" [data]="chart()" [options]="chartOptions" height="320px" />
       </div>
 
       <div class="app-card pin-table">
@@ -83,6 +89,8 @@ import { PreSchoolFinanceService } from '../../../core/services/preschool-financ
     .pin-kpis strong { font-size: 1.35rem; }
     .pin-green { color: #2b7a2b; }
     .pin-red { color: #b42318; }
+    .pin-chart { padding: 1rem 1.15rem; margin-bottom: 1rem; }
+    .pin-chart h2 { margin: 0 0 0.5rem; font-size: 1rem; }
     .pin-table { padding: 0; overflow-x: auto; margin-bottom: 1rem; }
     .pin-row { display: grid; grid-template-columns: 1fr repeat(6, minmax(5.5rem, 1fr)); gap: 0.5rem; padding: 0.55rem 1rem;
       border-bottom: 1px solid var(--app-border); min-width: 44rem; }
@@ -104,6 +112,35 @@ export class PreSchoolIncomeComponent implements OnInit {
   readonly report = signal<PreSchoolIncomeReport | null>(null);
   readonly money = formatMoney;
   readonly label = monthLabel;
+
+  /** Fees received against salaries and expenses for each month, bars, with the net as a line. */
+  readonly chart = computed(() => {
+    const months = this.report()?.months ?? [];
+    return {
+      labels: months.map(m => monthLabel(m.month).split(' ')[0]),
+      datasets: [
+        { type: 'line', label: 'Net', data: months.map(m => m.net), borderColor: '#ff6b8b', backgroundColor: '#ff6b8b', tension: 0, pointRadius: 4, order: 0 },
+        { type: 'bar', label: 'Admission fees', data: months.map(m => m.admissionFees), backgroundColor: '#7c3aed', stack: 'in', order: 1 },
+        { type: 'bar', label: 'Monthly fees', data: months.map(m => m.monthlyFees), backgroundColor: '#2b9a4b', stack: 'in', order: 1 },
+        { type: 'bar', label: 'Salaries', data: months.map(m => m.salaries), backgroundColor: '#f59e0b', stack: 'out', order: 1 },
+        { type: 'bar', label: 'Other expenses', data: months.map(m => m.expenses), backgroundColor: '#94a3b8', stack: 'out', order: 1 }
+      ]
+    };
+  });
+
+  readonly chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { position: 'bottom' },
+      tooltip: { callbacks: { label: (c: { dataset: { label?: string }; parsed: { y: number } }) => `${c.dataset.label}: ${formatMoney(c.parsed.y)}` } }
+    },
+    scales: {
+      x: { stacked: true, grid: { display: false } },
+      y: { stacked: true, ticks: { callback: (v: number | string) => formatMoney(Number(v)) } }
+    }
+  };
 
   readonly modes = computed(() => Object.entries(this.report()?.incomeByMode ?? {}).map(([name, amount]) => ({ name, amount })));
   readonly heads = computed(() => Object.entries(this.report()?.expensesByHead ?? {}).map(([name, amount]) => ({ name, amount })));

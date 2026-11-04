@@ -120,3 +120,19 @@ export const PRESCHOOL_EXPENSE_HEADS = [
   'Rent', 'Electricity', 'Teaching materials', 'Stationery', 'Toys and play items', 'Cleaning',
   'Repairs and maintenance', 'Events and celebrations', 'Tiffin and snacks', 'Internet and phone', 'Other'
 ];
+
+/** An alert for the PreSchool admin, e.g. a staff member changed their password. */
+export interface PreSchoolAlert {
+  id: number;
+  type: string;
+  title: string;
+  loginId?: string | null;
+  createdOn: string;
+  isRead: boolean;
+  readBy?: string | null;
+}
+
+export interface PreSchoolAlerts {
+  unread: number;
+  items: PreSchoolAlert[];
+}

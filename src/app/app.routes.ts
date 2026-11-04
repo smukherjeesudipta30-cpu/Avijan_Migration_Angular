@@ -639,6 +639,14 @@ export const routes: Routes = [
             .then(m => m.PreSchoolExpensesComponent)
       },
       {
+        path: 'preschool/reports/expenses',
+        title: 'PreSchool expense report · Avijan',
+        canActivate: [roleGuard('PreSchoolHead')],
+        loadComponent: () =>
+          import('./features/preschool/finance/preschool-expense-report.component')
+            .then(m => m.PreSchoolExpenseReportComponent)
+      },
+      {
         path: 'preschool/reports/income',
         title: 'PreSchool income report · Avijan',
         canActivate: [roleGuard('PreSchoolHead')],

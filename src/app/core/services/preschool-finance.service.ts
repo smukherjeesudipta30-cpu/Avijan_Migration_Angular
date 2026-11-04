@@ -5,7 +5,7 @@ import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
 import {
-  PreSchoolExpense, PreSchoolExpenseSave, PreSchoolIncomeReport, PreSchoolSalaryPay, PreSchoolSalaryPayment,
+  PreSchoolAlerts, PreSchoolExpense, PreSchoolExpenseSave, PreSchoolIncomeReport, PreSchoolSalaryPay, PreSchoolSalaryPayment,
   PreSchoolSalarySheet, PreSchoolStaff, PreSchoolStaffSave
 } from '../models/preschool-finance.model';
 
@@ -55,6 +55,18 @@ export class PreSchoolFinanceService {
 
   deleteExpense(id: number): Observable<boolean> {
     return this.http.delete<ApiResponse<boolean>>(`${this.base}/expenses/${id}`).pipe(map(r => r.data));
+  }
+
+  alerts(): Observable<PreSchoolAlerts> {
+    return this.http.get<ApiResponse<PreSchoolAlerts>>(`${this.base}/alerts`).pipe(map(r => r.data));
+  }
+
+  markAlertRead(id: number): Observable<boolean> {
+    return this.http.patch<ApiResponse<boolean>>(`${this.base}/alerts/${id}/read`, null).pipe(map(r => r.data));
+  }
+
+  markAllAlertsRead(): Observable<number> {
+    return this.http.patch<ApiResponse<number>>(`${this.base}/alerts/read-all`, null).pipe(map(r => r.data));
   }
 
   /** The signed-in PreSchool staff member's own salary slips. */

@@ -1,9 +1,13 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { MessageService } from 'primeng/api';
 import { RouterLink } from '@angular/router';
 
 import { formatMoney } from '../../../core/format/money';
 import { PreSchoolOverview, ageLabel } from '../../../core/models/preschool.model';
+import { PreSchoolAlerts } from '../../../core/models/preschool-finance.model';
 import { AuthService } from '../../../core/services/auth.service';
+import { PreSchoolFinanceService } from '../../../core/services/preschool-finance.service';
 import { PreSchoolService } from '../../../core/services/preschool.service';
 
 /** One soft colour per class card, in class order; repeats after four. */
@@ -18,7 +22,7 @@ const CARD_INKS = ['#b3264f', '#1d5fa8', '#2b7a2b', '#9a5b00'];
 @Component({
   selector: 'app-preschool-dashboard',
   standalone: true,
-  imports: [RouterLink],
+  imports: [DatePipe, RouterLink],
   template: `
     <section class="psd__hero">
       <div>
@@ -37,6 +41,25 @@ const CARD_INKS = ['#b3264f', '#1d5fa8', '#2b7a2b', '#9a5b00'];
 
     @if (failed()) {
       <p class="app-card psd__error">The PreSchool details could not be loaded. Please refresh the page.</p>
+    }
+
+    @if (isHead() && alerts(); as a) {
+      <section class="app-card psd__alerts">
+        <div class="psd__alerts-head">
+          <h2><i class="pi pi-bell" aria-hidden="true"></i> Alerts
+            @if (a.unread) { <span class="psd__unread">{{ a.unread }} new</span> }</h2>
+          @if (a.unread) { <button type="button" class="psd__link" (click)="readAll()">Mark all read</button> }
+        </div>
+        @for (n of a.items.slice(0, 6); track n.id) {
+          <div class="psd__alert" [class.psd__alert--new]="!n.isRead">
+            <i class="pi pi-key" aria-hidden="true"></i>
+            <span><strong>{{ n.title }}</strong><small>{{ n.createdOn | date: 'd MMM y, h:mm a' }}@if (n.loginId) { · {{ n.loginId }} }</small></span>
+            @if (!n.isRead) { <button type="button" class="psd__link" (click)="read(n.id)">Mark read</button> }
+          </div>
+        } @empty {
+          <p class="app-muted psd__none">No alerts. You are told here when a PreSchool staff member changes their password.</p>
+        }
+      </section>
     }
 
     <h2 class="psd__title">Classes</h2>
@@ -97,6 +120,16 @@ const CARD_INKS = ['#b3264f', '#1d5fa8', '#2b7a2b', '#9a5b00'];
     .psd__eyebrow { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #6d28d9; }
     .psd__hero-art { display: flex; gap: 0.5rem; font-size: 2.2rem; }
     .psd__error { color: #b42318; }
+    .psd__alerts { margin-top: 1rem; padding: 1rem 1.15rem; }
+    .psd__alerts-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+    .psd__alerts h2 { margin: 0 0 0.5rem; font-size: 1.05rem; display: flex; gap: 0.45rem; align-items: center; }
+    .psd__unread { padding: 0.1rem 0.55rem; border-radius: 999px; background: #ff6b8b; color: #fff; font-size: 0.75rem; }
+    .psd__alert { display: grid; grid-template-columns: auto 1fr auto; gap: 0.7rem; align-items: center; padding: 0.55rem 0; border-top: 1px solid var(--app-border); }
+    .psd__alert > i { color: #9a5b00; }
+    .psd__alert small { display: block; color: var(--app-text-muted); font-size: 0.78rem; }
+    .psd__alert:not(.psd__alert--new) { opacity: 0.6; }
+    .psd__link { border: 0; background: none; color: #6d28d9; font: inherit; font-weight: 600; cursor: pointer; }
+    .psd__none { margin: 0; }
     .psd__title { margin: 1.5rem 0 0.75rem; font-size: 1.1rem; }
     .psd__classes { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: 0.9rem; }
     .psd__class { display: flex; flex-direction: column; gap: 0.25rem; padding: 1.1rem; border-radius: 16px;
@@ -120,6 +153,12 @@ const CARD_INKS = ['#b3264f', '#1d5fa8', '#2b7a2b', '#9a5b00'];
 export class PreSchoolDashboardComponent implements OnInit {
   private readonly preschool = inject(PreSchoolService);
   private readonly auth = inject(AuthService);
+  private readonly finance = inject(PreSchoolFinanceService);
+  private readonly messages = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  /** The PreSchool admin's alerts; null until loaded, and never for the receptionist or teachers. */
+  readonly alerts = signal<PreSchoolAlerts | null>(null);
 
   readonly overview = signal<PreSchoolOverview | null>(null);
   readonly failed = signal(false);
@@ -136,7 +175,29 @@ export class PreSchoolDashboardComponent implements OnInit {
       next: o => this.overview.set(o),
       error: () => this.failed.set(true)
     });
+
+    if (this.isHead()) {
+      this.loadAlerts();
+      // Checked again every minute while the dashboard is open, so a password
+      // change shows up (with a toast) without reloading the page.
+      const timer = setInterval(() => this.loadAlerts(true), 60_000);
+      this.destroyRef.onDestroy(() => clearInterval(timer));
+    }
   }
+
+  private loadAlerts(announce = false): void {
+    const before = this.alerts()?.unread ?? 0;
+    this.finance.alerts().subscribe(a => {
+      if (announce && a.unread > before) {
+        const newest = a.items.find(n => !n.isRead);
+        this.messages.add({ severity: 'info', summary: 'New alert', detail: newest?.title, life: 6000 });
+      }
+      this.alerts.set(a);
+    });
+  }
+
+  read(id: number): void { this.finance.markAlertRead(id).subscribe(() => this.loadAlerts()); }
+  readAll(): void { this.finance.markAllAlertsRead().subscribe(() => this.loadAlerts()); }
 
   tone(i: number): string { return CARD_TONES[i % CARD_TONES.length]; }
   ink(i: number): string { return CARD_INKS[i % CARD_INKS.length]; }

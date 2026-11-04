@@ -130,6 +130,7 @@ export const MENU: MenuSection[] = [
     items: [
       { label: 'Staff & Salary', icon: 'pi pi-id-card', route: '/preschool/staff', roles: ['PreSchoolHead'] },
       { label: 'Expenses', icon: 'pi pi-minus-circle', route: '/preschool/expenses', roles: ['PreSchoolHead'] },
+      { label: 'Expense Report', icon: 'pi pi-chart-bar', route: '/preschool/reports/expenses', roles: ['PreSchoolHead'] },
       { label: 'Income Report', icon: 'pi pi-chart-line', route: '/preschool/reports/income', roles: ['PreSchoolHead'] }
     ]
   },
