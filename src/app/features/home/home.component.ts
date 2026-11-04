@@ -175,6 +175,10 @@ export class HomeComponent implements OnDestroy {
     officeHours: ''
   };
 
+  /** The Champahati branch, shared with Avijan PreSchool (address from the rent agreement). */
+  readonly champahatiBranch =
+    'First Floor, beside Champahati-Baruipur Main Road, Mouza Haral, Champahati, P.S. Baruipur, South 24 Parganas, West Bengal';
+
   /** Signed-in visitors go to their own landing page instead of the login form. */
   readonly isSignedIn = computed(() => this.auth.isAuthenticated());
   readonly landingRoute = computed(() => this.auth.user()?.landingRoute ?? '/dashboard');
