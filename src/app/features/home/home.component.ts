@@ -20,6 +20,8 @@ import { environment } from '../../../environments/environment';
 import { AVIJAN_FACEBOOK, AVIJAN_INSTAGRAM, Vacancy, hiringHeadline } from '../../core/models/career.model';
 import { CareerService } from '../../core/services/career.service';
 import { OfferPublic, OfferService } from '../../core/services/offer.service';
+import { isComingSoon } from '../../core/models/preschool.model';
+import { PreSchoolService } from '../../core/services/preschool.service';
 import { SchoolTabsComponent } from '../../shared/school-tabs/school-tabs.component';
 
 /** One picture in the Portfolio strip, with the caption the legacy page used. */
@@ -395,6 +397,14 @@ export class HomeComponent implements OnDestroy {
   /** The corner ribbon's offer, set by Admin/Receptionist; null hides the ribbon. */
   readonly offer = signal<OfferPublic | null>(null);
 
+  /* ------------------------------------------------ Champahati branch */
+
+  private readonly preschool = inject(PreSchoolService);
+  /** The opening day the PreSchool admin set for Champahati ("yyyy-MM-dd"); the branch shares the building. */
+  readonly champahatiOpensOn = signal<string | null>(null);
+  /** "Coming soon" until the opening day has come, and while the answer is still on its way. */
+  readonly champahatiSoon = computed(() => isComingSoon(this.champahatiOpensOn()));
+
   /** The lightbox the legacy page got by linking each thumbnail to its full image. */
   readonly lightbox = signal<PortfolioItem | null>(null);
 
@@ -402,6 +412,7 @@ export class HomeComponent implements OnDestroy {
     this.careers.open().subscribe({ next: v => this.hiring.set(v), error: () => this.hiring.set([]) });
     this.loadClosures();
     this.offers.publicOffer().subscribe({ next: o => this.offer.set(o), error: () => this.offer.set(null) });
+    this.preschool.publicPage().subscribe({ next: p => this.champahatiOpensOn.set(p.opensOn ?? null) });
 
     this.about.getAboutPage().subscribe({
       next: page => {

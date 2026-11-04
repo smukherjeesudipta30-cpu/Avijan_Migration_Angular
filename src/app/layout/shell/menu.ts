@@ -116,7 +116,9 @@ export const MENU: MenuSection[] = [
     items: [
       { label: 'Dashboard', icon: 'pi pi-home', route: '/preschool/dashboard', roles: ['PreSchoolHead', 'PreSchoolFrontDesk', 'PreSchoolTutor'] },
       { label: 'Classes & Fees', icon: 'pi pi-book', route: '/preschool/classes', roles: ['PreSchoolHead', 'PreSchoolFrontDesk', 'PreSchoolTutor'] },
-      { label: 'Admission Enquiries', icon: 'pi pi-comments', route: '/preschool/enquiries', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] },      { label: 'School Settings', icon: 'pi pi-cog', route: '/preschool/settings', roles: ['PreSchoolHead'] }
+      { label: 'Admission Enquiries', icon: 'pi pi-comments', route: '/preschool/enquiries', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] },
+      { label: 'Holiday Notices', icon: 'pi pi-calendar', route: '/preschool/holidays', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] },
+      { label: 'School Settings', icon: 'pi pi-cog', route: '/preschool/settings', roles: ['PreSchoolHead'] }
     ]
   },
   {

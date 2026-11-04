@@ -1,8 +1,9 @@
+import { DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
-import { PreSchoolEnquirySave, PreSchoolPublic, ageLabel } from '../../../core/models/preschool.model';
+import { PreSchoolEnquirySave, PreSchoolPublic, ageLabel, isComingSoon } from '../../../core/models/preschool.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { PreSchoolService } from '../../../core/services/preschool.service';
 import { SchoolTabsComponent } from '../../../shared/school-tabs/school-tabs.component';
@@ -27,7 +28,7 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
 @Component({
   selector: 'app-preschool-home',
   standalone: true,
-  imports: [FormsModule, RouterLink, SchoolTabsComponent],
+  imports: [DatePipe, FormsModule, RouterLink, SchoolTabsComponent],
   template: `
     <app-school-tabs current="preschool" />
 
@@ -48,6 +49,9 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
     <section class="ph__hero">
       <div class="ph__hero-text">
         <span class="ph__pill">Pre-Nursery · Nursery · KG-1 · KG-2</span>
+        @if (comingSoon()) {
+          <p class="ph__soon"><span aria-hidden="true">🎉</span> Our Champahati centre is coming soon@if (info()?.opensOn; as d) {, opening on <strong>{{ d | date: 'd MMMM y' }}</strong>}. Admissions are open now.</p>
+        }
         <h1>Little steps,<br /><span>big smiles.</span></h1>
         <p>A warm, safe and happy place for your child's first school years, at Champahati.
           Learning through play, stories, rhymes and colours.</p>
@@ -108,6 +112,20 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
         <li><span aria-hidden="true">🏡</span>Home time</li>
       </ol>
     </section>
+
+    @if (info()?.holidays?.length) {
+      <section class="ph__section" id="holidays">
+        <h2>Holiday notices</h2>
+        <ul class="ph__holidays">
+          @for (h of info()!.holidays; track h.id) {
+            <li>
+              <span class="ph__hdate">{{ h.fromDate | date: 'd MMM' }}@if (h.toDate !== h.fromDate) { – {{ h.toDate | date: 'd MMM' }}}</span>
+              <span><strong>{{ h.title }}</strong>@if (h.note) { · {{ h.note }}}</span>
+            </li>
+          }
+        </ul>
+      </section>
+    }
 
     @if (info()?.uniformShopName; as shop) {
       <section class="ph__section">
@@ -197,6 +215,12 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
       margin: 0 auto; padding: 2.5rem 1.25rem 3rem; }
     .ph__pill { display: inline-block; padding: 0.3rem 0.9rem; border-radius: 999px; background: #ffe3ec; color: #b3264f;
       font-weight: 700; font-size: 0.85rem; }
+    .ph__soon { display: table; margin: 0.8rem 0 0; padding: 0.45rem 0.9rem;
+      border-radius: 14px; background: #fff1d6; color: #7a4a00; font-weight: 600; font-size: 0.95rem; }
+    .ph__holidays { list-style: none; padding: 0; margin: 1.2rem auto 0; max-width: 40rem; display: flex; flex-direction: column; gap: 0.6rem; }
+    .ph__holidays li { display: flex; gap: 1rem; align-items: baseline; padding: 0.8rem 1.1rem; border-radius: 16px; background: #fff;
+      border: 2px dashed #c9e4ff; }
+    .ph__hdate { min-width: 7rem; font-weight: 800; color: #1d5fa8; }
     .ph__hero h1 { margin: 0.9rem 0; font-size: clamp(2.3rem, 5vw, 3.6rem); line-height: 1.05; letter-spacing: -0.02em; }
     .ph__hero h1 span { color: #ff6b8b; }
     .ph__hero p { font-size: 1.1rem; line-height: 1.6; max-width: 32rem; color: #4a5068; }
@@ -280,6 +304,7 @@ export class PreSchoolHomeComponent implements OnInit {
   readonly sending = signal(false);
   readonly sent = signal<string | null>(null);
   readonly error = signal<string | null>(null);
+  readonly comingSoon = computed(() => !!this.info() && isComingSoon(this.info()!.opensOn));
   readonly signedIn = computed(() => this.auth.isAuthenticated());
   /**
    * "My page" from the PreSchool site opens the PreSchool side: its dashboard

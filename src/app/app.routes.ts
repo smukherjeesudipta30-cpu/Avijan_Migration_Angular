@@ -567,6 +567,14 @@ export const routes: Routes = [
             .then(m => m.PreSchoolEnquiriesComponent)
       },
       {
+        path: 'preschool/holidays',
+        title: 'PreSchool holidays · Avijan',
+        canActivate: [roleGuard('PreSchoolHead', 'PreSchoolFrontDesk')],
+        loadComponent: () =>
+          import('./features/preschool/holidays/preschool-holidays.component')
+            .then(m => m.PreSchoolHolidaysComponent)
+      },
+      {
         path: 'preschool/settings',
         title: 'PreSchool settings · Avijan',
         canActivate: [roleGuard('PreSchoolHead')],

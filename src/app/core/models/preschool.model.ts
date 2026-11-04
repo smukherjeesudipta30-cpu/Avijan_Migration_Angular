@@ -50,6 +50,8 @@ export interface PreSchoolSettings {
   uniformShopPhone: string | null;
   uniformShopMapUrl: string | null;
   receiptPrefix: string;
+  /** The Champahati centre's opening day, "yyyy-MM-dd". */
+  opensOn?: string | null;
   modifiedBy: string | null;
   modifiedOn: string | null;
 }
@@ -123,7 +125,9 @@ export interface PreSchoolPublic {
   uniformShopAddress?: string | null;
   uniformShopPhone?: string | null;
   uniformShopMapUrl?: string | null;
+  opensOn?: string | null;
   classes: PreSchoolPublicClass[];
+  holidays: PreSchoolHoliday[];
 }
 
 export interface PreSchoolEnquirySave {
@@ -142,4 +146,34 @@ export interface PreSchoolEnquiry extends PreSchoolEnquirySave {
   isHandled: boolean;
   handledBy?: string | null;
   handledOn?: string | null;
+}
+
+/** A PreSchool closure; dates are "yyyy-MM-dd" and the same for a single day. */
+export interface PreSchoolHoliday {
+  id: number;
+  fromDate: string;
+  toDate: string;
+  title: string;
+  note?: string | null;
+}
+
+export interface PreSchoolHolidaySave {
+  fromDate: string;
+  toDate: string | null;
+  title: string;
+  note: string | null;
+}
+
+/** Today as "yyyy-MM-dd" in local time. */
+export function todayIso(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${`${d.getMonth() + 1}`.padStart(2, '0')}-${`${d.getDate()}`.padStart(2, '0')}`;
+}
+
+/**
+ * True while the Champahati centre has not opened: no opening day set yet, or
+ * one still ahead. From the opening day on, the "coming soon" tagline goes.
+ */
+export function isComingSoon(opensOn: string | null | undefined): boolean {
+  return !opensOn || opensOn > todayIso();
 }

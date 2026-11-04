@@ -40,6 +40,10 @@ interface BandDraft {
             <label>Phone <input pInputText [(ngModel)]="f.phone" maxlength="50" /></label>
             <label>Email <input pInputText type="email" [(ngModel)]="f.email" maxlength="150" /></label>
             <label class="pss__wide">Google Maps link <input pInputText [(ngModel)]="f.mapUrl" placeholder="https://maps.app.goo.gl/..." maxlength="500" /></label>
+            <label>Champahati opening date
+              <input pInputText type="date" [(ngModel)]="f.opensOn" />
+              <small class="app-muted">Until this day both websites say the Champahati centre is coming soon
+                (with this date). From this day the tagline goes. Leave empty for "coming soon" without a date.</small></label>
             <label>Receipt number prefix
               <input pInputText [(ngModel)]="f.receiptPrefix" maxlength="10" />
               <small class="app-muted">Receipts read {{ (f.receiptPrefix || 'APS').toUpperCase() }}/0001, /0002 …</small></label>
@@ -127,7 +131,8 @@ export class PreSchoolSettingsComponent implements OnInit {
       if (link?.trim() && !/^https:\/\//i.test(link.trim())) { this.warn('A map link must start with https://.'); return; }
     }
     this.saving.set(true);
-    this.preschool.saveSettings(f).subscribe({
+    // A cleared date input gives "", which the API cannot read as a date.
+    this.preschool.saveSettings({ ...f, opensOn: f.opensOn || null }).subscribe({
       next: s => { this.saving.set(false); this.applySettings(s); this.done('Settings saved.'); },
       error: () => this.saving.set(false)
     });

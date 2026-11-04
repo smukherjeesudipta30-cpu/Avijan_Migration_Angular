@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
@@ -13,7 +14,7 @@ import { PreSchoolService } from '../../../core/services/preschool.service';
 @Component({
   selector: 'app-preschool-parent',
   standalone: true,
-  imports: [RouterLink],
+  imports: [DatePipe, RouterLink],
   template: `
     @if (!isParent()) {
       <p class="psp__preview"><i class="pi pi-eye" aria-hidden="true"></i> Preview: this is the page a parent sees after signing in.</p>
@@ -39,6 +40,16 @@ import { PreSchoolService } from '../../../core/services/preschool.service';
         <p class="app-muted">Ready to download when your child completes the class.</p>
       </section>
     </div>
+
+    @if (school()?.holidays?.length) {
+      <section class="app-card psp__contact">
+        <h2><i class="pi pi-calendar" aria-hidden="true"></i> Holiday notices</h2>
+        @for (h of school()!.holidays; track h.id) {
+          <p><strong>{{ h.fromDate | date: 'd MMM' }}@if (h.toDate !== h.fromDate) { – {{ h.toDate | date: 'd MMM' }}}</strong>
+            {{ h.title }}@if (h.note) { · {{ h.note }}}</p>
+        }
+      </section>
+    }
 
     @if (school(); as s) {
       <section class="app-card psp__contact">

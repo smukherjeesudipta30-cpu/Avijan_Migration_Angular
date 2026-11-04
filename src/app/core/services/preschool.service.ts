@@ -6,7 +6,7 @@ import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
 import {
   PreSchoolClass, PreSchoolClassSave, PreSchoolFeeHead, PreSchoolFeeHeadSave, PreSchoolGradeBand,
-  PreSchoolEnquiry, PreSchoolEnquirySave, PreSchoolGradeBandSave, PreSchoolOverview, PreSchoolPublic, PreSchoolSettings,
+  PreSchoolEnquiry, PreSchoolEnquirySave, PreSchoolGradeBandSave, PreSchoolHoliday, PreSchoolHolidaySave, PreSchoolOverview, PreSchoolPublic, PreSchoolSettings,
   PreSchoolSettingsSave, PreSchoolSubject,
   PreSchoolSubjectSave
 } from '../models/preschool.model';
@@ -68,5 +68,20 @@ export class PreSchoolService {
   setEnquiryHandled(id: number, handled: boolean): Observable<PreSchoolEnquiry> {
     return this.http.put<ApiResponse<PreSchoolEnquiry>>(`${this.base}/enquiries/${id}/handled`, null, { params: { handled } })
       .pipe(map(r => r.data));
+  }
+
+  holidays(year: number): Observable<PreSchoolHoliday[]> {
+    return this.http.get<ApiResponse<PreSchoolHoliday[]>>(`${this.base}/holidays`, { params: { year } }).pipe(map(r => r.data));
+  }
+
+  saveHoliday(id: number | null, body: PreSchoolHolidaySave): Observable<PreSchoolHoliday> {
+    const call = id === null
+      ? this.http.post<ApiResponse<PreSchoolHoliday>>(`${this.base}/holidays`, body)
+      : this.http.put<ApiResponse<PreSchoolHoliday>>(`${this.base}/holidays/${id}`, body);
+    return call.pipe(map(r => r.data));
+  }
+
+  deleteHoliday(id: number): Observable<boolean> {
+    return this.http.delete<ApiResponse<boolean>>(`${this.base}/holidays/${id}`).pipe(map(r => r.data));
   }
 }
