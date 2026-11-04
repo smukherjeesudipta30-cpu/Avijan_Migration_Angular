@@ -78,7 +78,17 @@ export class ShellComponent {
    * lives under /preschool. Taken from the URL rather than remembered, so a
    * bookmark or a link always opens in the right school.
    */
-  readonly school = computed<School>(() => this.url().startsWith('/preschool') ? 'preschool' : 'computer');
+  readonly school = computed<School>(() => {
+    if (this.url().startsWith('/preschool')) return 'preschool';
+    // A page both schools share (Change Password, chat) has no /preschool in
+    // its address. An account that works only in the PreSchool stays in it
+    // there, or its drawer would show the Computer Centre's sections - none
+    // of which it can open - and so come up empty.
+    const held = this.user()?.roles ?? [];
+    const preSchoolOnly = held.length > 0 && !held.includes('SuperAdmin')
+      && held.every(r => PRESCHOOL_ROLES.includes(r));
+    return preSchoolOnly ? 'preschool' : 'computer';
+  });
 
   /**
    * Who gets the school switcher: anyone who actually works in both schools.
