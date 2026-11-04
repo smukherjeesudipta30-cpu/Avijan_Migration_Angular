@@ -43,6 +43,8 @@ export interface PreSchoolSettings {
   schoolName: string;
   address: string | null;
   phone: string | null;
+  /** The Champahati office number, shared with the Computer Centre branch there. */
+  officePhone?: string | null;
   email: string | null;
   mapUrl: string | null;
   uniformShopName: string | null;
@@ -119,6 +121,7 @@ export interface PreSchoolPublic {
   schoolName: string;
   address?: string | null;
   phone?: string | null;
+  officePhone?: string | null;
   email?: string | null;
   mapUrl?: string | null;
   uniformShopName?: string | null;

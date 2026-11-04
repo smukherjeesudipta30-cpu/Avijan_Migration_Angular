@@ -181,6 +181,9 @@ export class HomeComponent implements OnDestroy {
   readonly champahatiBranch =
     'First Floor, beside Champahati-Baruipur Main Road, Mouza Haral, Champahati, P.S. Baruipur, South 24 Parganas, West Bengal';
 
+  /** The Computer Centre's own Champahati number; the office number is shared with the PreSchool and comes from its settings. */
+  readonly champahatiPhone = '62908 91537';
+
   /** Signed-in visitors go to their own landing page instead of the login form. */
   readonly isSignedIn = computed(() => this.auth.isAuthenticated());
   readonly landingRoute = computed(() => this.auth.user()?.landingRoute ?? '/dashboard');
@@ -402,6 +405,8 @@ export class HomeComponent implements OnDestroy {
   private readonly preschool = inject(PreSchoolService);
   /** The opening day the PreSchool admin set for Champahati ("yyyy-MM-dd"); the branch shares the building. */
   readonly champahatiOpensOn = signal<string | null>(null);
+  /** The Champahati office number, shared with the PreSchool; this until its settings answer. */
+  readonly champahatiOffice = signal('68287 74395');
   /** "Coming soon" until the opening day has come, and while the answer is still on its way. */
   readonly champahatiSoon = computed(() => isComingSoon(this.champahatiOpensOn()));
 
@@ -412,7 +417,12 @@ export class HomeComponent implements OnDestroy {
     this.careers.open().subscribe({ next: v => this.hiring.set(v), error: () => this.hiring.set([]) });
     this.loadClosures();
     this.offers.publicOffer().subscribe({ next: o => this.offer.set(o), error: () => this.offer.set(null) });
-    this.preschool.publicPage().subscribe({ next: p => this.champahatiOpensOn.set(p.opensOn ?? null) });
+    this.preschool.publicPage().subscribe({
+      next: p => {
+        this.champahatiOpensOn.set(p.opensOn ?? null);
+        if (p.officePhone) this.champahatiOffice.set(p.officePhone);
+      }
+    });
 
     this.about.getAboutPage().subscribe({
       next: page => {

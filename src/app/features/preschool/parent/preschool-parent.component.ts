@@ -49,7 +49,8 @@ import { PreSchoolClosuresComponent } from '../../../shared/preschool-closures/p
       <section class="app-card psp__contact">
         <h2>{{ s.schoolName }}</h2>
         @if (s.address) { <p><i class="pi pi-map-marker" aria-hidden="true"></i> {{ s.address }}</p> }
-        @if (s.phone) { <p><i class="pi pi-phone" aria-hidden="true"></i> <a [href]="'tel:' + s.phone">{{ s.phone }}</a></p> }
+        @if (s.phone) { <p><i class="pi pi-phone" aria-hidden="true"></i> <a [href]="'tel:' + s.phone">School: {{ s.phone }}</a></p> }
+        @if (s.officePhone) { <p><i class="pi pi-phone" aria-hidden="true"></i> <a [href]="'tel:' + s.officePhone">Champahati office: {{ s.officePhone }}</a></p> }
         @if (s.email) { <p><i class="pi pi-envelope" aria-hidden="true"></i> <a [href]="'mailto:' + s.email">{{ s.email }}</a></p> }
         @if (s.mapUrl) { <p><i class="pi pi-directions" aria-hidden="true"></i> <a [href]="s.mapUrl" target="_blank" rel="noopener">Get directions</a></p> }
         <p><a routerLink="/preschool">Visit the PreSchool website</a></p>

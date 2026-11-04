@@ -174,16 +174,19 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
     <footer class="ph__footer" id="contact">
       <div>
         <h2>{{ info()?.schoolName ?? 'Avijan PreSchool' }}</h2>
-        <p>An Avijan Computer Centre school</p>
       </div>
       <div class="ph__contact">
-        @if (info()?.address; as a) { <p>📍 {{ a }}</p> }
-        @if (info()?.phone; as p) { <p><a [href]="'tel:' + p">📞 {{ p }}</a></p> }
-        @if (info()?.email; as e) { <p><a [href]="'mailto:' + e">✉️ {{ e }}</a></p> }
-        @if (info()?.mapUrl; as m) { <p><a [href]="m" target="_blank" rel="noopener">🗺️ Get directions</a></p> }
+        @if (info()?.address; as a) { <p><i class="pi pi-map-marker" aria-hidden="true"></i><span>{{ a }}</span></p> }
+        @if (info()?.phone; as p) {
+          <p><i class="pi pi-phone" aria-hidden="true"></i><span><small>PreSchool</small><a [href]="'tel:' + p">{{ p }}</a></span></p>
+        }
+        @if (info()?.officePhone; as o) {
+          <p><i class="pi pi-building" aria-hidden="true"></i><span><small>Champahati office</small><a [href]="'tel:' + o">{{ o }}</a></span></p>
+        }
+        @if (info()?.email; as e) { <p><i class="pi pi-envelope" aria-hidden="true"></i><span><a [href]="'mailto:' + e">{{ e }}</a></span></p> }
+        @if (info()?.mapUrl; as m) { <p><i class="pi pi-directions" aria-hidden="true"></i><span><a [href]="m" target="_blank" rel="noopener">Get directions</a></span></p> }
       </div>
       <div class="ph__foot-links">
-        <a routerLink="/">Avijan Computer Centre</a>
         <a routerLink="/privacy">Privacy</a>
         <a routerLink="/login">Login</a>
       </div>
@@ -273,6 +276,12 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
       padding: 2rem 1.25rem; border-top: 2px dashed #ffc2d1; }
     .ph__footer h2 { margin: 0; }
     .ph__footer p { margin: 0.25rem 0; }
+    .ph__contact p { display: flex; gap: 0.6rem; align-items: flex-start; margin: 0 0 0.6rem; }
+    .ph__contact i { flex: 0 0 auto; display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 10px;
+      background: #ffe3ec; color: #b3264f; font-size: 0.95rem; }
+    .ph__contact span { padding-top: 0.2rem; }
+    .ph__contact small { display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #8a6474; }
+    .ph__contact a { font-weight: 700; }
     .ph__footer a { text-decoration: none; }
     .ph__foot-links { display: flex; flex-direction: column; gap: 0.4rem; font-weight: 700; }
     @media (max-width: 820px) {

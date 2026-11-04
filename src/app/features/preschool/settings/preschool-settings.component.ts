@@ -37,7 +37,10 @@ interface BandDraft {
           <div class="pss__form">
             <label class="pss__wide">School name <input pInputText [(ngModel)]="f.schoolName" maxlength="150" /></label>
             <label class="pss__wide">Address <textarea pInputText rows="2" [(ngModel)]="f.address" maxlength="400"></textarea></label>
-            <label>Phone <input pInputText [(ngModel)]="f.phone" maxlength="50" /></label>
+            <label>PreSchool phone <input pInputText [(ngModel)]="f.phone" maxlength="50" /></label>
+            <label>Champahati office phone (shared)
+              <input pInputText [(ngModel)]="f.officePhone" maxlength="50" />
+              <small class="app-muted">Also shown with the Computer Centre's Champahati branch on its home page.</small></label>
             <label>Email <input pInputText type="email" [(ngModel)]="f.email" maxlength="150" /></label>
             <label class="pss__wide">Google Maps link <input pInputText [(ngModel)]="f.mapUrl" placeholder="https://maps.app.goo.gl/..." maxlength="500" /></label>
             <label>Champahati opening date

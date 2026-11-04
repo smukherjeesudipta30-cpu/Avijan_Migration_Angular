@@ -373,7 +373,8 @@
             @if (champahatiSoon()) {
               <span style="display: inline-block; margin-left: 0.4rem; padding: 0.05rem 0.5rem; border-radius: 999px; background: #fff1d6; color: #7a4a00; font-size: 0.75rem; font-weight: 700;">Coming soon@if (champahatiOpensOn(); as d) { · opening {{ d | date: 'd MMM y' }}}</span>
             }
-            <br />{{ champahatiBranch }}</span>
+            <br />{{ champahatiBranch }}
+            <br /><a [href]="'tel:' + champahatiPhone">{{ champahatiPhone }}</a> · office <a [href]="'tel:' + champahatiOffice()">{{ champahatiOffice() }}</a></span>
         </div>
 
         <div class="hm__c-detail">
