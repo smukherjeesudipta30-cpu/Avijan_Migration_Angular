@@ -2,7 +2,6 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
-import { formatMoney } from '../../../core/format/money';
 import { PreSchoolEnquirySave, PreSchoolPublic, ageLabel } from '../../../core/models/preschool.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { PreSchoolService } from '../../../core/services/preschool.service';
@@ -50,7 +49,7 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
       <div class="ph__hero-text">
         <span class="ph__pill">Pre-Nursery · Nursery · KG-1 · KG-2</span>
         <h1>Little steps,<br /><span>big smiles.</span></h1>
-        <p>A warm, safe and happy place for your child's first school years, at {{ info()?.address || 'Champahati' }}.
+        <p>A warm, safe and happy place for your child's first school years, at Champahati.
           Learning through play, stories, rhymes and colours.</p>
         <div class="ph__hero-cta">
           <a href="#enquire" class="ph__btn ph__btn--main" (click)="go($event, 'enquire')">Ask about admission</a>
@@ -70,17 +69,13 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
 
     <section class="ph__section" id="classes">
       <h2>Our classes</h2>
-      <p class="ph__lead">All fees are monthly. The admission fee is paid once, when your child joins.</p>
+      <p class="ph__lead">Admissions are open all year. Ask us about fees and seats in each class.</p>
       <div class="ph__classes">
         @for (c of info()?.classes ?? []; track c.name; let i = $index) {
           <article class="ph__class" [style.background]="theme(i).bg">
             <span class="ph__class-art" aria-hidden="true">{{ theme(i).art }}</span>
             <h3 [style.color]="theme(i).ink">{{ c.name }}</h3>
             @if (ageRange(c.minAgeMonths, c.maxAgeMonths); as age) { <p class="ph__age">Age {{ age }}</p> }
-            <dl>
-              <div><dt>Monthly</dt><dd>{{ c.monthlyTotal ? money(c.monthlyTotal) : 'Ask us' }}</dd></div>
-              <div><dt>Admission</dt><dd>{{ c.admissionFee ? money(c.admissionFee) : 'Ask us' }}</dd></div>
-            </dl>
             @if (c.subjects.length) {
               <ul class="ph__subjects">
                 @for (s of c.subjects; track s) { <li>{{ s }}</li> }
@@ -230,9 +225,6 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
     .ph__class-art { position: absolute; top: 1rem; right: 1.1rem; font-size: 2.2rem; }
     .ph__class h3 { margin: 0; font-size: 1.5rem; }
     .ph__age { margin: 0.2rem 0 0; font-weight: 600; color: #5b6178; }
-    .ph__class dl { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin: 1rem 0 0; }
-    .ph__class dt { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: #6b7088; }
-    .ph__class dd { margin: 0; font-size: 1.2rem; font-weight: 800; }
     .ph__subjects { display: flex; flex-wrap: wrap; gap: 0.35rem; list-style: none; margin: 0.9rem 0 0; padding: 0; }
     .ph__subjects li { padding: 0.2rem 0.6rem; border-radius: 999px; background: rgba(255, 255, 255, 0.75); font-size: 0.8rem; font-weight: 600; }
     .ph__why { background: #fff; border-radius: 32px; }
@@ -289,8 +281,16 @@ export class PreSchoolHomeComponent implements OnInit {
   readonly sent = signal<string | null>(null);
   readonly error = signal<string | null>(null);
   readonly signedIn = computed(() => this.auth.isAuthenticated());
-  readonly landing = computed(() => this.auth.user()?.landingRoute ?? '/');
-  readonly money = formatMoney;
+  /**
+   * "My page" from the PreSchool site opens the PreSchool side: its dashboard
+   * for SuperAdmin and PreSchool staff, the child's page for a parent. Anyone
+   * else keeps their own landing page.
+   */
+  readonly landing = computed(() => {
+    if (this.auth.hasAnyRole(['PreSchoolHead', 'PreSchoolFrontDesk', 'PreSchoolTutor'])) return '/preschool/dashboard';
+    if (this.auth.hasAnyRole(['Parent'])) return '/preschool/parent';
+    return this.auth.user()?.landingRoute ?? '/';
+  });
 
   form: PreSchoolEnquirySave = emptyEnquiry();
 
