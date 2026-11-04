@@ -123,6 +123,15 @@ export const MENU: MenuSection[] = [
     ]
   },
   {
+    title: 'PreSchool Accounts',
+    school: 'preschool',
+    items: [
+      { label: 'Staff & Salary', icon: 'pi pi-id-card', route: '/preschool/staff', roles: ['PreSchoolHead'] },
+      { label: 'Expenses', icon: 'pi pi-minus-circle', route: '/preschool/expenses', roles: ['PreSchoolHead'] },
+      { label: 'Income Report', icon: 'pi pi-chart-line', route: '/preschool/reports/income', roles: ['PreSchoolHead'] }
+    ]
+  },
+  {
     title: 'PreSchool Reports',
     school: 'preschool',
     items: [

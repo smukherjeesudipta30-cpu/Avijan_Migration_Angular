@@ -607,6 +607,30 @@ export const routes: Routes = [
             .then(m => m.PreSchoolAdmissionsReportComponent)
       },
       {
+        path: 'preschool/staff',
+        title: 'PreSchool staff & salary · Avijan',
+        canActivate: [roleGuard('PreSchoolHead')],
+        loadComponent: () =>
+          import('./features/preschool/finance/preschool-staff.component')
+            .then(m => m.PreSchoolStaffComponent)
+      },
+      {
+        path: 'preschool/expenses',
+        title: 'PreSchool expenses · Avijan',
+        canActivate: [roleGuard('PreSchoolHead')],
+        loadComponent: () =>
+          import('./features/preschool/finance/preschool-expenses.component')
+            .then(m => m.PreSchoolExpensesComponent)
+      },
+      {
+        path: 'preschool/reports/income',
+        title: 'PreSchool income report · Avijan',
+        canActivate: [roleGuard('PreSchoolHead')],
+        loadComponent: () =>
+          import('./features/preschool/finance/preschool-income.component')
+            .then(m => m.PreSchoolIncomeComponent)
+      },
+      {
         path: 'preschool/holidays',
         title: 'PreSchool holidays · Avijan',
         canActivate: [roleGuard('PreSchoolHead', 'PreSchoolFrontDesk')],
