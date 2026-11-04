@@ -406,13 +406,20 @@ export class ChatPanelComponent {
   }
 
   /**
+   * A PreSchool account. Its chat is the PreSchool's own — the server lists
+   * and lets it message PreSchool people only — and the panel says so.
+   */
+  readonly isPreSchoolAccount = computed(() => {
+    const roles = this.auth.user()?.roles ?? [];
+    return !roles.includes('SuperAdmin') && roles.some(r => PRESCHOOL_ROLES.includes(r));
+  });
+
+  /**
    * The PreSchool has chat but no calls: no call buttons when either side is a
    * PreSchool account. The server refuses such a call too (ChatService.CanCallAsync).
    */
   readonly callsAllowed = computed(() => {
-    const isPreSchool = (roles: string[]) =>
-      !roles.includes('SuperAdmin') && roles.some(r => PRESCHOOL_ROLES.includes(r));
-    if (isPreSchool(this.auth.user()?.roles ?? [])) return false;
+    if (this.isPreSchoolAccount()) return false;
 
     const me = this.auth.user()?.email;
     const other = this.activeConversation()?.participants.find(p => p.email !== me);

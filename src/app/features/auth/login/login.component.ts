@@ -63,7 +63,8 @@ export class LoginComponent {
 
     this.submitting.set(true);
 
-    this.auth.login(this.form.getRawValue()).subscribe({
+    // The Computer Centre's sign-in: a PreSchool account is sent to the PreSchool login instead.
+    this.auth.login({ ...this.form.getRawValue(), school: 'computer' }).subscribe({
       next: response => {
         this.submitting.set(false);
 

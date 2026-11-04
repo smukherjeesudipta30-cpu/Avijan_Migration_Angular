@@ -5,7 +5,7 @@ import { Observable, tap } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
-import { AuthResult, AuthUser, LoginRequest, UserRole } from '../models/auth.model';
+import { AuthResult, AuthUser, LoginRequest, PRESCHOOL_ROLES, UserRole } from '../models/auth.model';
 
 /** Persisted so a page refresh does not sign the user out. */
 const ACCESS_TOKEN_KEY = 'institutems.accessToken';
@@ -88,14 +88,25 @@ export class AuthService {
   }
 
   clearSession(redirect = true): void {
+    // Asked before the user is forgotten: a PreSchool account goes back to the
+    // PreSchool's own sign-in, everyone else to the Computer Centre's.
+    const loginPage = this.loginPageFor(this.currentUser()?.roles ?? []);
+
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     this.currentUser.set(null);
 
     if (redirect) {
-      void this.router.navigate(['/login']);
+      void this.router.navigate([loginPage]);
     }
+  }
+
+  /** The sign-in page for these roles: the PreSchool's for a PreSchool-only account. */
+  loginPageFor(roles: UserRole[]): string {
+    const preschoolOnly = roles.some(r => PRESCHOOL_ROLES.includes(r))
+      && !roles.some(r => !PRESCHOOL_ROLES.includes(r));
+    return preschoolOnly ? '/preschool/login' : '/login';
   }
 
   /** True when the user holds any of the given roles — a user can hold several. */

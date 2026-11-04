@@ -4,13 +4,16 @@ import { CanActivateFn, Router } from '@angular/router';
 import { UserRole } from '../models/auth.model';
 import { AuthService } from '../services/auth.service';
 
+/** The PreSchool's pages send a visitor to the PreSchool's own sign-in; every other page to the Computer Centre's. */
+const loginFor = (url: string) => url.startsWith('/preschool') ? '/preschool/login' : '/login';
+
 /** Blocks a route unless someone is signed in; remembers where they were going. */
 export const authGuard: CanActivateFn = (_route, state) => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
   if (!auth.isAuthenticated()) {
-    return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
+    return router.createUrlTree([loginFor(state.url)], { queryParams: { returnUrl: state.url } });
   }
 
   // A migrated account is allowed no further than the change-password screen.
@@ -33,7 +36,7 @@ export const passwordResetGuard: CanActivateFn = (_route, state) => {
   const router = inject(Router);
 
   if (!auth.isAuthenticated()) {
-    return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
+    return router.createUrlTree([loginFor(state.url)], { queryParams: { returnUrl: state.url } });
   }
 
   return true;
@@ -49,7 +52,7 @@ export function roleGuard(...roles: UserRole[]): CanActivateFn {
     const router = inject(Router);
 
     if (!auth.isAuthenticated()) {
-      return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
+      return router.createUrlTree([loginFor(state.url)], { queryParams: { returnUrl: state.url } });
     }
 
     if (auth.mustChangePassword()) {

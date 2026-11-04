@@ -43,7 +43,7 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
         <a href="#day" (click)="go($event, 'day')">Our day</a>
         <a href="#enquire" (click)="go($event, 'enquire')">Admission</a>
         <a href="#contact" (click)="go($event, 'contact')">Contact</a>
-        <a [routerLink]="signedIn() ? landing() : '/login'" class="ph__login">{{ signedIn() ? 'My page' : 'Login' }}</a>
+        <a [routerLink]="signedIn() ? landing() : '/preschool/login'" class="ph__login">{{ signedIn() ? 'My page' : 'Login' }}</a>
       </div>
     </header>
 
@@ -188,7 +188,7 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
       </div>
       <div class="ph__foot-links">
         <a routerLink="/privacy">Privacy</a>
-        <a routerLink="/login">Login</a>
+        <a routerLink="/preschool/login">Login</a>
       </div>
     </footer>
   `,

@@ -43,6 +43,14 @@ export const routes: Routes = [
       import('./features/preschool/public/preschool-home.component').then(m => m.PreSchoolHomeComponent)
   },
   {
+    /* Avijan PreSchool's own sign-in: its staff and parents. Computer Centre
+       accounts are turned away here, as PreSchool ones are at /login. */
+    path: 'preschool/login',
+    title: 'Sign in · Avijan PreSchool',
+    loadComponent: () =>
+      import('./features/preschool/login/preschool-login.component').then(m => m.PreSchoolLoginComponent)
+  },
+  {
     /* Public careers page: Receptionist vacancies and the Apply pop-up. Outside
        the shell and the sign-in — it is the page shared on Facebook and Instagram. */
     path: 'careers',
@@ -605,6 +613,14 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/preschool/reports/preschool-admissions-report.component')
             .then(m => m.PreSchoolAdmissionsReportComponent)
+      },
+      {
+        path: 'preschool/my-payslips',
+        title: 'My payslips · Avijan PreSchool',
+        canActivate: [roleGuard('PreSchoolHead', 'PreSchoolFrontDesk', 'PreSchoolTutor')],
+        loadComponent: () =>
+          import('./features/preschool/finance/preschool-my-payslips.component')
+            .then(m => m.PreSchoolMyPayslipsComponent)
       },
       {
         path: 'preschool/staff',

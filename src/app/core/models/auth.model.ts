@@ -12,6 +12,9 @@ export const ROLE_LABELS: Partial<Record<UserRole, string>> = {
 /** The PreSchool's staff: its admin, receptionist and teachers. */
 export const PRESCHOOL_STAFF: UserRole[] = ['PreSchoolHead', 'PreSchoolFrontDesk', 'PreSchoolTutor'];
 
+/** Every PreSchool role, parents included. */
+export const PRESCHOOL_ROLES: UserRole[] = [...PRESCHOOL_STAFF, 'Parent'];
+
 export interface AuthUser {
   id: number;
   name: string;
@@ -41,4 +44,6 @@ export interface AuthResult {
 export interface LoginRequest {
   email: string;
   password: string;
+  /** Which school's sign-in page this is; each turns away the other school's accounts. */
+  school?: 'computer' | 'preschool';
 }

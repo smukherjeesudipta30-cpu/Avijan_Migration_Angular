@@ -78,7 +78,7 @@
           <span class="chat__header-title"><strong>New group</strong></span>
         }
         @default {
-          <span class="chat__header-title"><strong>Chat</strong></span>
+          <span class="chat__header-title"><strong>{{ isPreSchoolAccount() ? 'PreSchool chat' : 'Chat' }}</strong></span>
         }
       }
     </div>

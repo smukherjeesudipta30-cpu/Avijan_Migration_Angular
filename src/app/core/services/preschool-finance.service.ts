@@ -57,6 +57,11 @@ export class PreSchoolFinanceService {
     return this.http.delete<ApiResponse<boolean>>(`${this.base}/expenses/${id}`).pipe(map(r => r.data));
   }
 
+  /** The signed-in PreSchool staff member's own salary slips. */
+  myPayslips(): Observable<PreSchoolSalaryPayment[]> {
+    return this.http.get<ApiResponse<PreSchoolSalaryPayment[]>>(`${this.base}/my-payslips`).pipe(map(r => r.data));
+  }
+
   income(year: number): Observable<PreSchoolIncomeReport> {
     return this.http.get<ApiResponse<PreSchoolIncomeReport>>(`${this.base}/reports/income`, { params: { year } }).pipe(map(r => r.data));
   }
