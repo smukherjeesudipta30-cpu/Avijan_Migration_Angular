@@ -1,4 +1,16 @@
-export type UserRole = 'SuperAdmin' | 'Admin' | 'Editor' | 'Student' | 'Teacher' | 'Receptionist';
+export type UserRole = 'SuperAdmin' | 'Admin' | 'Editor' | 'Student' | 'Teacher' | 'Receptionist'
+  // Avijan PreSchool's own roles (see UserRoles.cs for why the names avoid "Admin" and "Teacher").
+  | 'PreSchoolHead' | 'PreSchoolFrontDesk' | 'PreSchoolTutor' | 'Parent';
+
+/** How a role reads on screen. Roles not listed read as they are stored. */
+export const ROLE_LABELS: Partial<Record<UserRole, string>> = {
+  PreSchoolHead: 'PreSchool Admin',
+  PreSchoolFrontDesk: 'PreSchool Receptionist',
+  PreSchoolTutor: 'PreSchool Teacher'
+};
+
+/** The PreSchool's staff: its admin, receptionist and teachers. */
+export const PRESCHOOL_STAFF: UserRole[] = ['PreSchoolHead', 'PreSchoolFrontDesk', 'PreSchoolTutor'];
 
 export interface AuthUser {
   id: number;

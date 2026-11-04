@@ -1,0 +1,144 @@
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+
+import { formatMoney } from '../../../core/format/money';
+import { PreSchoolOverview, ageLabel } from '../../../core/models/preschool.model';
+import { AuthService } from '../../../core/services/auth.service';
+import { PreSchoolService } from '../../../core/services/preschool.service';
+
+/** One soft colour per class card, in class order; repeats after four. */
+const CARD_TONES = ['#ffe3ec', '#e3f2ff', '#e6f8e6', '#fff1d6'];
+const CARD_INKS = ['#b3264f', '#1d5fa8', '#2b7a2b', '#9a5b00'];
+
+/**
+ * The PreSchool's landing page for its admin, receptionist and teachers. Shows
+ * the classes with their fees and subjects; students, receipts and results
+ * join it as those phases are built.
+ */
+@Component({
+  selector: 'app-preschool-dashboard',
+  standalone: true,
+  imports: [RouterLink],
+  template: `
+    <section class="psd__hero">
+      <div>
+        <span class="psd__eyebrow">Avijan PreSchool</span>
+        <h1>{{ overview()?.settings?.schoolName ?? 'Avijan PreSchool' }}</h1>
+        <p>
+          <i class="pi pi-map-marker" aria-hidden="true"></i>
+          {{ overview()?.settings?.address || 'Champahati' }}
+          @if (overview()?.settings?.phone; as phone) { · <i class="pi pi-phone" aria-hidden="true"></i> {{ phone }} }
+        </p>
+      </div>
+      <div class="psd__hero-art" aria-hidden="true">
+        <span>🎨</span><span>🧸</span><span>📚</span>
+      </div>
+    </section>
+
+    @if (failed()) {
+      <p class="app-card psd__error">The PreSchool details could not be loaded. Please refresh the page.</p>
+    }
+
+    <h2 class="psd__title">Classes</h2>
+    <div class="psd__classes">
+      @for (c of activeClasses(); track c.id; let i = $index) {
+        <a class="psd__class" [routerLink]="'/preschool/classes'" [queryParams]="{ class: c.id }"
+          [style.background]="tone(i)" [style.color]="ink(i)">
+          <strong>{{ c.name }}</strong>
+          @if (c.minAgeMonths != null || c.maxAgeMonths != null) {
+            <small>Age {{ age(c.minAgeMonths) || 'any' }} – {{ age(c.maxAgeMonths) || 'any' }}</small>
+          }
+          <dl>
+            <div><dt>Admission</dt><dd>{{ money(c.admissionFee) }}</dd></div>
+            <div><dt>Monthly</dt><dd>{{ money(c.monthlyTotal) }}</dd></div>
+            <div><dt>Subjects</dt><dd>{{ countActive(c.subjects) }}</dd></div>
+          </dl>
+        </a>
+      } @empty {
+        @if (overview()) { <p class="app-muted">No classes yet.</p> }
+      }
+    </div>
+
+    <h2 class="psd__title">Get started</h2>
+    <div class="psd__steps">
+      <a class="app-card psd__step" routerLink="/preschool/classes">
+        <i class="pi pi-book" aria-hidden="true"></i>
+        <div>
+          <strong>Classes &amp; fees</strong>
+          <p class="app-muted">Admission fee, monthly fees and subjects for each class.</p>
+        </div>
+        @if (unsetClasses() > 0) {
+          <span class="psd__badge">{{ unsetClasses() }} without fees</span>
+        }
+      </a>
+      @if (isHead()) {
+        <a class="app-card psd__step" routerLink="/preschool/settings">
+          <i class="pi pi-cog" aria-hidden="true"></i>
+          <div>
+            <strong>School settings</strong>
+            <p class="app-muted">Address, phone, uniform shop, receipt numbers and the grade table.</p>
+          </div>
+        </a>
+      }
+      <div class="app-card psd__step psd__step--soon">
+        <i class="pi pi-user-plus" aria-hidden="true"></i>
+        <div>
+          <strong>Admissions and fee receipts</strong>
+          <p class="app-muted">Coming in the next phase.</p>
+        </div>
+      </div>
+    </div>
+  `,
+  styles: [`
+    .psd__hero { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1.5rem;
+      border-radius: 18px; background: linear-gradient(120deg, #ffd6e7 0%, #d9ecff 55%, #e2f7dc 100%); color: #2a2f45; }
+    .psd__hero h1 { margin: 0.15rem 0 0.35rem; font-size: 1.7rem; }
+    .psd__hero p { margin: 0; display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap; }
+    .psd__eyebrow { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #6d28d9; }
+    .psd__hero-art { display: flex; gap: 0.5rem; font-size: 2.2rem; }
+    .psd__error { color: #b42318; }
+    .psd__title { margin: 1.5rem 0 0.75rem; font-size: 1.1rem; }
+    .psd__classes { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: 0.9rem; }
+    .psd__class { display: flex; flex-direction: column; gap: 0.25rem; padding: 1.1rem; border-radius: 16px;
+      text-decoration: none; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+    .psd__class:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08); }
+    .psd__class strong { font-size: 1.2rem; }
+    .psd__class small { opacity: 0.85; }
+    .psd__class dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; margin: 0.6rem 0 0; }
+    .psd__class dt { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.8; }
+    .psd__class dd { margin: 0; font-weight: 700; color: #2a2f45; }
+    .psd__steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 0.9rem; }
+    .psd__step { display: flex; gap: 0.8rem; align-items: flex-start; text-decoration: none; color: inherit; position: relative; }
+    .psd__step > i { font-size: 1.4rem; color: #6d28d9; margin-top: 0.15rem; }
+    .psd__step p { margin: 0.2rem 0 0; font-size: 0.85rem; }
+    .psd__step--soon { opacity: 0.7; }
+    .psd__badge { position: absolute; top: 0.6rem; right: 0.6rem; font-size: 0.7rem; font-weight: 700;
+      padding: 0.15rem 0.5rem; border-radius: 999px; background: #fff1d6; color: #9a5b00; }
+    @media (max-width: 600px) { .psd__hero-art { display: none; } .psd__hero h1 { font-size: 1.35rem; } }
+  `]
+})
+export class PreSchoolDashboardComponent implements OnInit {
+  private readonly preschool = inject(PreSchoolService);
+  private readonly auth = inject(AuthService);
+
+  readonly overview = signal<PreSchoolOverview | null>(null);
+  readonly failed = signal(false);
+  readonly isHead = computed(() => this.auth.hasAnyRole(['PreSchoolHead']));
+  readonly activeClasses = computed(() => (this.overview()?.classes ?? []).filter(c => c.isActive));
+  /** Active classes still charging nothing a month — the first thing to set up. */
+  readonly unsetClasses = computed(() => this.activeClasses().filter(c => c.monthlyTotal === 0).length);
+
+  readonly money = formatMoney;
+  readonly age = ageLabel;
+
+  ngOnInit(): void {
+    this.preschool.overview().subscribe({
+      next: o => this.overview.set(o),
+      error: () => this.failed.set(true)
+    });
+  }
+
+  tone(i: number): string { return CARD_TONES[i % CARD_TONES.length]; }
+  ink(i: number): string { return CARD_INKS[i % CARD_INKS.length]; }
+  countActive(items: { isActive: boolean }[]): number { return items.filter(x => x.isActive).length; }
+}

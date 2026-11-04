@@ -138,6 +138,42 @@
   flex: 1;
 }
 
+/* SuperAdmin's school switcher, under the brand in the dark sidebar. */
+.shell__school {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin: 0 0.75rem 0.75rem;
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.3rem;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: #8b93a7;
+    font: inherit;
+    font-size: 0.74rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover { color: #fff; }
+  }
+
+  .shell__school--on {
+    background: #fff;
+    color: #1f2433;
+
+    &:hover { color: #1f2433; }
+  }
+}
+
 .shell__icon-button {
   display: grid;
   place-items: center;

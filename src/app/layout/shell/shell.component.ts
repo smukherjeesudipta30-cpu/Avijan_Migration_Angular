@@ -1,6 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, HostListener, computed, effect, inject, signal } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter, map } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { MenuModule } from 'primeng/menu';
 import { MenuItem } from 'primeng/api';
@@ -14,7 +16,8 @@ import { ChatUiService } from '../../core/services/chat-ui.service';
 import { FeaturesService } from '../../core/services/features.service';
 import { LoadingService } from '../../core/services/loading.service';
 import { ReportService } from '../../core/services/report.service';
-import { MENU, MenuSection } from './menu';
+import { ROLE_LABELS } from '../../core/models/auth.model';
+import { MENU, MenuSection, School } from './menu';
 
 @Component({
   selector: 'app-shell',
@@ -66,6 +69,31 @@ export class ShellComponent {
      phone is what put the menu over the page on every load. */
   readonly sidebarOpen = signal(!this.mobile.matches);
 
+  private readonly url = toSignal(
+    this.router.events.pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd), map(e => e.urlAfterRedirects)),
+    { initialValue: this.router.url });
+
+  /**
+   * The school being worked in, read from the address: every PreSchool page
+   * lives under /preschool. Taken from the URL rather than remembered, so a
+   * bookmark or a link always opens in the right school.
+   */
+  readonly school = computed<School>(() => this.url().startsWith('/preschool') ? 'preschool' : 'computer');
+
+  /** Only a SuperAdmin works in both schools, so only they get the switcher. */
+  readonly canSwitchSchool = computed(() => (this.user()?.roles ?? []).includes('SuperAdmin'));
+
+  readonly roleLabel = computed(() => {
+    const role = this.user()?.role;
+    return role ? ROLE_LABELS[role] ?? role : '';
+  });
+
+  switchSchool(school: School): void {
+    if (school === this.school()) return;
+    void this.router.navigateByUrl(school === 'preschool' ? '/preschool/dashboard' : '/dashboard');
+    this.closeIfMobile();
+  }
+
   /** Only the sections this user can actually reach — a user may hold several roles. */
   readonly sections = computed<MenuSection[]>(() => {
     const held = this.user()?.roles ?? [];
@@ -77,8 +105,12 @@ export class ShellComponent {
     // item list happens to name — the same "above every role check" stance as
     // AuthService.hasAnyRole and the API's SuperAdminAuthorizationHandler.
     const isSuperAdmin = held.includes('SuperAdmin');
+    const school = this.school();
 
     return MENU
+      // Everyone else sees only their own school's sections already, through
+      // the roles; a SuperAdmin holds every role, so the switcher decides.
+      .filter(section => !isSuperAdmin || (section.school ?? 'computer') === school)
       .map(section => ({
         ...section,
         items: section.items.filter(item =>

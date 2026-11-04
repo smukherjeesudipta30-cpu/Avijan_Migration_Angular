@@ -11,9 +11,22 @@
       <span class="shell__logo" aria-hidden="true">A</span>
       <span class="shell__brand-text">
         <strong>Avijan</strong>
-        <small>Institute Manager</small>
+        <small>{{ school() === 'preschool' ? 'PreSchool Manager' : 'Institute Manager' }}</small>
       </span>
     </div>
+
+    @if (canSwitchSchool()) {
+      <div class="shell__school" role="group" aria-label="School">
+        <button type="button" [class.shell__school--on]="school() === 'computer'"
+          [attr.aria-pressed]="school() === 'computer'" (click)="switchSchool('computer')">
+          <i class="pi pi-desktop" aria-hidden="true"></i> Computer Centre
+        </button>
+        <button type="button" [class.shell__school--on]="school() === 'preschool'"
+          [attr.aria-pressed]="school() === 'preschool'" (click)="switchSchool('preschool')">
+          <i class="pi pi-star" aria-hidden="true"></i> PreSchool
+        </button>
+      </div>
+    }
 
     <nav class="shell__nav">
       @for (section of sections(); track section.title) {
@@ -90,7 +103,7 @@
         </span>
         <span class="shell__account-text">
           <strong>{{ user()?.name }}</strong>
-          <small>{{ user()?.role }}</small>
+          <small>{{ roleLabel() }}</small>
         </span>
         <i class="pi pi-angle-down" aria-hidden="true"></i>
       </button>

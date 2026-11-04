@@ -11,8 +11,13 @@ export interface MenuEntry {
   comingSoon?: boolean;
 }
 
+/** Which school a section belongs to: Avijan Computer Centre or Avijan PreSchool. */
+export type School = 'computer' | 'preschool';
+
 export interface MenuSection {
   title: string;
+  /** Computer Centre when left out. A SuperAdmin sees one school's sections at a time. */
+  school?: School;
   items: MenuEntry[];
 }
 
@@ -101,6 +106,24 @@ export const MENU: MenuSection[] = [
       { label: 'Staff Attendance', icon: 'pi pi-clock', route: '/reports/attendance', roles: ['Admin', 'Editor'], feature: 'attendance' },
       // Students see their own; staff can look up anyone's.
       { label: 'My Statement', icon: 'pi pi-receipt', route: '/reports/student-statement', roles: ['Student'] }
+    ]
+  },
+  /* Avijan PreSchool. Only its own roles are listed, so no Computer Centre user
+     sees these; a SuperAdmin reaches them through the school switcher. */
+  {
+    title: 'PreSchool',
+    school: 'preschool',
+    items: [
+      { label: 'Dashboard', icon: 'pi pi-home', route: '/preschool/dashboard', roles: ['PreSchoolHead', 'PreSchoolFrontDesk', 'PreSchoolTutor'] },
+      { label: 'Classes & Fees', icon: 'pi pi-book', route: '/preschool/classes', roles: ['PreSchoolHead', 'PreSchoolFrontDesk', 'PreSchoolTutor'] },
+      { label: 'School Settings', icon: 'pi pi-cog', route: '/preschool/settings', roles: ['PreSchoolHead'] }
+    ]
+  },
+  {
+    title: 'My Child',
+    school: 'preschool',
+    items: [
+      { label: 'Home', icon: 'pi pi-heart', route: '/preschool/parent', roles: ['Parent'] }
     ]
   }
 ];

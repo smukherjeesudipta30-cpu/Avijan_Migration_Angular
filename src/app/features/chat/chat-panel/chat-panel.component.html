@@ -60,7 +60,7 @@
                 <i class="pi pi-eraser" aria-hidden="true"></i>
               </button>
             }
-            @if (threadIsDirect()) {
+            @if (threadIsDirect() && callsAllowed()) {
               <button type="button" class="chat__call-btn" (click)="startAudioCall()" title="Voice call">
                 <i class="pi pi-phone" aria-hidden="true"></i>
               </button>

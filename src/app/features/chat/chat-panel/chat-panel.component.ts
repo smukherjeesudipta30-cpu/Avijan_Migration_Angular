@@ -24,6 +24,9 @@ import {
 } from '../../../core/services/chat.service';
 import { ChatUiService } from '../../../core/services/chat-ui.service';
 
+/** Avijan PreSchool accounts, which can chat but not call. */
+const PRESCHOOL_ROLES: string[] = ['PreSchoolHead', 'PreSchoolFrontDesk', 'PreSchoolTutor', 'Parent'];
+
 /** Comfortably under the server's 5 MB cap, checked client-side so a large pick fails fast. */
 const MaxAttachmentBytes = 5 * 1024 * 1024;
 
@@ -401,6 +404,20 @@ export class ChatPanelComponent {
     const other = c.participants.find(p => p.email !== me);
     return other?.email ? { email: other.email, name: other.displayName } : null;
   }
+
+  /**
+   * The PreSchool has chat but no calls: no call buttons when either side is a
+   * PreSchool account. The server refuses such a call too (ChatService.CanCallAsync).
+   */
+  readonly callsAllowed = computed(() => {
+    const isPreSchool = (roles: string[]) =>
+      !roles.includes('SuperAdmin') && roles.some(r => PRESCHOOL_ROLES.includes(r));
+    if (isPreSchool(this.auth.user()?.roles ?? [])) return false;
+
+    const me = this.auth.user()?.email;
+    const other = this.activeConversation()?.participants.find(p => p.email !== me);
+    return !other || !PRESCHOOL_ROLES.includes(other.role);
+  });
 
   startAudioCall(): void {
     const other = this.threadOther();

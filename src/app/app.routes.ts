@@ -530,6 +530,40 @@ export const routes: Routes = [
           import('./features/income/income.component').then(m => m.IncomeComponent)
       },
       // Reaching the shell with no child sends staff to their dashboard.
+      /* Avijan PreSchool. Guarded for its own roles only, so no Computer
+         Centre role reaches these pages (SuperAdmin passes every guard). */
+      {
+        path: 'preschool/dashboard',
+        title: 'PreSchool · Avijan',
+        canActivate: [roleGuard('PreSchoolHead', 'PreSchoolFrontDesk', 'PreSchoolTutor')],
+        loadComponent: () =>
+          import('./features/preschool/dashboard/preschool-dashboard.component')
+            .then(m => m.PreSchoolDashboardComponent)
+      },
+      {
+        path: 'preschool/classes',
+        title: 'PreSchool classes & fees · Avijan',
+        canActivate: [roleGuard('PreSchoolHead', 'PreSchoolFrontDesk', 'PreSchoolTutor')],
+        loadComponent: () =>
+          import('./features/preschool/classes/preschool-classes.component')
+            .then(m => m.PreSchoolClassesComponent)
+      },
+      {
+        path: 'preschool/settings',
+        title: 'PreSchool settings · Avijan',
+        canActivate: [roleGuard('PreSchoolHead')],
+        loadComponent: () =>
+          import('./features/preschool/settings/preschool-settings.component')
+            .then(m => m.PreSchoolSettingsComponent)
+      },
+      {
+        path: 'preschool/parent',
+        title: 'My child · Avijan PreSchool',
+        canActivate: [roleGuard('Parent')],
+        loadComponent: () =>
+          import('./features/preschool/parent/preschool-parent.component')
+            .then(m => m.PreSchoolParentComponent)
+      },
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' }
     ]
   },
