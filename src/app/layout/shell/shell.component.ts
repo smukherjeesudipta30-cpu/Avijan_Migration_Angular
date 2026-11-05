@@ -109,8 +109,30 @@ export class ShellComponent {
 
   switchSchool(school: School): void {
     if (school === this.school()) return;
-    void this.router.navigateByUrl(school === 'preschool' ? '/preschool/dashboard' : '/dashboard');
+    void this.router.navigateByUrl(school === 'preschool' ? this.preSchoolStart() : this.computerCentreStart());
     this.closeIfMobile();
+  }
+
+  /**
+   * The Computer Centre page this account may open first. Only an Admin or
+   * Editor may open /dashboard: a Receptionist or Teacher who is also on the
+   * PreSchool's staff was sent there and turned away, so the switch did nothing.
+   * The same start pages as UserRoles.LandingRoute on the API.
+   */
+  private computerCentreStart(): string {
+    const held = this.user()?.roles ?? [];
+    if (held.some(r => r === 'SuperAdmin' || r === 'Admin' || r === 'Editor')) return '/dashboard';
+    if (held.includes('Receptionist')) return '/courses';
+    if (held.includes('Teacher')) return '/reports/teacher-earnings';
+    if (held.includes('Student')) return '/reports/student-statement';
+    return '/dashboard';
+  }
+
+  /** The PreSchool page this account may open first: a parent has the child's page, not the staff dashboard. */
+  private preSchoolStart(): string {
+    const held = this.user()?.roles ?? [];
+    const staff = held.some(r => r === 'SuperAdmin' || r === 'PreSchoolHead' || r === 'PreSchoolFrontDesk' || r === 'PreSchoolTutor');
+    return !staff && held.includes('Parent') ? '/preschool/parent' : '/preschool/dashboard';
   }
 
   /** Only the sections this user can actually reach — a user may hold several roles. */
