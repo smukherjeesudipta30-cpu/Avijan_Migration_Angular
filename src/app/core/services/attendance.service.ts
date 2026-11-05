@@ -19,8 +19,9 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class AttendanceService {
-  private readonly http = inject(HttpClient);
-  private readonly base = `${environment.apiBaseUrl}/attendance`;
+  protected readonly http = inject(HttpClient);
+  /** Protected so the PreSchool can point the same screens at its own attendance. */
+  protected readonly base: string = `${environment.apiBaseUrl}/attendance`;
 
   /** The code to display at the centre. Short-lived, so the screen re-asks. */
   qr(branchId?: number): Observable<AttendanceQr> {

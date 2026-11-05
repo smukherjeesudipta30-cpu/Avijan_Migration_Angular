@@ -1,6 +1,8 @@
 import { Routes } from '@angular/router';
 
 import { authGuard, passwordResetGuard, roleGuard } from './core/guards/auth.guard';
+import { AttendanceService } from './core/services/attendance.service';
+import { PreSchoolAttendanceService } from './core/services/preschool-attendance.service';
 
 /**
  * One lazy chunk per feature (MIGRATION_PLAN §6).
@@ -122,6 +124,17 @@ export const routes: Routes = [
     path: 'attendance/scan',
     title: 'Mark attendance · Avijan',
     canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/attendance/scan/attendance-scan.component')
+        .then(m => m.AttendanceScanComponent)
+  },
+  {
+    /* The same page for the PreSchool's QR. The screen is the Computer
+       Centre's; the provider points it at the PreSchool's own attendance. */
+    path: 'preschool/attendance/scan',
+    title: 'Mark attendance · Avijan PreSchool',
+    canActivate: [authGuard, roleGuard('PreSchoolFrontDesk', 'PreSchoolTutor')],
+    providers: [{ provide: AttendanceService, useClass: PreSchoolAttendanceService }],
     loadComponent: () =>
       import('./features/attendance/scan/attendance-scan.component')
         .then(m => m.AttendanceScanComponent)
@@ -613,6 +626,25 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/preschool/reports/preschool-admissions-report.component')
             .then(m => m.PreSchoolAdmissionsReportComponent)
+      },
+      {
+        /* PreSchool staff attendance: the Computer Centre's screen, talking to
+           the PreSchool's own attendance. The admin puts the code on screen;
+           the receptionist and teachers mark themselves in and out. */
+        path: 'preschool/attendance',
+        title: 'Attendance · Avijan PreSchool',
+        canActivate: [roleGuard('PreSchoolHead', 'PreSchoolFrontDesk', 'PreSchoolTutor')],
+        providers: [{ provide: AttendanceService, useClass: PreSchoolAttendanceService }],
+        loadComponent: () =>
+          import('./features/attendance/attendance.component').then(m => m.AttendanceComponent)
+      },
+      {
+        path: 'preschool/reports/attendance',
+        title: 'PreSchool staff attendance · Avijan',
+        canActivate: [roleGuard('PreSchoolHead')],
+        loadComponent: () =>
+          import('./features/preschool/reports/preschool-attendance-report.component')
+            .then(m => m.PreSchoolAttendanceReportComponent)
       },
       {
         path: 'preschool/my-payslips',

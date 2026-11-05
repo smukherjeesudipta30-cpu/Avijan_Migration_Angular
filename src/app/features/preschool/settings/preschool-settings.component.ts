@@ -66,6 +66,26 @@ interface BandDraft {
         </section>
 
         <section class="app-card">
+          <h2>Staff attendance location</h2>
+          <p class="app-muted pss__note">The receptionist and teachers can mark attendance only within this distance of the
+            PreSchool. Stand inside the PreSchool and press <strong>Use my current location</strong>, then save the settings.</p>
+          <div class="pss__form">
+            <label>Latitude <input pInputText type="number" step="0.000001" [(ngModel)]="f.latitude" placeholder="22.3961" /></label>
+            <label>Longitude <input pInputText type="number" step="0.000001" [(ngModel)]="f.longitude" placeholder="88.4795" /></label>
+            <label>Allowed distance (metres)
+              <input pInputText type="number" min="20" max="1000" [(ngModel)]="f.geofenceMetres" />
+              <small class="app-muted">100 metres suits one building; raise it if phones inside are refused.</small></label>
+            <div class="pss__locate">
+              <p-button label="Use my current location" icon="pi pi-map-marker" severity="secondary" [outlined]="true"
+                [loading]="locating()" (onClick)="useMyLocation(f)" />
+              @if (f.latitude && f.longitude) {
+                <a [href]="'https://www.google.com/maps?q=' + f.latitude + ',' + f.longitude" target="_blank" rel="noopener">Check on the map</a>
+              }
+            </div>
+          </div>
+        </section>
+
+        <section class="app-card">
           <h2>Smart classroom photo</h2>
           <p class="app-muted pss__note">Shown on the PreSchool home page. Until a photo is put up, a drawing of a
             smart-board classroom is shown. Take one of your own classroom with the camera, or choose one from the gallery.</p>
@@ -114,6 +134,7 @@ interface BandDraft {
     .pss__form label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.82rem; font-weight: 600; }
     .pss__form small { font-weight: 400; }
     .pss__wide { grid-column: 1 / -1; }
+    .pss__locate { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; align-self: end; }
     .pss__actions { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-top: 0.6rem; }
     .pss__bands { display: flex; flex-direction: column; gap: 0.4rem; }
     .pss__band { display: grid; grid-template-columns: 6rem 6rem 1fr 2.5rem; gap: 0.5rem; align-items: center; }
@@ -153,10 +174,32 @@ export class PreSchoolSettingsComponent implements OnInit {
     }
     this.saving.set(true);
     // A cleared date input gives "", which the API cannot read as a date.
-    this.preschool.saveSettings({ ...f, opensOn: f.opensOn || null }).subscribe({
+    const num = (v: unknown) => (v === null || v === undefined || v === '' ? null : Number(v));
+    const latitude = num(f.latitude), longitude = num(f.longitude);
+    if ((latitude === null) !== (longitude === null)) { this.warn('Give both the latitude and the longitude, or neither.'); return; }
+    this.preschool.saveSettings({
+      ...f, opensOn: f.opensOn || null, latitude, longitude, geofenceMetres: num(f.geofenceMetres) ?? 100
+    }).subscribe({
       next: s => { this.saving.set(false); this.applySettings(s); this.done('Settings saved.'); },
       error: () => this.saving.set(false)
     });
+  }
+
+  readonly locating = signal(false);
+
+  /** Fills the fence's centre from this device, for the admin standing inside the PreSchool. */
+  useMyLocation(f: PreSchoolSettingsSave): void {
+    if (!navigator.geolocation) { this.warn('This browser cannot report its location.'); return; }
+    this.locating.set(true);
+    navigator.geolocation.getCurrentPosition(
+      p => {
+        this.locating.set(false);
+        f.latitude = Math.round(p.coords.latitude * 1e6) / 1e6;
+        f.longitude = Math.round(p.coords.longitude * 1e6) / 1e6;
+        this.done(`Location taken (accurate to about ${Math.round(p.coords.accuracy)} m). Save the settings to keep it.`);
+      },
+      () => { this.locating.set(false); this.warn('The location could not be read. Allow location for this site and turn on GPS.'); },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
   }
 
   saveSmartPhoto(): void {

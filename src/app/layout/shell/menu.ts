@@ -115,6 +115,8 @@ export const MENU: MenuSection[] = [
     school: 'preschool',
     items: [
       { label: 'Dashboard', icon: 'pi pi-home', route: '/preschool/dashboard', roles: ['PreSchoolHead', 'PreSchoolFrontDesk', 'PreSchoolTutor'] },
+      // The admin puts the code on screen; the receptionist and teachers mark in and out.
+      { label: 'Attendance', icon: 'pi pi-qrcode', route: '/preschool/attendance', roles: ['PreSchoolHead', 'PreSchoolFrontDesk', 'PreSchoolTutor'] },
       { label: 'Students & Fees', icon: 'pi pi-users', route: '/preschool/students', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] },
       { label: 'Classes & Fees', icon: 'pi pi-book', route: '/preschool/classes', roles: ['PreSchoolHead', 'PreSchoolFrontDesk', 'PreSchoolTutor'] },
       { label: 'Admission Enquiries', icon: 'pi pi-comments', route: '/preschool/enquiries', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] },
@@ -139,7 +141,8 @@ export const MENU: MenuSection[] = [
     school: 'preschool',
     items: [
       { label: 'Pending Fees', icon: 'pi pi-exclamation-circle', route: '/preschool/reports/pending-fees', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] },
-      { label: 'Admissions by Month', icon: 'pi pi-user-plus', route: '/preschool/reports/admissions', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] }
+      { label: 'Admissions by Month', icon: 'pi pi-user-plus', route: '/preschool/reports/admissions', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] },
+      { label: 'Staff Attendance', icon: 'pi pi-clock', route: '/preschool/reports/attendance', roles: ['PreSchoolHead'] }
     ]
   },
   {

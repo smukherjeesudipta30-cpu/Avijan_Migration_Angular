@@ -54,6 +54,10 @@ export interface PreSchoolSettings {
   receiptPrefix: string;
   /** The Champahati centre's opening day, "yyyy-MM-dd". */
   opensOn?: string | null;
+  /** The attendance fence: staff can mark only within geofenceMetres of this point. */
+  latitude?: number | null;
+  longitude?: number | null;
+  geofenceMetres?: number;
   modifiedBy: string | null;
   modifiedOn: string | null;
 }

@@ -39,7 +39,9 @@ export class AttendanceComponent implements OnDestroy {
    * come here to put the code on a screen, and that is all they are shown.
    */
   readonly marksOwnAttendance = computed(() =>
-    this.auth.hasAnyRole(['Teacher', 'Receptionist']));
+    // The PreSchool's receptionist and teachers use this same screen at
+    // /preschool/attendance, where it talks to the PreSchool's attendance.
+    this.auth.hasAnyRole(['Teacher', 'Receptionist', 'PreSchoolFrontDesk', 'PreSchoolTutor']));
 
   readonly qr = signal<AttendanceQr | null>(null);
   readonly qrImage = signal<string | null>(null);
