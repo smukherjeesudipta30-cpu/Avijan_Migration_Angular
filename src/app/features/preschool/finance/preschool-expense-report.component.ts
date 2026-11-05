@@ -8,10 +8,17 @@ import { formatMoney } from '../../../core/format/money';
 import { todayIso } from '../../../core/models/preschool.model';
 import { PreSchoolExpense } from '../../../core/models/preschool-finance.model';
 import { monthLabel } from '../../../core/models/preschool-student.model';
+import { downloadCsv } from '../../../core/printing/csv-download';
 import { escapeHtml, openDocumentWindow } from '../../../core/printing/legacy-documents';
 import { PreSchoolFinanceService } from '../../../core/services/preschool-finance.service';
 
-type Period = 'month' | 'year' | 'all';
+type Period = 'month' | 'year' | 'all' | 'range';
+
+/** "2026-11-05" as "5 Nov 2026". */
+const dayLabel = (iso: string) => {
+  const [y, m, d] = iso.split('-').map(Number);
+  return `${d} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][m - 1]} ${y}`;
+};
 
 /** The earliest day "All time" reaches back to; the PreSchool did not exist before it. */
 const ALL_FROM = '2026-01-01';
@@ -34,7 +41,10 @@ const pad = (n: number) => `${n}`.padStart(2, '0');
         <h1>Expense report</h1>
         <p class="app-muted">What the PreSchool spent, by head. Salaries are in the income report.</p>
       </div>
-      <p-button label="Print / PDF" icon="pi pi-print" [outlined]="true" [disabled]="!list().length" (onClick)="print()" />
+      <div class="per-dl">
+        <p-button label="Print / PDF" icon="pi pi-print" [outlined]="true" [disabled]="!list().length" (onClick)="print()" />
+        <p-button label="Excel" icon="pi pi-file-excel" [outlined]="true" severity="success" [disabled]="!list().length" (onClick)="excel()" />
+      </div>
     </div>
 
     <div class="per-bar">
@@ -42,8 +52,15 @@ const pad = (n: number) => `${n}`.padStart(2, '0');
         <button type="button" role="tab" [class.on]="period() === 'month'" [attr.aria-selected]="period() === 'month'" (click)="setPeriod('month')">Monthly</button>
         <button type="button" role="tab" [class.on]="period() === 'year'" [attr.aria-selected]="period() === 'year'" (click)="setPeriod('year')">Yearly</button>
         <button type="button" role="tab" [class.on]="period() === 'all'" [attr.aria-selected]="period() === 'all'" (click)="setPeriod('all')">All time</button>
+        <button type="button" role="tab" [class.on]="period() === 'range'" [attr.aria-selected]="period() === 'range'" (click)="setPeriod('range')">Date range</button>
       </div>
-      @if (period() !== 'all') {
+      @if (period() === 'range') {
+        <div class="per-range">
+          <label>From <input type="date" [(ngModel)]="rangeFrom" [max]="rangeTo" /></label>
+          <label>To <input type="date" [(ngModel)]="rangeTo" [min]="rangeFrom" /></label>
+          <p-button label="Show" icon="pi pi-search" size="small" (onClick)="load()" />
+        </div>
+      } @else if (period() !== 'all') {
         <div class="per-step">
           <p-button icon="pi pi-chevron-left" [text]="true" [rounded]="true" ariaLabel="Earlier" (onClick)="step(-1)" />
           <strong>{{ title() }}</strong>
@@ -99,6 +116,10 @@ const pad = (n: number) => `${n}`.padStart(2, '0');
     .per-tabs button { border: 0; background: none; padding: 0.45rem 1rem; border-radius: 999px; font: inherit; font-weight: 700; color: #5b21b6; cursor: pointer; }
     .per-tabs button.on { background: #6d28d9; color: #fff; }
     .per-step { display: flex; align-items: center; gap: 0.3rem; }
+    .per-dl { display: flex; gap: 0.5rem; }
+    .per-range { display: flex; gap: 0.6rem; align-items: flex-end; flex-wrap: wrap; }
+    .per-range label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.78rem; font-weight: 600; }
+    .per-range input { padding: 0.4rem 0.55rem; border: 1px solid var(--app-border); border-radius: 6px; font: inherit; }
     .per-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
     .per-kpis div { padding: 0.8rem 1rem; border-radius: 12px; background: #fff; border: 1px solid var(--app-border); }
     .per-kpis span { display: block; font-size: 0.8rem; color: var(--app-text-muted); }
@@ -130,8 +151,15 @@ export class PreSchoolExpenseReportComponent implements OnInit {
     const a = this.anchor();
     if (this.period() === 'month') return monthLabel(a);
     if (this.period() === 'year') return a.slice(0, 4);
+    if (this.period() === 'range') return `${dayLabel(this.shown.from)} to ${dayLabel(this.shown.to)}`;
     return `All time (from ${monthLabel(ALL_FROM)})`;
   });
+
+  /** Any two days, for the Date range tab; the month so far to start with. */
+  rangeFrom = todayIso().slice(0, 8) + '01';
+  rangeTo = todayIso();
+  /** The dates the list on screen is for, so the title matches what was loaded. */
+  private shown = { from: this.rangeFrom, to: this.rangeTo };
 
   readonly total = computed(() => this.list().reduce((n, e) => n + e.amount, 0));
 
@@ -185,10 +213,15 @@ export class PreSchoolExpenseReportComponent implements OnInit {
     return this.total() ? (Math.round((amount / this.total()) * 1000) / 10).toString() : '0';
   }
 
-  private load(): void {
+  load(): void {
     const [y, m] = this.anchor().split('-').map(Number);
     let from: string, to: string;
-    if (this.period() === 'month') {
+    if (this.period() === 'range') {
+      if (!this.rangeFrom || !this.rangeTo || this.rangeTo < this.rangeFrom) return;
+      from = this.rangeFrom;
+      to = this.rangeTo;
+      this.shown = { from, to };
+    } else if (this.period() === 'month') {
       from = this.anchor();
       to = `${y}-${pad(m)}-${pad(new Date(y, m, 0).getDate())}`;
     } else if (this.period() === 'year') {
@@ -199,6 +232,17 @@ export class PreSchoolExpenseReportComponent implements OnInit {
       to = todayIso();
     }
     this.finance.expenses(from, to).subscribe(l => this.list.set(l));
+  }
+
+  /** Every entry and the head totals, as a file Excel opens. */
+  excel(): void {
+    downloadCsv(`Avijan-PreSchool-expenses-${this.title().replace(/[^A-Za-z0-9]+/g, '-')}`, [
+      { title: `Avijan PreSchool — Expense report — ${this.title()}`, header: ['Date', 'Head', 'Description', 'Mode', 'Reference', 'Amount'],
+        rows: [...this.list()].sort((a, b) => a.spentOn.localeCompare(b.spentOn))
+          .map(x => [x.spentOn, x.head, x.description, x.mode, x.reference, x.amount]) },
+      { title: 'By head', header: ['Head', 'Entries', 'Amount'],
+        rows: [...this.heads().map(h => [h.name, h.count, h.amount]), ['Total', this.list().length, this.total()]] }
+    ]);
   }
 
   print(): void {

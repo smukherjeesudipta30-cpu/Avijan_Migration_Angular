@@ -136,3 +136,40 @@ export interface PreSchoolAlerts {
   unread: number;
   items: PreSchoolAlert[];
 }
+
+export interface PreSchoolIncomeReceiptLine {
+  receivedOn: string;
+  receiptCode: string;
+  childName: string;
+  className: string;
+  mode: string;
+  admissionFee: number;
+  monthlyFees: number;
+  total: number;
+}
+
+export interface PreSchoolIncomeSalaryLine {
+  paidOn: string;
+  staffName: string;
+  role: string;
+  forMonth: string;
+  mode: string;
+  amount: number;
+}
+
+/** The PreSchool's money between any two dates, with every entry behind it. */
+export interface PreSchoolIncomeRange {
+  from: string;
+  to: string;
+  admissionFees: number;
+  monthlyFees: number;
+  income: number;
+  salaries: number;
+  expenses: number;
+  net: number;
+  incomeByMode: Record<string, number>;
+  expensesByHead: Record<string, number>;
+  receipts: PreSchoolIncomeReceiptLine[];
+  salaryPayments: PreSchoolIncomeSalaryLine[];
+  expenseEntries: PreSchoolExpense[];
+}

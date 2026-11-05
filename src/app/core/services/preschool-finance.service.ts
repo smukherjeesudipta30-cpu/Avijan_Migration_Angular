@@ -5,7 +5,7 @@ import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
 import {
-  PreSchoolAlerts, PreSchoolExpense, PreSchoolExpenseSave, PreSchoolIncomeReport, PreSchoolSalaryPay, PreSchoolSalaryPayment,
+  PreSchoolAlerts, PreSchoolExpense, PreSchoolExpenseSave, PreSchoolIncomeRange, PreSchoolIncomeReport, PreSchoolSalaryPay, PreSchoolSalaryPayment,
   PreSchoolSalarySheet, PreSchoolStaff, PreSchoolStaffSave
 } from '../models/preschool-finance.model';
 
@@ -72,6 +72,11 @@ export class PreSchoolFinanceService {
   /** The signed-in PreSchool staff member's own salary slips. */
   myPayslips(): Observable<PreSchoolSalaryPayment[]> {
     return this.http.get<ApiResponse<PreSchoolSalaryPayment[]>>(`${this.base}/my-payslips`).pipe(map(r => r.data));
+  }
+
+  /** Income, salaries and expenses between any two dates, with every entry behind them. */
+  incomeRange(from: string, to: string): Observable<PreSchoolIncomeRange> {
+    return this.http.get<ApiResponse<PreSchoolIncomeRange>>(`${this.base}/reports/income-range`, { params: { from, to } }).pipe(map(r => r.data));
   }
 
   income(year: number): Observable<PreSchoolIncomeReport> {

@@ -7,6 +7,7 @@ import { PreSchoolIncomeReport } from '../../../core/models/preschool-finance.mo
 import { monthLabel } from '../../../core/models/preschool-student.model';
 import { escapeHtml, openDocumentWindow } from '../../../core/printing/legacy-documents';
 import { PreSchoolFinanceService } from '../../../core/services/preschool-finance.service';
+import { PreSchoolIncomeRangeComponent } from './preschool-income-range.component';
 
 /**
  * The PreSchool's money for a year, month by month: fees received, salaries
@@ -16,7 +17,7 @@ import { PreSchoolFinanceService } from '../../../core/services/preschool-financ
 @Component({
   selector: 'app-preschool-income',
   standalone: true,
-  imports: [ButtonModule, ChartModule],
+  imports: [ButtonModule, ChartModule, PreSchoolIncomeRangeComponent],
   template: `
     <div class="pin-head">
       <div class="app-page-head">
@@ -24,8 +25,10 @@ import { PreSchoolFinanceService } from '../../../core/services/preschool-financ
         <h1>Income report</h1>
         <p class="app-muted">Fees by the date received, salaries by the date paid, expenses by the date spent. Cancelled receipts are left out.</p>
       </div>
-      <p-button label="Print / PDF" icon="pi pi-print" [outlined]="true" [disabled]="!report()" (onClick)="print()" />
+      <p-button label="Year as PDF" icon="pi pi-print" [outlined]="true" [disabled]="!report()" (onClick)="print()" />
     </div>
+
+    <app-preschool-income-range />
 
     <div class="pin-year">
       <p-button icon="pi pi-chevron-left" [text]="true" [rounded]="true" ariaLabel="Previous year" (onClick)="setYear(year() - 1)" />
