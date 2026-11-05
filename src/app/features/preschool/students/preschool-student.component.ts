@@ -149,6 +149,9 @@ function addMonths(iso: string, n: number): string {
           <label>Relation <input pInputText [(ngModel)]="form.guardianRelation" maxlength="30" list="psd-relations" placeholder="Mother" /></label>
           <label>Phone * <input pInputText type="tel" [(ngModel)]="form.phone" maxlength="15" placeholder="98300 00000" /></label>
           <label>Emergency phone <input pInputText type="tel" [(ngModel)]="form.emergencyPhone" maxlength="15" /></label>
+          <label class="w2">Home address * <textarea pInputText rows="3" [(ngModel)]="form.address" maxlength="400"
+            placeholder="House / flat, para or road, village or town, P.O., P.S., PIN"></textarea></label>
+          <label>Email <input pInputText type="email" [(ngModel)]="form.email" maxlength="150" /></label>
 
           <p class="psd-sub w2">Guardian 2 <small>— a second person allowed to collect the child; gets their own ID card</small></p>
           <label>Name <input pInputText [(ngModel)]="form.guardian2Name" maxlength="100" /></label>
@@ -165,8 +168,6 @@ function addMonths(iso: string, n: number): string {
             <app-photo-capture label="Guardian 2" [(value)]="guardian2Photo" />
           </div>
           <p class="psd-sub w2">Other details</p>
-          <label>Email <input pInputText type="email" [(ngModel)]="form.email" maxlength="150" /></label>
-          <label class="w2">Address <textarea pInputText rows="2" [(ngModel)]="form.address" maxlength="400"></textarea></label>
           <label>Monthly discount (₹) <input pInputText type="number" min="0" [(ngModel)]="form.monthlyDiscount" /></label>
           @if (!isNew()) {
             <label>Status
@@ -396,6 +397,7 @@ export class PreSchoolStudentComponent implements OnInit {
     if (!f.joinedOn) return this.warn('Pick the joining date.');
     if (!f.parentName.trim()) return this.warn('Enter the parent to contact.');
     if (!/^\+?[0-9 \-]{10,15}$/.test(f.phone.trim())) return this.warn('Enter a 10-digit phone number.');
+    if (!f.address?.trim()) return this.warn('Enter the home address.');
     if (f.status !== 'Active' && !f.endedOn) return this.warn('Give the date the child completed the class or left.');
     if (f.guardian2Phone?.trim() && !/^\+?[0-9 \-]{10,15}$/.test(f.guardian2Phone.trim())) return this.warn('Enter a 10-digit phone for guardian 2.');
     if (f.guardian2Phone?.trim() && !f.guardian2Name?.trim()) return this.warn('Enter guardian 2\'s name with their phone.');
