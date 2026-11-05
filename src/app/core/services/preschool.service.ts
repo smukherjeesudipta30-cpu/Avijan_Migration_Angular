@@ -50,6 +50,11 @@ export class PreSchoolService {
     return this.http.put<ApiResponse<PreSchoolSettings>>(`${this.base}/settings`, body).pipe(map(r => r.data));
   }
 
+  /** Just the PreSchool's email; the admin and the receptionist may change it. */
+  saveEmail(email: string): Observable<PreSchoolSettings> {
+    return this.http.put<ApiResponse<PreSchoolSettings>>(`${this.base}/settings/email`, { email }).pipe(map(r => r.data));
+  }
+
   /** Puts up (or, with null, takes down) the landing page's classroom picture. Returns when it was put up. */
   saveSitePhoto(slot: 'SmartClass', dataUrl: string | null): Observable<string | null> {
     return this.http.put<ApiResponse<string | null>>(`${this.base}/site-photos/${slot}`, { dataUrl }).pipe(map(r => r.data));

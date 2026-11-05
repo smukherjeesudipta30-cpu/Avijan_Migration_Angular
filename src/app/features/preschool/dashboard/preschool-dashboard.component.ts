@@ -1,6 +1,8 @@
 import { DatePipe } from '@angular/common';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
+import { InputTextModule } from 'primeng/inputtext';
 import { RouterLink } from '@angular/router';
 
 import { formatMoney } from '../../../core/format/money';
@@ -22,7 +24,7 @@ const CARD_INKS = ['#b3264f', '#1d5fa8', '#2b7a2b', '#9a5b00'];
 @Component({
   selector: 'app-preschool-dashboard',
   standalone: true,
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe, RouterLink, FormsModule, InputTextModule],
   template: `
     <section class="psd__hero">
       <div>
@@ -58,6 +60,24 @@ const CARD_INKS = ['#b3264f', '#1d5fa8', '#2b7a2b', '#9a5b00'];
           </div>
         } @empty {
           <p class="app-muted psd__none">No alerts. You are told here when a PreSchool staff member changes their password.</p>
+        }
+      </section>
+    }
+
+    @if (isOffice() && overview(); as o) {
+      <section class="app-card psd__mail">
+        <i class="pi pi-envelope" aria-hidden="true"></i>
+        <div>
+          <strong>PreSchool email</strong>
+          <small class="app-muted">Shown to parents; replies to the PreSchool's emails come here.</small>
+        </div>
+        @if (editingEmail()) {
+          <input pInputText type="email" [(ngModel)]="emailDraft" maxlength="150" aria-label="PreSchool email" />
+          <button type="button" class="psd__link" (click)="saveEmail()">Save</button>
+          <button type="button" class="psd__link" (click)="editingEmail.set(false)">Cancel</button>
+        } @else {
+          <span class="psd__mail-value">{{ o.settings.email || 'Not set' }}</span>
+          <button type="button" class="psd__link" (click)="emailDraft = o.settings.email ?? ''; editingEmail.set(true)">Change</button>
         }
       </section>
     }
@@ -103,13 +123,22 @@ const CARD_INKS = ['#b3264f', '#1d5fa8', '#2b7a2b', '#9a5b00'];
           </div>
         </a>
       }
-      <div class="app-card psd__step psd__step--soon">
-        <i class="pi pi-user-plus" aria-hidden="true"></i>
+      @if (isOffice()) {
+        <a class="app-card psd__step" routerLink="/preschool/students">
+          <i class="pi pi-user-plus" aria-hidden="true"></i>
+          <div>
+            <strong>Admissions and fee receipts</strong>
+            <p class="app-muted">New admission with ID cards, monthly fees and receipts.</p>
+          </div>
+        </a>
+      }
+      <a class="app-card psd__step" routerLink="/preschool/attendance">
+        <i class="pi pi-qrcode" aria-hidden="true"></i>
         <div>
-          <strong>Admissions and fee receipts</strong>
-          <p class="app-muted">Coming in the next phase.</p>
+          <strong>Attendance</strong>
+          <p class="app-muted">{{ isHead() ? 'Put the attendance code on the office screen.' : 'Mark your arrival and departure.' }}</p>
         </div>
-      </div>
+      </a>
     </div>
   `,
   styles: [`
@@ -131,6 +160,11 @@ const CARD_INKS = ['#b3264f', '#1d5fa8', '#2b7a2b', '#9a5b00'];
     .psd__link { border: 0; background: none; color: #6d28d9; font: inherit; font-weight: 600; cursor: pointer; }
     .psd__none { margin: 0; }
     .psd__title { margin: 1.5rem 0 0.75rem; font-size: 1.1rem; }
+    .psd__mail { margin-top: 1rem; padding: 0.85rem 1.15rem; display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap; }
+    .psd__mail > i { font-size: 1.3rem; color: #6d28d9; }
+    .psd__mail > div { display: flex; flex-direction: column; flex: 1 1 14rem; }
+    .psd__mail-value { font-weight: 700; }
+    .psd__mail input { min-width: 15rem; }
     .psd__classes { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: 0.9rem; }
     .psd__class { display: flex; flex-direction: column; gap: 0.25rem; padding: 1.1rem; border-radius: 16px;
       text-decoration: none; transition: transform 0.15s ease, box-shadow 0.15s ease; }
@@ -163,6 +197,23 @@ export class PreSchoolDashboardComponent implements OnInit {
   readonly overview = signal<PreSchoolOverview | null>(null);
   readonly failed = signal(false);
   readonly isHead = computed(() => this.auth.hasAnyRole(['PreSchoolHead']));
+  readonly isOffice = computed(() => this.auth.hasAnyRole(['PreSchoolHead', 'PreSchoolFrontDesk']));
+  readonly editingEmail = signal(false);
+  emailDraft = '';
+
+  saveEmail(): void {
+    const email = this.emailDraft.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      this.messages.add({ severity: 'warn', summary: 'Please check', detail: 'Enter a valid email address.', life: 4000 });
+      return;
+    }
+    this.preschool.saveEmail(email).subscribe(s => {
+      const o = this.overview();
+      if (o) this.overview.set({ ...o, settings: s });
+      this.editingEmail.set(false);
+      this.messages.add({ severity: 'success', summary: 'PreSchool email saved', life: 2500 });
+    });
+  }
   readonly activeClasses = computed(() => (this.overview()?.classes ?? []).filter(c => c.isActive));
   /** Active classes still charging nothing a month — the first thing to set up. */
   readonly unsetClasses = computed(() => this.activeClasses().filter(c => c.monthlyTotal === 0).length);
