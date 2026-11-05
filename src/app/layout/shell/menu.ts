@@ -120,6 +120,7 @@ export const MENU: MenuSection[] = [
       { label: 'Students & Fees', icon: 'pi pi-users', route: '/preschool/students', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] },
       { label: 'Classes & Fees', icon: 'pi pi-book', route: '/preschool/classes', roles: ['PreSchoolHead', 'PreSchoolFrontDesk', 'PreSchoolTutor'] },
       { label: 'Admission Enquiries', icon: 'pi pi-comments', route: '/preschool/enquiries', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] },
+      { label: 'Store', icon: 'pi pi-box', route: '/preschool/store', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] },
       { label: 'Holiday Notices', icon: 'pi pi-calendar', route: '/preschool/holidays', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] },
       // The receptionist's and teachers' own salary slips (the admin pays them under Accounts).
       { label: 'My Payslips', icon: 'pi pi-wallet', route: '/preschool/my-payslips', roles: ['PreSchoolFrontDesk', 'PreSchoolTutor'] },

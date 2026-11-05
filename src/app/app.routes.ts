@@ -639,6 +639,13 @@ export const routes: Routes = [
           import('./features/attendance/attendance.component').then(m => m.AttendanceComponent)
       },
       {
+        path: 'preschool/store',
+        title: 'PreSchool store · Avijan',
+        canActivate: [roleGuard('PreSchoolHead', 'PreSchoolFrontDesk')],
+        loadComponent: () =>
+          import('./features/preschool/store/preschool-store.component').then(m => m.PreSchoolStoreComponent)
+      },
+      {
         path: 'preschool/reports/attendance',
         title: 'PreSchool staff attendance · Avijan',
         canActivate: [roleGuard('PreSchoolHead')],

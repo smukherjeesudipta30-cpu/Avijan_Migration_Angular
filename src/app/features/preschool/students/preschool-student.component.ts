@@ -21,6 +21,7 @@ import { PhotoCaptureComponent } from '../../../shared/photo-capture/photo-captu
 import { AuthService } from '../../../core/services/auth.service';
 import { PreSchoolService } from '../../../core/services/preschool.service';
 import { PreSchoolStudentService } from '../../../core/services/preschool-student.service';
+import { PreSchoolStoreService, PreSchoolStudentStoreLine } from '../../../core/services/preschool-store.service';
 
 const blankForm = (): PreSchoolStudentSave => ({
   childName: '', dateOfBirth: '', gender: null, bloodGroup: null, fatherName: null, motherName: null,
@@ -185,6 +186,27 @@ function addMonths(iso: string, n: number): string {
 
       @if (!isNew() && student(); as s) {
         <section class="app-card psd-receipts">
+          <h2>Store items</h2>
+          @for (l of storeLines(); track l.itemId) {
+            <div class="psd-store">
+              <span><strong>{{ l.itemName }}</strong>
+                @if (l.givenOn) { <small>Given {{ l.givenOn | date: 'd MMM y' }}@if (l.givenBy) { · {{ l.givenBy }} }</small> }
+                @else { <small>{{ l.inStock }} in stock</small> }</span>
+              @if (l.givenOn) {
+                <span class="psd-store-ok"><i class="pi pi-check-circle" aria-hidden="true"></i> Given</span>
+              } @else {
+                <p-button label="Give" icon="pi pi-box" size="small" [outlined]="true" [disabled]="l.inStock <= 0"
+                  [loading]="giving() === l.itemId" (onClick)="give(s, l.itemId, l.itemName)" />
+              }
+            </div>
+          } @empty {
+            <p class="app-muted">No store items set up for {{ s.className }}. Add them on the Store screen.</p>
+          }
+        </section>
+      }
+
+      @if (!isNew() && student(); as s) {
+        <section class="app-card psd-receipts">
           <h2>Receipts</h2>
           @for (r of s.receipts; track r.id) {
             <div class="psd-receipt" [class.psd-receipt--void]="r.isCancelled">
@@ -244,6 +266,9 @@ function addMonths(iso: string, n: number): string {
     .psd-sub { margin: 0.4rem 0 -0.2rem; padding-top: 0.6rem; border-top: 1px dashed var(--app-border); font-weight: 700; font-size: 0.9rem; color: #4c1d95; }
     .psd-sub small { font-weight: 500; color: var(--app-text-muted); }
     .psd-photos { display: flex; gap: 1.1rem; flex-wrap: wrap; }
+    .psd-store { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid var(--app-border); }
+    .psd-store small { display: block; color: var(--app-text-muted); font-size: 0.78rem; }
+    .psd-store-ok { color: #2b7a2b; font-weight: 700; font-size: 0.85rem; }
     .psd-title { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
     .psd-receipt { display: grid; grid-template-columns: 1fr auto auto; gap: 0.75rem; align-items: center; padding: 0.55rem 0; border-bottom: 1px solid var(--app-border); }
     .psd-receipt small { display: block; color: var(--app-text-muted); font-size: 0.78rem; }
@@ -257,6 +282,7 @@ function addMonths(iso: string, n: number): string {
 })
 export class PreSchoolStudentComponent implements OnInit {
   private readonly students = inject(PreSchoolStudentService);
+  private readonly storeApi = inject(PreSchoolStoreService);
   private readonly preschool = inject(PreSchoolService);
   private readonly auth = inject(AuthService);
   private readonly messages = inject(MessageService);
@@ -328,6 +354,22 @@ export class PreSchoolStudentComponent implements OnInit {
     }
   }
 
+  readonly storeLines = signal<PreSchoolStudentStoreLine[]>([]);
+  readonly giving = signal<number | null>(null);
+
+  private loadStore(id: number): void {
+    this.storeApi.forStudent(id).subscribe(l => this.storeLines.set(l));
+  }
+
+  /** Gives the child one of the item; it comes off the class's stock. */
+  give(s: PreSchoolStudentDetail, itemId: number, name: string): void {
+    this.giving.set(itemId);
+    this.storeApi.give(s.id, itemId).subscribe({
+      next: l => { this.giving.set(null); this.storeLines.set(l); this.done(`${name} given to ${s.childName}`); },
+      error: () => this.giving.set(null)
+    });
+  }
+
   private loadPhotos(id: number): void {
     this.students.photos(id).subscribe(p => this.showPhotos(p));
   }
@@ -373,6 +415,7 @@ export class PreSchoolStudentComponent implements OnInit {
   }
 
   private load(id: number): void {
+    this.loadStore(id);
     this.students.get(id).subscribe(s => {
       this.student.set(s);
       const { id: _id, admissionCode: _a, className: _c, monthlyFee: _m, admissionFee: _f, admissionPaid: _p, months: _ms, receipts: _r, ...editable } = s;
