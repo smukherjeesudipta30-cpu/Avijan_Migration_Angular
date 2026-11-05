@@ -6,7 +6,7 @@ import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
 import {
   PreSchoolAdmissionReport, PreSchoolCollect, PreSchoolPendingReport, PreSchoolReceipt, PreSchoolStudentDetail,
-  PreSchoolStudentListItem, PreSchoolStudentSave
+  PreSchoolPhotoSlot, PreSchoolStudentListItem, PreSchoolStudentPhotos, PreSchoolStudentSave
 } from '../models/preschool-student.model';
 
 /** Avijan PreSchool admissions, fee collection, receipts and their reports. */
@@ -32,6 +32,16 @@ export class PreSchoolStudentService {
       ? this.http.post<ApiResponse<PreSchoolStudentDetail>>(`${this.base}/students`, body)
       : this.http.put<ApiResponse<PreSchoolStudentDetail>>(`${this.base}/students/${id}`, body);
     return call.pipe(map(r => r.data));
+  }
+
+  photos(id: number): Observable<PreSchoolStudentPhotos> {
+    return this.http.get<ApiResponse<PreSchoolStudentPhotos>>(`${this.base}/students/${id}/photos`).pipe(map(r => r.data));
+  }
+
+  /** Saves one photo; null removes it. */
+  savePhoto(id: number, slot: PreSchoolPhotoSlot, dataUrl: string | null): Observable<PreSchoolStudentPhotos> {
+    return this.http.put<ApiResponse<PreSchoolStudentPhotos>>(`${this.base}/students/${id}/photos/${slot}`, { dataUrl })
+      .pipe(map(r => r.data));
   }
 
   collect(studentId: number, body: PreSchoolCollect): Observable<PreSchoolReceipt> {

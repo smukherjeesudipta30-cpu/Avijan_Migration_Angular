@@ -129,6 +129,8 @@ export interface PreSchoolPublic {
   uniformShopPhone?: string | null;
   uniformShopMapUrl?: string | null;
   opensOn?: string | null;
+  /** When the school put up its own classroom picture; empty shows the drawn one. */
+  smartClassPhotoOn?: string | null;
   classes: PreSchoolPublicClass[];
   holidays: PreSchoolHoliday[];
 }

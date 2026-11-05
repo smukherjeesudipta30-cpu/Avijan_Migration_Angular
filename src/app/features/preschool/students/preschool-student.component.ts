@@ -6,20 +6,26 @@ import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 
+import { Observable, concatMap, from, last, of } from 'rxjs';
+
 import { formatMoney } from '../../../core/format/money';
-import { PreSchoolClass, todayIso } from '../../../core/models/preschool.model';
+import { PreSchoolClass, PreSchoolSettings, todayIso } from '../../../core/models/preschool.model';
 import {
-  PreSchoolMonth, PreSchoolPayMode, PreSchoolReceipt, PreSchoolStudentDetail, PreSchoolStudentSave, monthLabel, whatsAppLink
+  PreSchoolMonth, PreSchoolPayMode, PreSchoolPhotoSlot, PreSchoolReceipt, PreSchoolStudentDetail, PreSchoolStudentPhotos,
+  PreSchoolStudentSave, monthLabel, whatsAppLink
 } from '../../../core/models/preschool-student.model';
 import { openPendingDocumentWindow, writeDocumentWindow } from '../../../core/printing/legacy-documents';
+import { downloadPreSchoolIdCards } from '../../../core/printing/preschool-id-cards';
 import { preSchoolReceiptHtml } from '../../../core/printing/preschool-receipt';
+import { PhotoCaptureComponent } from '../../../shared/photo-capture/photo-capture.component';
 import { AuthService } from '../../../core/services/auth.service';
 import { PreSchoolService } from '../../../core/services/preschool.service';
 import { PreSchoolStudentService } from '../../../core/services/preschool-student.service';
 
 const blankForm = (): PreSchoolStudentSave => ({
   childName: '', dateOfBirth: '', gender: null, bloodGroup: null, fatherName: null, motherName: null,
-  parentName: '', phone: '', emergencyPhone: null, email: null, address: null, classId: 0,
+  parentName: '', phone: '', emergencyPhone: null, email: null, address: null,
+  guardianRelation: null, guardian2Name: null, guardian2Relation: null, guardian2Phone: null, heightCm: null, weightKg: null, classId: 0,
   joinedOn: todayIso(), monthlyDiscount: 0, status: 'Active', endedOn: null, notes: null
 });
 
@@ -38,7 +44,7 @@ function addMonths(iso: string, n: number): string {
 @Component({
   selector: 'app-preschool-student',
   standalone: true,
-  imports: [DatePipe, FormsModule, RouterLink, ButtonModule, InputTextModule],
+  imports: [DatePipe, FormsModule, RouterLink, ButtonModule, InputTextModule, PhotoCaptureComponent],
   template: `
     <a routerLink="/preschool/students" class="psd-back"><i class="pi pi-arrow-left" aria-hidden="true"></i> Students</a>
 
@@ -57,6 +63,8 @@ function addMonths(iso: string, n: number): string {
           <p class="app-muted">{{ s.parentName }} · <a [href]="'tel:' + s.phone">{{ s.phone }}</a> · joined {{ s.joinedOn | date: 'd MMM y' }}
             @if (s.status !== 'Active') { · <strong>{{ s.status }}</strong> }</p>
         </div>
+        <p-button label="Download ID cards" icon="pi pi-id-card" severity="secondary" [outlined]="true"
+          [loading]="makingCards()" (onClick)="downloadCards()" />
       </div>
     }
 
@@ -131,11 +139,32 @@ function addMonths(iso: string, n: number): string {
               @for (c of classes(); track c.id) { <option [ngValue]="c.id" [disabled]="!c.isActive">{{ c.name }}</option> }
             </select></label>
           <label>Joining date * <input pInputText type="date" [(ngModel)]="form.joinedOn" /></label>
+          <label>Height (cm) <input pInputText type="number" min="40" max="200" step="0.5" [(ngModel)]="form.heightCm" placeholder="95" /></label>
+          <label>Weight (kg) <input pInputText type="number" min="2" max="80" step="0.1" [(ngModel)]="form.weightKg" placeholder="14.5" /></label>
           <label>Father's name <input pInputText [(ngModel)]="form.fatherName" maxlength="100" /></label>
           <label>Mother's name <input pInputText [(ngModel)]="form.motherName" maxlength="100" /></label>
-          <label>Parent to contact * <input pInputText [(ngModel)]="form.parentName" maxlength="100" /></label>
+
+          <p class="psd-sub w2">Guardian 1 <small>— the parent the school calls; gets an ID card to collect the child</small></p>
+          <label>Name * <input pInputText [(ngModel)]="form.parentName" maxlength="100" /></label>
+          <label>Relation <input pInputText [(ngModel)]="form.guardianRelation" maxlength="30" list="psd-relations" placeholder="Mother" /></label>
           <label>Phone * <input pInputText type="tel" [(ngModel)]="form.phone" maxlength="15" placeholder="98300 00000" /></label>
           <label>Emergency phone <input pInputText type="tel" [(ngModel)]="form.emergencyPhone" maxlength="15" /></label>
+
+          <p class="psd-sub w2">Guardian 2 <small>— a second person allowed to collect the child; gets their own ID card</small></p>
+          <label>Name <input pInputText [(ngModel)]="form.guardian2Name" maxlength="100" /></label>
+          <label>Relation <input pInputText [(ngModel)]="form.guardian2Relation" maxlength="30" list="psd-relations" placeholder="Father" /></label>
+          <label>Phone <input pInputText type="tel" [(ngModel)]="form.guardian2Phone" maxlength="15" /></label>
+          <datalist id="psd-relations">
+            @for (r of relations; track r) { <option [value]="r"></option> }
+          </datalist>
+
+          <p class="psd-sub w2">Photos <small>— for the ID cards; take them with the camera or choose from the gallery</small></p>
+          <div class="psd-photos w2">
+            <app-photo-capture label="Child" [(value)]="childPhoto" />
+            <app-photo-capture label="Guardian 1" [(value)]="guardian1Photo" />
+            <app-photo-capture label="Guardian 2" [(value)]="guardian2Photo" />
+          </div>
+          <p class="psd-sub w2">Other details</p>
           <label>Email <input pInputText type="email" [(ngModel)]="form.email" maxlength="150" /></label>
           <label class="w2">Address <textarea pInputText rows="2" [(ngModel)]="form.address" maxlength="400"></textarea></label>
           <label>Monthly discount (₹) <input pInputText type="number" min="0" [(ngModel)]="form.monthlyDiscount" /></label>
@@ -150,7 +179,7 @@ function addMonths(iso: string, n: number): string {
           }
           <label class="w2">Notes <textarea pInputText rows="2" [(ngModel)]="form.notes" maxlength="500"></textarea></label>
         </div>
-        <p-button [label]="isNew() ? 'Save admission' : 'Save details'" icon="pi pi-check" [loading]="saving()" (onClick)="save()" />
+        <p-button [label]="isNew() ? 'Save admission and download ID cards' : 'Save details'" icon="pi pi-check" [loading]="saving()" (onClick)="save()" />
       </section>
 
       @if (!isNew() && student(); as s) {
@@ -211,6 +240,10 @@ function addMonths(iso: string, n: number): string {
     .psd-grid label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.82rem; font-weight: 600; }
     .psd-grid select { padding: 0.5rem 0.6rem; border: 1px solid var(--app-border); border-radius: 6px; background: #fff; font: inherit; }
     .w2 { grid-column: 1 / -1; }
+    .psd-sub { margin: 0.4rem 0 -0.2rem; padding-top: 0.6rem; border-top: 1px dashed var(--app-border); font-weight: 700; font-size: 0.9rem; color: #4c1d95; }
+    .psd-sub small { font-weight: 500; color: var(--app-text-muted); }
+    .psd-photos { display: flex; gap: 1.1rem; flex-wrap: wrap; }
+    .psd-title { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
     .psd-receipt { display: grid; grid-template-columns: 1fr auto auto; gap: 0.75rem; align-items: center; padding: 0.55rem 0; border-bottom: 1px solid var(--app-border); }
     .psd-receipt small { display: block; color: var(--app-text-muted); font-size: 0.78rem; }
     .psd-receipt--void { opacity: 0.55; }
@@ -242,6 +275,15 @@ export class PreSchoolStudentComponent implements OnInit {
   readonly saving = signal(false);
   readonly collecting = signal(false);
   readonly isHead = computed(() => this.auth.hasAnyRole(['PreSchoolHead']));
+  readonly makingCards = signal(false);
+  readonly relations = ['Mother', 'Father', 'Grandmother', 'Grandfather', 'Aunt', 'Uncle', 'Sister', 'Brother', 'Guardian'];
+
+  /** The ID-card photos as on screen, and as last saved, so only changed ones are sent. */
+  readonly childPhoto = signal<string | null>(null);
+  readonly guardian1Photo = signal<string | null>(null);
+  readonly guardian2Photo = signal<string | null>(null);
+  private savedPhotos: PreSchoolStudentPhotos = { child: null, guardian1: null, guardian2: null };
+  private settings: PreSchoolSettings | null = null;
 
   form: PreSchoolStudentSave = blankForm();
   takeAdmission = false;
@@ -273,11 +315,59 @@ export class PreSchoolStudentComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.preschool.overview().subscribe(o => this.classes.set(o.classes));
+    this.preschool.overview().subscribe(o => {
+      this.classes.set(o.classes);
+      this.settings = o.settings;
+    });
     const id = Number(this.route.snapshot.paramMap.get('id'));
     if (id) {
       this.isNew.set(false);
       this.load(id);
+      this.loadPhotos(id);
+    }
+  }
+
+  private loadPhotos(id: number): void {
+    this.students.photos(id).subscribe(p => this.showPhotos(p));
+  }
+
+  private showPhotos(p: PreSchoolStudentPhotos): void {
+    this.savedPhotos = p;
+    this.childPhoto.set(p.child);
+    this.guardian1Photo.set(p.guardian1);
+    this.guardian2Photo.set(p.guardian2);
+  }
+
+  /** Sends each photo that differs from what was last saved, one after another. */
+  private savePhotos(id: number): Observable<PreSchoolStudentPhotos> {
+    const changes: [PreSchoolPhotoSlot, string | null][] = [];
+    if (this.childPhoto() !== this.savedPhotos.child) changes.push(['Child', this.childPhoto()]);
+    if (this.guardian1Photo() !== this.savedPhotos.guardian1) changes.push(['Guardian1', this.guardian1Photo()]);
+    if (this.guardian2Photo() !== this.savedPhotos.guardian2) changes.push(['Guardian2', this.guardian2Photo()]);
+    if (changes.length === 0) return of(this.savedPhotos);
+    return from(changes).pipe(concatMap(([slot, url]) => this.students.savePhoto(id, slot, url)), last());
+  }
+
+  /** The child's card and both guardians' cards, as one PDF at ATM-card size. */
+  downloadCards(): void {
+    const s = this.student();
+    if (!s) return;
+    this.makingCards.set(true);
+    this.students.photos(s.id).subscribe({
+      next: p => void this.makeCards(s, p).finally(() => this.makingCards.set(false)),
+      error: () => this.makingCards.set(false)
+    });
+  }
+
+  private async makeCards(s: PreSchoolStudentDetail, photos: PreSchoolStudentPhotos): Promise<void> {
+    try {
+      await downloadPreSchoolIdCards(s, photos, {
+        name: this.settings?.schoolName || 'Avijan PreSchool',
+        address: this.settings?.address,
+        phone: this.settings?.phone
+      });
+    } catch {
+      this.warn('The ID cards could not be made. Please try again.');
     }
   }
 
@@ -307,12 +397,18 @@ export class PreSchoolStudentComponent implements OnInit {
     if (!f.parentName.trim()) return this.warn('Enter the parent to contact.');
     if (!/^\+?[0-9 \-]{10,15}$/.test(f.phone.trim())) return this.warn('Enter a 10-digit phone number.');
     if (f.status !== 'Active' && !f.endedOn) return this.warn('Give the date the child completed the class or left.');
+    if (f.guardian2Phone?.trim() && !/^\+?[0-9 \-]{10,15}$/.test(f.guardian2Phone.trim())) return this.warn('Enter a 10-digit phone for guardian 2.');
+    if (f.guardian2Phone?.trim() && !f.guardian2Name?.trim()) return this.warn('Enter guardian 2\'s name with their phone.');
 
     const clean = (v: string | null) => (v ?? '').trim() || null;
+    const measure = (v: number | string | null) => (v === null || v === '' ? null : Number(v) || null);
     const body: PreSchoolStudentSave = {
       ...f, childName: f.childName.trim(), parentName: f.parentName.trim(), phone: f.phone.trim(),
       gender: f.gender || null, bloodGroup: clean(f.bloodGroup), fatherName: clean(f.fatherName), motherName: clean(f.motherName),
       emergencyPhone: clean(f.emergencyPhone), email: clean(f.email), address: clean(f.address), notes: clean(f.notes),
+      guardianRelation: clean(f.guardianRelation), guardian2Name: clean(f.guardian2Name),
+      guardian2Relation: clean(f.guardian2Relation), guardian2Phone: clean(f.guardian2Phone),
+      heightCm: measure(f.heightCm), weightKg: measure(f.weightKg),
       monthlyDiscount: Number(f.monthlyDiscount) || 0, endedOn: f.status === 'Active' ? null : f.endedOn || null
     };
 
@@ -320,19 +416,36 @@ export class PreSchoolStudentComponent implements OnInit {
     const existing = this.student();
     this.students.save(existing?.id ?? null, body).subscribe({
       next: saved => {
-        this.saving.set(false);
-        if (existing) {
-          this.done('Details saved');
-          this.load(saved.id);
-        } else {
-          this.done(`Admission saved · ${saved.admissionCode}`);
-          void this.router.navigate(['/preschool/students', saved.id]).then(() => {
-            this.isNew.set(false);
-            this.load(saved.id);
-          });
-        }
+        // The details are saved; the photos follow. A photo that fails leaves
+        // the admission in place, and can be taken again on the child's page.
+        this.savePhotos(saved.id).subscribe({
+          next: photos => this.afterSave(saved, photos, !existing),
+          error: () => {
+            this.warn('The details were saved, but a photo was not. Take it again and save.');
+            this.afterSave(saved, null, !existing);
+          }
+        });
       },
       error: () => this.saving.set(false)
+    });
+  }
+
+  private afterSave(saved: PreSchoolStudentDetail, photos: PreSchoolStudentPhotos | null, isAdmission: boolean): void {
+    this.saving.set(false);
+    if (photos) this.showPhotos(photos);
+    if (!isAdmission) {
+      this.done('Details saved');
+      this.load(saved.id);
+      return;
+    }
+
+    this.done(`Admission saved · ${saved.admissionCode}`);
+    // The three ID cards download straight after the registration is saved.
+    void this.makeCards(saved, photos ?? { child: null, guardian1: null, guardian2: null });
+    void this.router.navigate(['/preschool/students', saved.id]).then(() => {
+      this.isNew.set(false);
+      this.load(saved.id);
+      if (!photos) this.loadPhotos(saved.id);
     });
   }
 

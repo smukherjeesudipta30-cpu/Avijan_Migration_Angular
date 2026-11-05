@@ -8,6 +8,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { PreSchoolService } from '../../../core/services/preschool.service';
 import { PreSchoolClosuresComponent } from '../../../shared/preschool-closures/preschool-closures.component';
 import { SchoolTabsComponent } from '../../../shared/school-tabs/school-tabs.component';
+import { SmartClassComponent } from './smart-class.component';
 
 /** One colour per class card, in class order; repeats after four. */
 const CLASS_THEMES = [
@@ -29,7 +30,7 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
 @Component({
   selector: 'app-preschool-home',
   standalone: true,
-  imports: [DatePipe, FormsModule, RouterLink, SchoolTabsComponent, PreSchoolClosuresComponent],
+  imports: [DatePipe, FormsModule, RouterLink, SchoolTabsComponent, PreSchoolClosuresComponent, SmartClassComponent],
   template: `
     <app-school-tabs current="preschool" />
 
@@ -104,6 +105,8 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
         <div><span aria-hidden="true">📝</span><h3>Regular report cards</h3><p>Marks and grades after every exam, so you see your child grow.</p></div>
       </div>
     </section>
+
+    <app-smart-class [photoUrl]="smartClassPhoto()" />
 
     <section class="ph__section" id="day">
       <h2>A day at school</h2>
@@ -303,6 +306,11 @@ export class PreSchoolHomeComponent implements OnInit {
   readonly error = signal<string | null>(null);
   readonly comingSoon = computed(() => !!this.info() && isComingSoon(this.info()!.opensOn));
   readonly signedIn = computed(() => this.auth.isAuthenticated());
+  /** The school's own smart-board photo once the admin has put one up; until then the drawing shows. */
+  readonly smartClassPhoto = computed(() => {
+    const on = this.info()?.smartClassPhotoOn;
+    return on ? this.preschool.sitePhotoUrl('SmartClass', on) : null;
+  });
   /**
    * "My page" from the PreSchool site opens the PreSchool side: its dashboard
    * for SuperAdmin and PreSchool staff, the child's page for a parent. Anyone

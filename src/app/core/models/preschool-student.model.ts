@@ -48,12 +48,27 @@ export interface PreSchoolStudentSave {
   emergencyPhone: string | null;
   email: string | null;
   address: string | null;
+  /** How the parent to contact (guardian 1) is related to the child. */
+  guardianRelation: string | null;
+  guardian2Name: string | null;
+  guardian2Relation: string | null;
+  guardian2Phone: string | null;
+  heightCm: number | null;
+  weightKg: number | null;
   classId: number;
   joinedOn: string;
   monthlyDiscount: number;
   status: PreSchoolStatus;
   endedOn: string | null;
   notes: string | null;
+}
+
+/** The three ID-card photos, as data URLs. */
+export type PreSchoolPhotoSlot = 'Child' | 'Guardian1' | 'Guardian2';
+export interface PreSchoolStudentPhotos {
+  child: string | null;
+  guardian1: string | null;
+  guardian2: string | null;
 }
 
 export interface PreSchoolStudentDetail extends PreSchoolStudentSave {

@@ -7,6 +7,7 @@ import { InputTextModule } from 'primeng/inputtext';
 
 import { PreSchoolSettings, PreSchoolSettingsSave } from '../../../core/models/preschool.model';
 import { PreSchoolService } from '../../../core/services/preschool.service';
+import { PhotoCaptureComponent } from '../../../shared/photo-capture/photo-capture.component';
 
 interface BandDraft {
   minPercent: number | null;
@@ -22,7 +23,7 @@ interface BandDraft {
 @Component({
   selector: 'app-preschool-settings',
   standalone: true,
-  imports: [DatePipe, FormsModule, ButtonModule, InputTextModule],
+  imports: [DatePipe, FormsModule, ButtonModule, InputTextModule, PhotoCaptureComponent],
   template: `
     <div class="app-page-head">
       <span class="app-eyebrow">Avijan PreSchool</span>
@@ -61,6 +62,17 @@ interface BandDraft {
             <label class="pss__wide">Address <textarea pInputText rows="2" [(ngModel)]="f.uniformShopAddress" maxlength="400"></textarea></label>
             <label>Phone <input pInputText [(ngModel)]="f.uniformShopPhone" maxlength="50" /></label>
             <label>Google Maps link <input pInputText [(ngModel)]="f.uniformShopMapUrl" placeholder="https://maps.app.goo.gl/..." maxlength="500" /></label>
+          </div>
+        </section>
+
+        <section class="app-card">
+          <h2>Smart classroom photo</h2>
+          <p class="app-muted pss__note">Shown on the PreSchool home page. Until a photo is put up, a drawing of a
+            smart-board classroom is shown. Take one of your own classroom with the camera, or choose one from the gallery.</p>
+          <app-photo-capture label="Classroom" [aspect]="1.6" [size]="1600" frameWidth="min(100%, 24rem)" [(value)]="smartPhoto" />
+          <div class="pss__actions">
+            <p-button label="Save photo" icon="pi pi-upload" [loading]="savingPhoto()" [disabled]="smartPhoto() === smartPhotoSaved"
+              (onClick)="saveSmartPhoto()" />
           </div>
         </section>
 
@@ -119,8 +131,14 @@ export class PreSchoolSettingsComponent implements OnInit {
   readonly bands = signal<BandDraft[]>([]);
   readonly saving = signal(false);
   readonly savingBands = signal(false);
+  readonly savingPhoto = signal(false);
+
+  /** The classroom photo on screen (a data URL once changed) and the one on the home page now. */
+  readonly smartPhoto = signal<string | null>(null);
+  smartPhotoSaved: string | null = null;
 
   ngOnInit(): void {
+    this.preschool.publicPage().subscribe(p => this.showSmartPhoto(p.smartClassPhotoOn ?? null));
     this.preschool.overview().subscribe(o => {
       this.applySettings(o.settings);
       this.bands.set(o.gradeBands.map(b => ({ minPercent: b.minPercent, grade: b.grade, remark: b.remark ?? '' })));
@@ -139,6 +157,27 @@ export class PreSchoolSettingsComponent implements OnInit {
       next: s => { this.saving.set(false); this.applySettings(s); this.done('Settings saved.'); },
       error: () => this.saving.set(false)
     });
+  }
+
+  saveSmartPhoto(): void {
+    const value = this.smartPhoto();
+    // Only a new picture is a data URL; the one already up is its web address.
+    const dataUrl = value?.startsWith('data:') ? value : null;
+    if (value && !dataUrl) return;
+    this.savingPhoto.set(true);
+    this.preschool.saveSitePhoto('SmartClass', dataUrl).subscribe({
+      next: on => {
+        this.savingPhoto.set(false);
+        this.showSmartPhoto(on);
+        this.done(on ? 'Photo is on the home page.' : 'Photo taken down; the drawing shows again.');
+      },
+      error: () => this.savingPhoto.set(false)
+    });
+  }
+
+  private showSmartPhoto(on: string | null): void {
+    this.smartPhotoSaved = on ? this.preschool.sitePhotoUrl('SmartClass', on) : null;
+    this.smartPhoto.set(this.smartPhotoSaved);
   }
 
   addBand(): void {

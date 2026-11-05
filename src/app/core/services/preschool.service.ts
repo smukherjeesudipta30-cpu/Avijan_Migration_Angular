@@ -50,6 +50,16 @@ export class PreSchoolService {
     return this.http.put<ApiResponse<PreSchoolSettings>>(`${this.base}/settings`, body).pipe(map(r => r.data));
   }
 
+  /** Puts up (or, with null, takes down) the landing page's classroom picture. Returns when it was put up. */
+  saveSitePhoto(slot: 'SmartClass', dataUrl: string | null): Observable<string | null> {
+    return this.http.put<ApiResponse<string | null>>(`${this.base}/site-photos/${slot}`, { dataUrl }).pipe(map(r => r.data));
+  }
+
+  /** The address of the school's own picture, changing whenever a new one is put up. */
+  sitePhotoUrl(slot: 'SmartClass', updatedOn: string): string {
+    return `${this.base}/public/site-photos/${slot}?v=${encodeURIComponent(updatedOn)}`;
+  }
+
   // ------------------------------------------------ public page and enquiries
 
   publicPage(): Observable<PreSchoolPublic> {
