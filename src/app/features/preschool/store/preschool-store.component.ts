@@ -38,11 +38,11 @@ interface ClassGroup { title: string; items: PreSchoolStoreItem[]; }
             <tbody>
               @for (i of g.items; track i.id) {
                 <tr [class.pst__off]="!i.isActive">
-                  <td><strong>{{ i.name }}</strong>@if (!i.isActive) { <small> (not in use)</small> }</td>
-                  <td>{{ i.received }}</td>
-                  <td>{{ i.given }}</td>
-                  <td><span class="pst__stock" [class.pst__stock--low]="i.inStock < i.studentsWaiting" [class.pst__stock--out]="i.inStock === 0">{{ i.inStock }}</span></td>
-                  <td>{{ i.studentsWaiting }} <small class="app-muted">of {{ i.students }}</small></td>
+                  <td class="pst__name"><strong>{{ i.name }}</strong>@if (!i.isActive) { <small> (not in use)</small> }</td>
+                  <td data-label="Received">{{ i.received }}</td>
+                  <td data-label="Given">{{ i.given }}</td>
+                  <td data-label="In stock"><span class="pst__stock" [class.pst__stock--low]="i.inStock < i.studentsWaiting" [class.pst__stock--out]="i.inStock === 0">{{ i.inStock }}</span></td>
+                  <td data-label="Waiting">{{ i.studentsWaiting }} <small class="app-muted">of {{ i.students }}</small></td>
                   <td class="pst__actions">
                     @if (stockFor() === i.id) {
                       <input pInputText type="number" min="1" [(ngModel)]="qty" placeholder="Qty" aria-label="Quantity received" />
@@ -119,6 +119,17 @@ interface ClassGroup { title: string; items: PreSchoolStoreItem[]; }
     .pst__move small { display: block; color: var(--app-text-muted); font-size: 0.78rem; }
     .pst__kind { font-weight: 800; color: #2b7a2b; }
     .pst__kind--out { color: #b3264f; }
+    /* On a phone each item is a small card: name, then the four numbers side by side, then the buttons. */
+    @media (max-width: 640px) {
+      thead { display: none; }
+      table, tbody { display: block; }
+      tr { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.3rem 0.5rem; padding: 0.7rem 0; border-bottom: 1px solid var(--app-border); }
+      td { border: 0; padding: 0; white-space: normal; }
+      td[data-label]::before { content: attr(data-label); display: block; font-size: 0.66rem; text-transform: uppercase;
+        letter-spacing: 0.04em; color: var(--app-text-muted); }
+      .pst__name, .pst__actions { grid-column: 1 / -1; }
+      .pst__actions { flex-wrap: wrap; margin-top: 0.3rem; }
+    }
   `]
 })
 export class PreSchoolStoreComponent implements OnInit {
