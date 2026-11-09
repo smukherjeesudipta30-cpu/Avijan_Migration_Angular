@@ -50,7 +50,7 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
 
     <section class="ph__hero">
       <div class="ph__hero-text">
-        <span class="ph__pill">Pre-Nursery · Nursery · KG-1 · KG-2</span>
+        <span class="ph__pill">{{ classLine() }}</span>
         @if (comingSoon()) {
           <p class="ph__soon"><span aria-hidden="true">🎉</span> Our Champahati centre is coming soon@if (info()?.opensOn; as d) {, opening on <strong>{{ d | date: 'd MMMM y' }}</strong>}. Admissions are open now.</p>
         }
@@ -85,7 +85,7 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
           <article class="ph__class" [style.background]="theme(i).bg">
             <span class="ph__class-art" aria-hidden="true">{{ theme(i).art }}</span>
             <h3 [style.color]="theme(i).ink">{{ c.name }}</h3>
-            @if (ageRange(c.minAgeMonths, c.maxAgeMonths); as age) { <p class="ph__age">Age {{ age }}</p> }
+            @if (ageRange(c.minAgeMonths, c.maxAgeMonths, i); as age) { <p class="ph__age">{{ age }}</p> }
             @if (c.subjects.length) {
               <ul class="ph__subjects">
                 @for (s of c.subjects; track s) { <li>{{ s }}</li> }
@@ -330,12 +330,31 @@ export class PreSchoolHomeComponent implements OnInit {
 
   theme(i: number) { return CLASS_THEMES[i % CLASS_THEMES.length]; }
 
-  ageRange(min?: number | null, max?: number | null): string {
+  /** "Play Group · Nursery · LKG · UKG", from the classes the PreSchool admin keeps. */
+  readonly classLine = computed(() => {
+    const names = (this.info()?.classes ?? []).map(c => c.name);
+    return names.length ? names.join(' · ') : 'Play Group · Nursery · LKG · UKG';
+  });
+
+  /**
+   * In the owner's words: a whole-year band reads "2 years to under 3" for the
+   * youngest class and "3+ years" for the rest. Anything else is spelt out.
+   */
+  ageRange(min?: number | null, max?: number | null, index = 0): string {
     if (min == null && max == null) return '';
+    if (min != null && max != null && min % 12 === 0 && max === min + 11) {
+      const years = min / 12;
+      return index === 0 ? `Age ${years} years to under ${years + 1}` : `Age ${years}+ years`;
+    }
+    return `Age ${this.spelt(min, max)}`;
+  }
+
+  private spelt(min?: number | null, max?: number | null): string {
     if (min == null) return `up to ${ageLabel(max)}`;
     if (max == null) return `${ageLabel(min)} and above`;
     return `${ageLabel(min)} – ${ageLabel(max)}`;
   }
+
 
   go(event: Event, id: string): void {
     event.preventDefault();

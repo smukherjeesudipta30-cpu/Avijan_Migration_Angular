@@ -40,7 +40,7 @@ export const routes: Routes = [
        /preschool/... inside the shell. */
     path: 'preschool',
     pathMatch: 'full',
-    title: 'Avijan PreSchool, Champahati — Pre-Nursery, Nursery, KG-1 and KG-2',
+    title: 'Avijan PreSchool, Champahati — Play Group, Nursery, LKG and UKG',
     loadComponent: () =>
       import('./features/preschool/public/preschool-home.component').then(m => m.PreSchoolHomeComponent)
   },

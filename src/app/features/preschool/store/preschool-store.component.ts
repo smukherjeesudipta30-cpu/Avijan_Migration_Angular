@@ -65,7 +65,7 @@ interface ClassGroup { title: string; items: PreSchoolStoreItem[]; }
     <section class="app-card pst">
       <h2>{{ editing() ? 'Edit item' : 'Add an item' }}</h2>
       <div class="pst__form">
-        <label>Name <input pInputText [(ngModel)]="form.name" maxlength="100" placeholder="KG-1 tuition book set" /></label>
+        <label>Name <input pInputText [(ngModel)]="form.name" maxlength="100" placeholder="LKG tuition book set" /></label>
         <label>Class
           <select [(ngModel)]="form.classId">
             <option [ngValue]="null">All classes</option>

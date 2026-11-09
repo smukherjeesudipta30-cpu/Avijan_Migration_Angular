@@ -24,7 +24,7 @@ import { SchoolTabsComponent } from '../../../shared/school-tabs/school-tabs.com
       <section class="pl__art" aria-hidden="true">
         <span class="pl__b pl__b--1">🎨</span><span class="pl__b pl__b--2">🧸</span><span class="pl__b pl__b--3">📚</span>
         <h2>Avijan PreSchool</h2>
-        <p>Pre-Nursery · Nursery · KG-1 · KG-2</p>
+        <p>Play Group · Nursery · LKG · UKG</p>
       </section>
 
       <section class="pl__card">

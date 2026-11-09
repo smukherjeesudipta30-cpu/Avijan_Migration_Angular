@@ -102,7 +102,7 @@ function drawCard(doc: JsPdf, c: CardPerson, school: PreSchoolIdCardSchool, qr: 
   doc.text(school.name, 4, 5.6);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(5.4);
-  doc.text('Pre-Nursery · Nursery · KG-1 · KG-2', 4, 9.2);
+  doc.text('Play Group · Nursery · LKG · UKG', 4, 9.2);
 
   // Card type, in a white pill on the right of the band.
   doc.setFontSize(6);
