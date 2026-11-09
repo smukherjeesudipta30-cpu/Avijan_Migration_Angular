@@ -99,6 +99,27 @@
       </div>
     </div>
 
+    <!-- --------------------------------------------------- fee payments -->
+    <div class="brn__geo">
+      <h3>Fee payments (UPI)</h3>
+      <p class="app-muted brn__geo-help">
+        The UPI account this branch's students pay into from Pay My Fees; their QR is made
+        for it with the exact amount. Champahati: <code>bom261001361082&#64;mahb</code>, name AVIJAN.
+      </p>
+    <div class="brn__field">
+      <label for="upiId">Fee payment UPI ID</label>
+      <input pInputText id="upiId" formControlName="upiId" placeholder="e.g. bom261001361082@mahb" />
+      <small class="app-muted">
+        Students of this branch pay their monthly fee here from Pay My Fees.
+        Leave empty to use the institute's usual UPI account.
+      </small>
+    </div>
+    <div class="brn__field">
+      <label for="upiPayeeName">Name on the payment</label>
+      <input pInputText id="upiPayeeName" formControlName="upiPayeeName" placeholder="e.g. AVIJAN" />
+    </div>
+    </div>
+
     <footer class="brn__form-actions">
       <p-button
         type="submit"

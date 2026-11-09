@@ -67,6 +67,9 @@ export interface BranchListItem {
   latitude?: number;
   longitude?: number;
   geofenceMetres: number;
+  /** The UPI account this branch's fees are paid into; empty for the usual one. */
+  upiId?: string | null;
+  upiPayeeName?: string | null;
 }
 
 export interface BranchSaveRequest {
@@ -78,6 +81,8 @@ export interface BranchSaveRequest {
   latitude?: number | null;
   longitude?: number | null;
   geofenceMetres: number;
+  upiId?: string | null;
+  upiPayeeName?: string | null;
 }
 
 /* ============================================= payments made to a teacher */

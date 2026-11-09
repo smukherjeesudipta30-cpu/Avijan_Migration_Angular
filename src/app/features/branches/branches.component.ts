@@ -69,7 +69,12 @@ export class BranchesComponent {
        attendance, which is safer than defaulting to somewhere. */
     latitude: [null as number | null],
     longitude: [null as number | null],
-    geofenceMetres: [150 as number]
+    geofenceMetres: [150 as number],
+
+    /* The UPI account this branch's students pay their fees into from Pay My
+       Fees. Empty: the institute's usual account. */
+    upiId: ['', [Validators.maxLength(100), Validators.pattern(/^([A-Za-z0-9._-]{2,256}@[A-Za-z]{2,64})?$/)]],
+    upiPayeeName: ['', [Validators.maxLength(100)]]
   });
 
   /** Live preview of what a registration id will look like for this branch. */
@@ -108,7 +113,7 @@ export class BranchesComponent {
       this.messages.add({
         severity: 'warn',
         summary: 'Check the form',
-        detail: 'Branch name and code are both required.',
+        detail: 'Branch name and code are both required, and a UPI ID looks like name@bank.',
         life: 5000
       });
       return;
@@ -123,7 +128,9 @@ export class BranchesComponent {
       isActive: v.isActive,
       latitude: v.latitude ?? null,
       longitude: v.longitude ?? null,
-      geofenceMetres: v.geofenceMetres ?? 150
+      geofenceMetres: v.geofenceMetres ?? 150,
+      upiId: v.upiId.trim() || null,
+      upiPayeeName: v.upiPayeeName.trim() || null
     };
 
     const id = this.editingId();
@@ -167,7 +174,9 @@ export class BranchesComponent {
       isActive: branch.isActive,
       latitude: branch.latitude ?? null,
       longitude: branch.longitude ?? null,
-      geofenceMetres: branch.geofenceMetres ?? 150
+      geofenceMetres: branch.geofenceMetres ?? 150,
+      upiId: branch.upiId ?? '',
+      upiPayeeName: branch.upiPayeeName ?? ''
     });
 
     // A code already present in issued registration ids cannot change without
@@ -185,7 +194,8 @@ export class BranchesComponent {
     this.form.enable();
     this.form.reset({
       name: '', code: '', isActive: true,
-      latitude: null, longitude: null, geofenceMetres: 150
+      latitude: null, longitude: null, geofenceMetres: 150,
+      upiId: '', upiPayeeName: ''
     });
     this.editingId.set(null);
     this.codeLocked.set(false);

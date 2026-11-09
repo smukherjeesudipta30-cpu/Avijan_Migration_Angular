@@ -127,11 +127,28 @@
             UPI ID: <code>{{ d.upiId }}</code>
           </p>
 
-          @if (upiLink(); as link) {
-            <!-- On a phone this opens the UPI app with the amount already filled
-                 in, so it cannot be mistyped. Ignored on a desktop browser. -->
-            <a class="fee__upi-link" [href]="link">Open in a UPI app on this device</a>
-          }
+          <!-- Paying from this same phone: it cannot scan its own screen, and UPI
+               apps often refuse a merchant payment opened from a link. Saving the
+               QR and scanning it from the gallery always works. -->
+          <div class="fee__same-phone">
+            <strong>Paying from this phone?</strong>
+            <ol>
+              <li>Tap <em>Save QR</em> below.</li>
+              <li>In Google Pay, PhonePe, Paytm or your bank's app, tap <em>Scan QR</em>, then the
+                gallery / upload button, and pick the saved QR.</li>
+              <li>Check the amount is {{ d.amountPayable | currency: 'INR' : 'symbol-narrow' : '1.2-2' }} and pay.</li>
+            </ol>
+            <div class="fee__same-actions">
+              @if (qrDataUrl()) {
+                <button type="button" class="fee__save-qr" (click)="saveQr()"><i class="pi pi-download" aria-hidden="true"></i> Save QR</button>
+              }
+              @if (upiLink(); as link) {
+                <!-- Opens the UPI app with the amount filled in. Some apps refuse
+                     this for a merchant account; the saved QR is the sure way. -->
+                <a class="fee__upi-link" [href]="link">Or open a UPI app directly</a>
+              }
+            </div>
+          </div>
 
           <p class="fee__note">
             The amount is built into the code. If your app asks you to type it,

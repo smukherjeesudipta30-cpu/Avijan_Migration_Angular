@@ -109,6 +109,27 @@ export class MyFeesComponent {
       .catch(() => this.qrDataUrl.set(null));
   }
 
+  /**
+   * Saves the QR as a picture, for paying from this same phone.
+   *
+   * A phone cannot scan its own screen, and Google Pay, PhonePe and Paytm often
+   * refuse a payment to a merchant UPI ID opened from a web link ("cannot be
+   * completed for security reasons", or a low limit) — a rule of the UPI apps,
+   * not a fault in the ID. Every one of them can read a QR from the gallery
+   * ("Scan QR" → gallery / upload), and that route carries the same amount.
+   */
+  saveQr(): void {
+    const qr = this.qrDataUrl();
+    const d = this.due();
+    if (!qr || !d) return;
+    const a = document.createElement('a');
+    a.href = qr;
+    a.download = `Avijan-fee-QR-${d.registrationId.replace(/[^A-Za-z0-9]+/g, '-')}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
   submit(): void {
     const d = this.due();
 
