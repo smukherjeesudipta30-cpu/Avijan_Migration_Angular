@@ -34,7 +34,7 @@ export function preSchoolPayslipHtml(p: PreSchoolSalaryPayment): string {
   @media print { body { background: #fff; } .sheet { margin: 0; } .actions { display: none; } }
 </style></head><body>
   <div class="sheet">
-    <h1>${e(p.schoolName)}</h1>${p.schoolAddress ? `<p class="addr">${e(p.schoolAddress)}</p>` : ''}
+    <h1>${e(p.schoolName)}</h1><p class="addr" style="font-weight:700;color:#e8590c;display:flex;align-items:center;gap:4px">powered by <img src="${location.origin}/images/my-chhota-school.svg" alt="My Chhota School" style="height:20px"></p>${p.schoolAddress ? `<p class="addr">${e(p.schoolAddress)}</p>` : ''}
     <h2>Salary slip · ${e(monthLabel(p.forMonth))}</h2>
     <div class="who">
       <div><b>Name</b>${e(p.staffName)}</div><div><b>Role</b>${e(p.role)}</div>

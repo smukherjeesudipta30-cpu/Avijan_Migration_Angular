@@ -82,17 +82,20 @@ export async function downloadPreSchoolIdCards(
     }
   ];
 
+  // My Chhota School's logo, drawn as a picture: jsPDF cannot place an SVG itself.
+  const mcs = await svgAsPng('images/my-chhota-school.svg', 600, 200).catch(() => null);
+
   for (let i = 0; i < cards.length; i++) {
     if (i > 0) doc.addPage([CARD_H, CARD_W], 'landscape');
     const qr = await toDataURL(`${s.admissionCode}|${cards[i].kind}|${s.childName}`, { margin: 0, width: 240, errorCorrectionLevel: 'M' });
-    drawCard(doc, cards[i], school, qr);
+    drawCard(doc, cards[i], school, qr, mcs);
   }
 
   doc.setProperties({ title: `${s.admissionCode} ID cards — ${s.childName}`, author: school.name });
   doc.save(`${s.admissionCode}-${safeFileName(s.childName)}-ID-cards.pdf`);
 }
 
-function drawCard(doc: JsPdf, c: CardPerson, school: PreSchoolIdCardSchool, qr: string): void {
+function drawCard(doc: JsPdf, c: CardPerson, school: PreSchoolIdCardSchool, qr: string, mcs: string | null): void {
   // Header band.
   doc.setFillColor(...c.colour);
   doc.rect(0, 0, CARD_W, 11.5, 'F');
@@ -102,7 +105,7 @@ function drawCard(doc: JsPdf, c: CardPerson, school: PreSchoolIdCardSchool, qr: 
   doc.text(school.name, 4, 5.6);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(5.4);
-  doc.text('Play Group · Nursery · LKG · UKG', 4, 9.2);
+  doc.text('powered by My Chhota School  ·  Pre-Nursery to UKG', 4, 9.2);
 
   // Card type, in a white pill on the right of the band.
   doc.setFontSize(6);
@@ -169,6 +172,9 @@ function drawCard(doc: JsPdf, c: CardPerson, school: PreSchoolIdCardSchool, qr: 
   doc.setTextColor(...MUTED);
   doc.text('Scan to verify', CARD_W - 4 - 7.5, 32.4, { align: 'center' });
 
+  // Powered by My Chhota School: their logo under the QR.
+  if (mcs) doc.addImage(mcs, 'PNG', CARD_W - 4 - 7.5 - 9.75, 34, 19.5, 6.5, undefined, 'FAST');
+
   // Note and footer.
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(5);
@@ -206,4 +212,24 @@ function formatDate(iso: string): string {
 
 function safeFileName(name: string): string {
   return name.trim().replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'child';
+}
+
+/** An SVG from the site's own images, as a PNG data URL of the given size (white background). */
+function svgAsPng(url: string, width: number, height: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { reject(new Error('no canvas')); return; }
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => reject(new Error('logo not loaded'));
+    img.src = url;
+  });
 }

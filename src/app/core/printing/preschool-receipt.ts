@@ -66,6 +66,7 @@ export function preSchoolReceiptHtml(r: PreSchoolReceipt): string {
         <div class="mark">A</div>
         <div>
           <h1>${e(r.schoolName)}</h1>
+          <p class="addr" style="font-weight:700;color:#e8590c;display:flex;align-items:center;gap:4px">powered by <img src="${location.origin}/images/my-chhota-school.svg" alt="My Chhota School" style="height:20px"></p>
           ${r.schoolAddress ? `<p class="addr">${e(r.schoolAddress)}</p>` : ''}
           ${r.schoolPhone ? `<p class="addr">Phone: ${e(r.schoolPhone)}</p>` : ''}
         </div>

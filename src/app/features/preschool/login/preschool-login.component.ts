@@ -24,11 +24,13 @@ import { SchoolTabsComponent } from '../../../shared/school-tabs/school-tabs.com
       <section class="pl__art" aria-hidden="true">
         <span class="pl__b pl__b--1">🎨</span><span class="pl__b pl__b--2">🧸</span><span class="pl__b pl__b--3">📚</span>
         <h2>Avijan PreSchool</h2>
-        <p>Play Group · Nursery · LKG · UKG</p>
+        <p class="pl__powered">powered by</p>
+        <img class="pl__mcs" src="images/my-chhota-school.svg" alt="My Chhota School" />
+        <p>Pre-Nursery · Nursery · LKG · UKG</p>
       </section>
 
       <section class="pl__card">
-        <a routerLink="/preschool" class="pl__brand"><span class="pl__mark">A</span> <span><strong>Avijan</strong> PreSchool</span></a>
+        <a routerLink="/preschool" class="pl__brand"><span class="pl__mark">A</span> <span><strong>Avijan</strong> PreSchool<small class="pl__by">powered by <img src="images/my-chhota-school.svg" alt="My Chhota School" /></small></span></a>
         <h1>Sign in</h1>
         <p class="pl__sub">For the PreSchool's staff and parents.</p>
 
@@ -72,6 +74,10 @@ import { SchoolTabsComponent } from '../../../shared/school-tabs/school-tabs.com
       font-size: 2rem; box-shadow: 0 8px 20px rgba(42, 47, 69, 0.1); }
     .pl__b--1 { top: 12%; left: 14%; } .pl__b--2 { top: 16%; right: 14%; } .pl__b--3 { bottom: 12%; left: 40%; }
     .pl__card { background: #fff; border-radius: 24px; padding: 2rem 1.75rem; box-shadow: 0 14px 40px rgba(42, 47, 69, 0.08); }
+    .pl__powered { margin: 0 0 0.4rem; font-weight: 700; color: #ffd58a; }
+    .pl__by { display: flex; align-items: center; gap: 0.25rem; font-size: 0.68rem; font-weight: 700; color: #e8590c; }
+    .pl__by img { height: 1.1rem; }
+    .pl__mcs { height: 3.2rem; background: #fff; border-radius: 10px; padding: 0.3rem 0.5rem; margin-bottom: 0.6rem; }
     .pl__brand { display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; color: inherit; font-size: 1.1rem; }
     .pl__mark { display: grid; place-items: center; width: 2.1rem; height: 2.1rem; border-radius: 12px; background: #ff6b8b; color: #fff; font-weight: 800; transform: rotate(-6deg); }
     .pl__card h1 { margin: 1.1rem 0 0.2rem; font-size: 1.7rem; }

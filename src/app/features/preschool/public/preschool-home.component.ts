@@ -3,7 +3,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
-import { PreSchoolEnquirySave, PreSchoolPublic, ageLabel, isComingSoon } from '../../../core/models/preschool.model';
+import { PRESCHOOL_DAY, PRESCHOOL_POWERED_BY, PreSchoolEnquirySave, PreSchoolPublic, ageLabel, isComingSoon } from '../../../core/models/preschool.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { PreSchoolService } from '../../../core/services/preschool.service';
 import { PreSchoolClosuresComponent } from '../../../shared/preschool-closures/preschool-closures.component';
@@ -37,7 +37,7 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
     <header class="ph__bar">
       <a routerLink="/preschool" class="ph__brand">
         <span class="ph__brand-mark" aria-hidden="true">A</span>
-        <span><strong>Avijan</strong> PreSchool</span>
+        <span class="ph__brand-name"><span><strong>Avijan</strong> PreSchool</span><small class="ph__by">powered by <img class="mcs-logo" src="images/my-chhota-school.svg" alt="My Chhota School" /></small></span>
       </a>
       <div class="ph__bar-links">
         <a href="#classes" (click)="go($event, 'classes')">Classes</a>
@@ -110,14 +110,11 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
 
     <section class="ph__section" id="day">
       <h2>A day at school</h2>
-      <ol class="ph__day">
-        <li><span aria-hidden="true">👋</span>Welcome and prayer</li>
-        <li><span aria-hidden="true">🎶</span>Rhymes and stories</li>
-        <li><span aria-hidden="true">🔤</span>Letters and numbers</li>
-        <li><span aria-hidden="true">🍎</span>Tiffin time</li>
-        <li><span aria-hidden="true">🖍️</span>Drawing and craft</li>
-        <li><span aria-hidden="true">⚽</span>Play time</li>
-        <li><span aria-hidden="true">🏡</span>Home time</li>
+      <p class="ph__lead">Every school day, 8:00 AM to 1:00 PM.</p>
+      <ol class="ph__routine">
+        @for (s of day; track s.time) {
+          <li><span class="ph__routine-icon" aria-hidden="true">{{ s.icon }}</span><span class="ph__routine-time">{{ s.time }}</span><strong>{{ s.what }}</strong></li>
+        }
       </ol>
     </section>
 
@@ -177,6 +174,7 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
     <footer class="ph__footer" id="contact">
       <div>
         <h2>{{ info()?.schoolName ?? 'Avijan PreSchool' }}</h2>
+        <p class="ph__powered">powered by <img class="mcs-logo mcs-logo--big" src="images/my-chhota-school.svg" alt="My Chhota School" /></p>
       </div>
       <div class="ph__contact">
         @if (info()?.address; as a) { <p><i class="pi pi-map-marker" aria-hidden="true"></i><span>{{ a }}</span></p> }
@@ -255,6 +253,17 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
     .ph__day li { display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.1rem; border-radius: 999px; background: #fff;
       border: 2px dashed #ffc2d1; font-weight: 700; }
     .ph__day span { font-size: 1.4rem; }
+    .ph__brand-name { display: flex; flex-direction: column; line-height: 1.1; }
+    .ph__brand-name small { font-size: 0.68rem; font-weight: 700; color: #e8590c; letter-spacing: 0.02em; }
+    .ph__powered { margin: 0.3rem 0 0; color: #e8590c; font-weight: 700; display: flex; align-items: center; gap: 0.4rem; }
+    .ph__by { display: flex; align-items: center; gap: 0.25rem; }
+    .mcs-logo { height: 1.7rem; width: auto; display: inline-block; }
+    .mcs-logo--big { height: 2.6rem; }
+    .ph__routine { list-style: none; padding: 0; margin: 1rem auto 0; max-width: 34rem; display: grid; gap: 0.5rem; }
+    .ph__routine li { display: grid; grid-template-columns: 2.4rem 7.5rem 1fr; align-items: center; gap: 0.6rem; padding: 0.6rem 1rem;
+      border-radius: 16px; background: #fff; border: 2px dashed #ffc2d1; }
+    .ph__routine-icon { font-size: 1.4rem; }
+    .ph__routine-time { font-weight: 700; color: #b3264f; font-size: 0.9rem; }
     .ph__shop { display: flex; gap: 1.2rem; align-items: center; padding: 1.5rem; border-radius: 24px; background: #e3f2ff; }
     .ph__shop h2 { margin: 0; font-size: 1.5rem; text-align: left; }
     .ph__shop p { margin: 0.3rem 0 0; }
@@ -322,6 +331,9 @@ export class PreSchoolHomeComponent implements OnInit {
     return this.auth.user()?.landingRoute ?? '/';
   });
 
+  readonly poweredBy = PRESCHOOL_POWERED_BY;
+  readonly day = PRESCHOOL_DAY;
+
   form: PreSchoolEnquirySave = emptyEnquiry();
 
   ngOnInit(): void {
@@ -330,10 +342,10 @@ export class PreSchoolHomeComponent implements OnInit {
 
   theme(i: number) { return CLASS_THEMES[i % CLASS_THEMES.length]; }
 
-  /** "Play Group · Nursery · LKG · UKG", from the classes the PreSchool admin keeps. */
+  /** "Pre-Nursery · Nursery · LKG · UKG", from the classes the PreSchool admin keeps. */
   readonly classLine = computed(() => {
     const names = (this.info()?.classes ?? []).map(c => c.name);
-    return names.length ? names.join(' · ') : 'Play Group · Nursery · LKG · UKG';
+    return names.length ? names.join(' · ') : 'Pre-Nursery · Nursery · LKG · UKG';
   });
 
   /**

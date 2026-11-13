@@ -186,3 +186,17 @@ export function todayIso(): string {
 export function isComingSoon(opensOn: string | null | undefined): boolean {
   return !opensOn || opensOn > todayIso();
 }
+
+/** Avijan PreSchool is run with My Chhota School's curriculum; shown under the name everywhere. */
+export const PRESCHOOL_POWERED_BY = 'powered by My Chhota School';
+
+/** The PreSchool day, 8:00 AM to 1:00 PM — My Chhota School's routine, fitted to Avijan's hours. */
+export const PRESCHOOL_DAY: { time: string; what: string; icon: string }[] = [
+  { time: '8:00 – 8:30', what: 'Welcome & Assembly', icon: '👋' },
+  { time: '8:30 – 9:30', what: 'English & Literacy', icon: '🔤' },
+  { time: '9:30 – 10:00', what: 'Nutritional Break', icon: '🍎' },
+  { time: '10:00 – 11:00', what: 'Math & Logic', icon: '🔢' },
+  { time: '11:00 – 11:45', what: 'EVS & Exploration', icon: '🌱' },
+  { time: '11:45 – 12:30', what: 'Creative Expression', icon: '🎨' },
+  { time: '12:30 – 1:00', what: 'Reflection & Departure', icon: '🏡' }
+];

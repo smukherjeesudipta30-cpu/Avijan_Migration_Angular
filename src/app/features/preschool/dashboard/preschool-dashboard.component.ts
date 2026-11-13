@@ -28,7 +28,7 @@ const CARD_INKS = ['#b3264f', '#1d5fa8', '#2b7a2b', '#9a5b00'];
   template: `
     <section class="psd__hero">
       <div>
-        <span class="psd__eyebrow">Avijan PreSchool</span>
+        <span class="psd__eyebrow">Avijan PreSchool · powered by <img class="psd__mcs" src="images/my-chhota-school.svg" alt="My Chhota School" /></span>
         <h1>{{ overview()?.settings?.schoolName ?? 'Avijan PreSchool' }}</h1>
         <p>
           <i class="pi pi-map-marker" aria-hidden="true"></i>
@@ -146,6 +146,7 @@ const CARD_INKS = ['#b3264f', '#1d5fa8', '#2b7a2b', '#9a5b00'];
       border-radius: 18px; background: linear-gradient(120deg, #ffd6e7 0%, #d9ecff 55%, #e2f7dc 100%); color: #2a2f45; }
     .psd__hero h1 { margin: 0.15rem 0 0.35rem; font-size: 1.7rem; }
     .psd__hero p { margin: 0; display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap; }
+    .psd__mcs { height: 1.3rem; vertical-align: middle; }
     .psd__eyebrow { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #6d28d9; }
     .psd__hero-art { display: flex; gap: 0.5rem; font-size: 2.2rem; }
     .psd__error { color: #b42318; }
