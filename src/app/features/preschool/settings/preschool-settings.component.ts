@@ -18,7 +18,7 @@ interface BandDraft {
 /**
  * The PreSchool's own settings, PreSchool admin only: contact details for its
  * home page and receipts, the uniform shop parents are sent to, the receipt
- * number prefix and the grade table for report cards.
+ * number prefix and the grade table for marks.
  */
 @Component({
   selector: 'app-preschool-settings',
@@ -28,7 +28,7 @@ interface BandDraft {
     <div class="app-page-head">
       <span class="app-eyebrow">Avijan PreSchool</span>
       <h1>School settings</h1>
-      <p class="app-muted">Shown on the PreSchool home page, its receipts and report cards.</p>
+      <p class="app-muted">Shown on the PreSchool home page, its receipts and marks.</p>
     </div>
 
     @if (form(); as f) {
@@ -104,7 +104,7 @@ interface BandDraft {
         </div>
 
         <section class="app-card">
-          <h2>Grades on the report card</h2>
+          <h2>Grades for marks</h2>
           <p class="app-muted pss__note">A child's percentage gets the highest grade it reaches. The lowest grade must start at 0%.</p>
           <div class="pss__bands">
             <div class="pss__band pss__band--head"><span>From %</span><span>Grade</span><span>Remark</span><span></span></div>

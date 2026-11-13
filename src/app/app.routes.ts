@@ -639,6 +639,14 @@ export const routes: Routes = [
           import('./features/attendance/attendance.component').then(m => m.AttendanceComponent)
       },
       {
+        /* Marks from the PreSchool's offline exams: the admin, receptionist and teachers enter them. */
+        path: 'preschool/marks',
+        title: 'PreSchool marks · Avijan',
+        canActivate: [roleGuard('PreSchoolHead', 'PreSchoolFrontDesk', 'PreSchoolTutor')],
+        loadComponent: () =>
+          import('./features/preschool/marks/preschool-marks.component').then(m => m.PreSchoolMarksComponent)
+      },
+      {
         path: 'preschool/store',
         title: 'PreSchool store · Avijan',
         canActivate: [roleGuard('PreSchoolHead', 'PreSchoolFrontDesk')],

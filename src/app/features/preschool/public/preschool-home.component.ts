@@ -101,7 +101,7 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
         <div><span aria-hidden="true">🤗</span><h3>Caring teachers</h3><p>Every child is known by name and looked after with patience.</p></div>
         <div><span aria-hidden="true">🧸</span><h3>Learning through play</h3><p>Rhymes, stories, games and art build early reading and numbers.</p></div>
         <div><span aria-hidden="true">🏠</span><h3>Safe and clean</h3><p>Bright, clean classrooms where little ones feel at home.</p></div>
-        <div><span aria-hidden="true">📝</span><h3>Regular report cards</h3><p>Marks and grades after every exam, so you see your child grow.</p></div>
+        <div><span aria-hidden="true">📝</span><h3>Regular class tests</h3><p>Marks and grades after every exam, so you see your child grow.</p></div>
       </div>
     </section>
 

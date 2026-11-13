@@ -128,7 +128,7 @@ const CARD_INKS = ['#b3264f', '#1d5fa8', '#2b7a2b', '#9a5b00'];
           <i class="pi pi-user-plus" aria-hidden="true"></i>
           <div>
             <strong>Admissions and fee receipts</strong>
-            <p class="app-muted">New admission with ID cards, monthly fees and receipts.</p>
+            <p class="app-muted">New admission, monthly fees and receipts.</p>
           </div>
         </a>
       }

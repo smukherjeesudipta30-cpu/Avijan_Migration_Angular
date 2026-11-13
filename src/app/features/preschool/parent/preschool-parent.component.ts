@@ -7,7 +7,7 @@ import { PreSchoolService } from '../../../core/services/preschool.service';
 import { PreSchoolClosuresComponent } from '../../../shared/preschool-closures/preschool-closures.component';
 
 /**
- * Where a parent lands after signing in. Their child's fees, report cards and
+ * Where a parent lands after signing in. Their child's fees, marks and
  * certificate are added here with admissions (phase 3); until then it greets
  * them and shows how to reach the school.
  */
@@ -23,7 +23,7 @@ import { PreSchoolClosuresComponent } from '../../../shared/preschool-closures/p
     <section class="psp">
       <span class="psp__art" aria-hidden="true">🧸</span>
       <h1>Welcome{{ isParent() && name() ? ', ' + name() : '' }}</h1>
-      <p>This is your Avijan PreSchool page. Your child's fee receipts, pending fees, report cards and certificate will appear here.</p>
+      <p>This is your Avijan PreSchool page. Your child's fee receipts, pending fees, marks and certificate will appear here.</p>
     </section>
 
     <div class="psp__cards">
@@ -33,7 +33,7 @@ import { PreSchoolClosuresComponent } from '../../../shared/preschool-closures/p
       </section>
       <section class="app-card psp__card">
         <h2><i class="pi pi-star" aria-hidden="true"></i> Results</h2>
-        <p class="app-muted">Marks and grades from every exam, and the report card.</p>
+        <p class="app-muted">Marks and grades from every exam.</p>
       </section>
       <section class="app-card psp__card">
         <h2><i class="pi pi-verified" aria-hidden="true"></i> Certificate</h2>
