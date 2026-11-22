@@ -3,10 +3,12 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
-import { PRESCHOOL_POWERED_BY, PreSchoolEnquirySave, PreSchoolPublic, ageLabel, isComingSoon } from '../../../core/models/preschool.model';
+import { PRESCHOOL_POWERED_BY, PreSchoolEnquirySave, PreSchoolPublic, ageLabel, emptyEnquiry, isComingSoon } from '../../../core/models/preschool.model';
+import { currentSession } from '../../../core/printing/preschool-forms';
 import { AuthService } from '../../../core/services/auth.service';
 import { PreSchoolService } from '../../../core/services/preschool.service';
 import { PreSchoolClosuresComponent } from '../../../shared/preschool-closures/preschool-closures.component';
+import { PreSchoolEnquiryFormComponent } from '../../../shared/preschool-enquiry-form/preschool-enquiry-form.component';
 import { SchoolTabsComponent } from '../../../shared/school-tabs/school-tabs.component';
 import { SmartClassComponent } from './smart-class.component';
 
@@ -18,10 +20,6 @@ const CLASS_THEMES = [
   { bg: '#fff1d6', ink: '#9a5b00', art: '🚀' }
 ];
 
-const emptyEnquiry = (): PreSchoolEnquirySave => ({
-  childName: '', childDateOfBirth: null, parentName: '', phone: '', email: null, classWanted: null, message: null
-});
-
 /**
  * Avijan PreSchool's public home page at /preschool. Everything on it comes
  * from the PreSchool admin's own settings and classes, so the page is right
@@ -30,7 +28,7 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
 @Component({
   selector: 'app-preschool-home',
   standalone: true,
-  imports: [DatePipe, FormsModule, RouterLink, SchoolTabsComponent, PreSchoolClosuresComponent, SmartClassComponent],
+  imports: [DatePipe, FormsModule, RouterLink, SchoolTabsComponent, PreSchoolClosuresComponent, SmartClassComponent, PreSchoolEnquiryFormComponent],
   template: `
     <app-school-tabs current="preschool" />
 
@@ -139,24 +137,7 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
             <button type="button" class="ph__btn" (click)="sent.set(null)">Send another</button>
           </div>
         } @else {
-          <form class="ph__form" (ngSubmit)="send()" novalidate>
-            <label>Child's name * <input name="child" [(ngModel)]="form.childName" maxlength="100" required /></label>
-            <label>Child's date of birth <input name="dob" type="date" [(ngModel)]="form.childDateOfBirth" /></label>
-            <label>Parent's name * <input name="parent" [(ngModel)]="form.parentName" maxlength="100" required /></label>
-            <label>Phone * <input name="phone" type="tel" [(ngModel)]="form.phone" maxlength="15" placeholder="98300 00000" required /></label>
-            <label>Email <input name="email" type="email" [(ngModel)]="form.email" maxlength="150" /></label>
-            <label>Class
-              <select name="class" [(ngModel)]="form.classWanted">
-                <option [ngValue]="null">Not sure yet</option>
-                @for (c of info()?.classes ?? []; track c.name) { <option [ngValue]="c.name">{{ c.name }}</option> }
-              </select>
-            </label>
-            <label class="ph__wide">Message <textarea name="msg" rows="3" [(ngModel)]="form.message" maxlength="1000"></textarea></label>
-            @if (error()) { <p class="ph__error ph__wide" role="alert">{{ error() }}</p> }
-            <button type="submit" class="ph__btn ph__btn--main ph__wide" [disabled]="sending()">
-              {{ sending() ? 'Sending…' : 'Send enquiry' }}
-            </button>
-          </form>
+          <app-preschool-enquiry-form [form]="form" [busy]="sending()" (submitted)="send($event)" />
         }
       </div>
     </section>
@@ -250,11 +231,11 @@ const emptyEnquiry = (): PreSchoolEnquirySave => ({
     .ph__shop p { margin: 0.3rem 0 0; }
     .ph__shop-art { font-size: 3rem; }
     .ph__shop-links { display: flex; gap: 1rem; margin-top: 0.5rem; font-weight: 700; }
-    .ph__enquire { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 2rem; padding: 2rem; border-radius: 32px; background: #fff;
+    .ph__enquire { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem; padding: 2rem; border-radius: 32px; background: #fff;
       box-shadow: 0 10px 30px rgba(42, 47, 69, 0.06); }
     .ph__enquire-text h2 { margin: 0 0 0.6rem; font-size: 2rem; }
     .ph__enquire-text p { color: #5b6178; line-height: 1.6; }
-    .ph__enquire-art { font-size: 5rem; }
+    .ph__enquire-art { display: none; }
     .ph__form { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
     .ph__form label { display: flex; flex-direction: column; gap: 0.3rem; font-weight: 700; font-size: 0.9rem; }
     .ph__form input, .ph__form select, .ph__form textarea { padding: 0.65rem 0.8rem; border: 2px solid #e6e1d8; border-radius: 14px;
@@ -314,7 +295,7 @@ export class PreSchoolHomeComponent implements OnInit {
 
   readonly poweredBy = PRESCHOOL_POWERED_BY;
 
-  form: PreSchoolEnquirySave = emptyEnquiry();
+  form: PreSchoolEnquirySave = emptyEnquiry(currentSession());
 
   ngOnInit(): void {
     this.preschool.publicPage().subscribe({ next: p => this.info.set(p) });
@@ -353,23 +334,13 @@ export class PreSchoolHomeComponent implements OnInit {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  send(): void {
-    const f = this.form;
-    if (!f.childName.trim()) return this.error.set('Please enter your child\'s name.');
-    if (!f.parentName.trim()) return this.error.set('Please enter your name.');
-    if (!/^\+?[0-9 \-]{10,15}$/.test(f.phone.trim())) return this.error.set('Please enter a 10-digit phone number.');
-    this.error.set(null);
+  send(enquiry: PreSchoolEnquirySave): void {
     this.sending.set(true);
-    this.preschool.sendEnquiry({
-      ...f,
-      childDateOfBirth: f.childDateOfBirth || null,
-      email: f.email?.trim() || null,
-      message: f.message?.trim() || null
-    }).subscribe({
+    this.preschool.sendEnquiry({ ...enquiry, source: 'Website' }).subscribe({
       next: msg => {
         this.sending.set(false);
         this.sent.set(msg || 'The school will call you soon.');
-        this.form = emptyEnquiry();
+        this.form = emptyEnquiry(currentSession());
       },
       // The error interceptor has already shown why; the form stays filled in to try again.
       error: () => this.sending.set(false)

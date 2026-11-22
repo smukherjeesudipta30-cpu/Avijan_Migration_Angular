@@ -46,7 +46,35 @@ export async function downloadPagesPdf(
   if (pdf) await downloadBlob(pdf.output('blob'), fileName);
 }
 
-async function renderToCanvas(html: string, width: number): Promise<HTMLCanvasElement> {
+/**
+ * One document as a PDF on a page of the given paper size, filled edge to
+ * edge: the markup is drawn at exactly that page's size (A5 is 559 px wide),
+ * so nothing is scaled twice. Rendered at 3× for sharp print.
+ */
+export async function downloadSizedPdf(
+  html: string | string[],
+  fileName: string,
+  options: { width: number; format: 'a4' | 'a5'; landscape?: boolean }
+): Promise<void> {
+  const { jsPDF } = await import('jspdf');
+  const orientation = options.landscape ? 'landscape' : 'portrait';
+  const pdf = new jsPDF({ orientation, unit: 'mm', format: options.format });
+  const pages = Array.isArray(html) ? html : [html];
+  for (let i = 0; i < pages.length; i++) {
+    // The on-screen gap and shadow around each sheet do not belong on the paper.
+    const flat = pages[i].replace('</style>', '.sheet{margin:0!important;box-shadow:none!important}</style>');
+    const canvas = await renderToCanvas(flat, options.width, 3);
+    if (i > 0) pdf.addPage(options.format, orientation);
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const ratio = Math.min(pageW / canvas.width, pageH / canvas.height);
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG',
+      (pageW - canvas.width * ratio) / 2, (pageH - canvas.height * ratio) / 2, canvas.width * ratio, canvas.height * ratio);
+  }
+  await downloadBlob(pdf.output('blob'), fileName);
+}
+
+async function renderToCanvas(html: string, width: number, scale = 2): Promise<HTMLCanvasElement> {
   const { default: html2canvas } = await import('html2canvas');
   const options = { width };
 
@@ -75,7 +103,7 @@ async function renderToCanvas(html: string, width: number): Promise<HTMLCanvasEl
     frame.style.height = `${height}px`;
 
     return await html2canvas(doc.body, {
-      scale: 2,
+      scale,
       useCORS: true,
       backgroundColor: '#ffffff',
       width: options.width,

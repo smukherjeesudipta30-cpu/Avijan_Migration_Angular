@@ -11,11 +11,12 @@ import { Observable, concatMap, from, last, of } from 'rxjs';
 import { formatMoney } from '../../../core/format/money';
 import { PreSchoolClass, todayIso } from '../../../core/models/preschool.model';
 import {
-  PreSchoolMonth, PreSchoolPayMode, PreSchoolPhotoSlot, PreSchoolReceipt, PreSchoolStudentDetail, PreSchoolStudentPhotos,
-  PreSchoolStudentSave, monthLabel, whatsAppLink
+  PRESCHOOL_CHARGE_HEADS, PreSchoolChargeHead, PreSchoolMonth, PreSchoolPayMode, PreSchoolPhotoSlot, PreSchoolReceipt,
+  PreSchoolStudentDetail, PreSchoolStudentPhotos, PreSchoolStudentSave, monthLabel, whatsAppLink
 } from '../../../core/models/preschool-student.model';
 import { openPendingDocumentWindow, writeDocumentWindow } from '../../../core/printing/legacy-documents';
-import { preSchoolReceiptHtml } from '../../../core/printing/preschool-receipt';
+import { downloadSizedPdf, isNativeApp, pdfFileName } from '../../../core/printing/pdf-download';
+import { feeReceiptHtml } from '../../../core/printing/preschool-forms';
 import { PhotoCaptureComponent } from '../../../shared/photo-capture/photo-capture.component';
 import { AuthService } from '../../../core/services/auth.service';
 import { PreSchoolService } from '../../../core/services/preschool.service';
@@ -26,8 +27,13 @@ const blankForm = (): PreSchoolStudentSave => ({
   childName: '', dateOfBirth: '', gender: null, bloodGroup: null, fatherName: null, motherName: null,
   parentName: '', phone: '', emergencyPhone: null, email: null, address: null,
   guardianRelation: null, guardian2Name: null, guardian2Relation: null, guardian2Phone: null, heightCm: null, weightKg: null, classId: 0,
-  joinedOn: todayIso(), monthlyDiscount: 0, status: 'Active', endedOn: null, notes: null
+  joinedOn: todayIso(), monthlyDiscount: 0, status: 'Active', endedOn: null, notes: null, section: null
 });
+
+/** The receipt's other rows, blank: an amount (and a note for "Late fee / others" and "Others") per head. */
+const blankCharges = () =>
+  Object.fromEntries(PRESCHOOL_CHARGE_HEADS.map(h => [h.head, { amount: null as number | null, note: '' }])) as
+    Record<PreSchoolChargeHead, { amount: number | null; note: string }>;
 
 /** "2026-11-01" plus n months. */
 function addMonths(iso: string, n: number): string {
@@ -103,14 +109,39 @@ function addMonths(iso: string, n: number): string {
             }
           </div>
 
+          <details class="psd-charges" [open]="chargesTotal() > 0">
+            <summary>Other charges on the receipt <small class="app-muted">— registration, annual, kit, food, transport…</small>
+              @if (chargesTotal() > 0) { <strong>{{ money(chargesTotal()) }}</strong> }</summary>
+            @for (part of [1, 2]; track part) {
+              <p class="psd-part">Part {{ part === 1 ? 'I' : 'II' }}</p>
+              <div class="psd-charge-grid">
+                @for (h of chargeHeads; track h.head) {
+                  @if (h.part === part) {
+                    <label>{{ h.label }}
+                      <input pInputText type="number" min="0" step="1" [(ngModel)]="charges[h.head].amount" placeholder="0" /></label>
+                    @if (h.head === 'LateFee' || h.head === 'Others') {
+                      <label>{{ h.head === 'LateFee' ? 'Late fee / other' : 'Other' }} — what for
+                        <input pInputText [(ngModel)]="charges[h.head].note" maxlength="60" /></label>
+                    }
+                  }
+                }
+              </div>
+            }
+          </details>
+
           <div class="psd-pay">
             <div class="psd-modes" role="radiogroup" aria-label="Payment mode">
               @for (mode of modes; track mode) {
                 <label [class.psd-mode--on]="payMode === mode"><input type="radio" name="mode" [value]="mode" [(ngModel)]="payMode" /> {{ mode }}</label>
               }
             </div>
-            @if (payMode !== 'Cash') {
+            @if (payMode === 'UPI' || payMode === 'Paytm') {
               <label>{{ payMode }} reference <input pInputText [(ngModel)]="reference" maxlength="60" /></label>
+            }
+            @if (payMode === 'Cheque' || payMode === 'DD') {
+              <label>{{ payMode }} No. <input pInputText [(ngModel)]="reference" maxlength="30" /></label>
+              <label>{{ payMode }} date <input pInputText type="date" [(ngModel)]="chequeDate" /></label>
+              <label class="psd-wide">Drawn on (bank) <input pInputText [(ngModel)]="drawnOn" maxlength="80" placeholder="State Bank of India, Baruipur" /></label>
             }
             <label>Date received <input pInputText type="date" [(ngModel)]="receivedOn" [max]="today" /></label>
             <label>Note (optional) <input pInputText [(ngModel)]="payNote" maxlength="300" /></label>
@@ -136,6 +167,7 @@ function addMonths(iso: string, n: number): string {
               <option [ngValue]="0" disabled>Pick a class</option>
               @for (c of classes(); track c.id) { <option [ngValue]="c.id" [disabled]="!c.isActive">{{ c.name }}</option> }
             </select></label>
+          <label>Section <input pInputText [(ngModel)]="form.section" maxlength="10" placeholder="A" /></label>
           <label>Joining date * <input pInputText type="date" [(ngModel)]="form.joinedOn" /></label>
           <label>Height (cm) <input pInputText type="number" min="40" max="200" step="0.5" [(ngModel)]="form.heightCm" placeholder="95" /></label>
           <label>Weight (kg) <input pInputText type="number" min="2" max="80" step="0.1" [(ngModel)]="form.weightKg" placeholder="14.5" /></label>
@@ -211,7 +243,9 @@ function addMonths(iso: string, n: number): string {
                 <small>{{ r.summary }}</small></span>
               <strong>{{ money(r.total) }}</strong>
               <span class="psd-receipt-actions">
-                <p-button icon="pi pi-print" [text]="true" [rounded]="true" ariaLabel="Print receipt" (onClick)="print(r.id)" />
+                <p-button icon="pi pi-print" [text]="true" [rounded]="true" ariaLabel="Print receipt (parent and office copy)" (onClick)="print(r.id)" />
+                <p-button icon="pi pi-file-pdf" [text]="true" [rounded]="true" ariaLabel="Download the parent copy as PDF"
+                  [loading]="downloading() === r.id" (onClick)="downloadParentCopy(r.id)" />
                 <a [href]="share(s, r.receiptCode, r.total, r.summary)" target="_blank" rel="noopener" class="psd-wa" aria-label="Send to parent on WhatsApp"><i class="pi pi-whatsapp" aria-hidden="true"></i></a>
                 @if (isHead() && !r.isCancelled) {
                   <p-button icon="pi pi-ban" [text]="true" [rounded]="true" severity="danger" ariaLabel="Cancel receipt" (onClick)="cancel(r.id, r.receiptCode)" />
@@ -250,8 +284,15 @@ function addMonths(iso: string, n: number): string {
     .psd-month--on { border-color: #ff6b8b; background: #fff0f4; }
     .psd-month--paid { background: #e6f8e6; border-color: #bfe6bf; color: #2b7a2b; cursor: default; }
     .psd-pay { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+    .psd-wide { grid-column: 1 / -1; }
+    .psd-charges { margin-bottom: 1rem; padding: 0.6rem 0.75rem; border: 1px solid var(--app-border); border-radius: 10px; }
+    .psd-charges summary { cursor: pointer; font-weight: 700; font-size: 0.9rem; }
+    .psd-charges summary strong { float: right; }
+    .psd-part { margin: 0.7rem 0 0.35rem; font-weight: 700; font-size: 0.8rem; color: #4c1d95; }
+    .psd-charge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); gap: 0.6rem; }
+    .psd-charge-grid label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8rem; font-weight: 600; }
     .psd-pay label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.82rem; font-weight: 600; }
-    .psd-modes { grid-column: 1 / -1; display: flex; gap: 0.5rem; }
+    .psd-modes { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0.5rem; }
     .psd-modes label { flex-direction: row; align-items: center; gap: 0.35rem; padding: 0.4rem 0.9rem; border: 2px solid #e4e6ef; border-radius: 999px; cursor: pointer; font-size: 0.9rem; }
     .psd-modes .psd-mode--on { border-color: #6d28d9; background: #f5f3ff; }
     .psd-total { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-top: 1rem; padding-top: 0.9rem;
@@ -286,7 +327,9 @@ export class PreSchoolStudentComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
-  readonly modes: PreSchoolPayMode[] = ['Cash', 'UPI', 'Paytm'];
+  readonly modes: PreSchoolPayMode[] = ['Cash', 'UPI', 'Paytm', 'Cheque', 'DD'];
+  readonly chargeHeads = PRESCHOOL_CHARGE_HEADS;
+  readonly downloading = signal<number | null>(null);
   readonly today = todayIso();
   readonly thisMonth = todayIso().slice(0, 8) + '01';
   readonly money = formatMoney;
@@ -314,6 +357,14 @@ export class PreSchoolStudentComponent implements OnInit {
   reference = '';
   receivedOn = todayIso();
   payNote = '';
+  chequeDate = todayIso();
+  drawnOn = '';
+  charges = blankCharges();
+
+  /** What the receipt's other rows add up to. */
+  chargesTotal(): number {
+    return PRESCHOOL_CHARGE_HEADS.reduce((t, h) => t + (Number(this.charges[h.head].amount) || 0), 0);
+  }
 
   /** Every month billed so far, plus three ahead for paying in advance. */
   readonly monthChoices = computed<PreSchoolMonth[]>(() => {
@@ -333,7 +384,7 @@ export class PreSchoolStudentComponent implements OnInit {
     const s = this.student();
     if (!s) return 0;
     const admission = this.takeAdmission && !s.admissionPaid ? Number(this.admissionAmount) || 0 : 0;
-    return admission + this.picked().size * s.monthlyFee;
+    return admission + this.picked().size * s.monthlyFee + this.chargesTotal();
   }
 
   ngOnInit(): void {
@@ -463,36 +514,77 @@ export class PreSchoolStudentComponent implements OnInit {
   }
 
   collect(s: PreSchoolStudentDetail): void {
-    if (this.payMode !== 'Cash' && !this.reference.trim()) return this.warn(`Enter the ${this.payMode} reference number.`);
+    const byCheque = this.payMode === 'Cheque' || this.payMode === 'DD';
+    if (this.payMode !== 'Cash' && !this.reference.trim()) {
+      return this.warn(byCheque ? `Enter the ${this.payMode} number.` : `Enter the ${this.payMode} reference number.`);
+    }
+    if (byCheque && !this.chequeDate) return this.warn(`Enter the ${this.payMode} date.`);
+    if (byCheque && !this.drawnOn.trim()) return this.warn(`Enter the bank the ${this.payMode} is drawn on.`);
+    if (PRESCHOOL_CHARGE_HEADS.some(h => (Number(this.charges[h.head].amount) || 0) < 0)) return this.warn('A charge cannot be negative.');
     if (this.takeAdmission && !s.admissionPaid && !(Number(this.admissionAmount) > 0)) return this.warn('Enter the admission amount.');
 
     // Opened now, while the click still counts as the user's, so the pop-up blocker lets it through.
-    const win = openPendingDocumentWindow(820, 960);
+    // In the app there is no window: the parent copy is saved as a PDF instead, once collected.
+    const win = isNativeApp() ? null : openPendingDocumentWindow(1180, 900);
     this.collecting.set(true);
     this.students.collect(s.id, {
       includeAdmission: this.takeAdmission && !s.admissionPaid,
       admissionAmount: this.takeAdmission ? Number(this.admissionAmount) || null : null,
       months: [...this.picked()].sort(),
       mode: this.payMode,
+      charges: PRESCHOOL_CHARGE_HEADS
+        .filter(h => (Number(this.charges[h.head].amount) || 0) > 0)
+        .map(h => ({ head: h.head, amount: Number(this.charges[h.head].amount), note: this.charges[h.head].note.trim() || null })),
       reference: this.payMode === 'Cash' ? null : this.reference.trim(),
+      chequeDate: byCheque ? this.chequeDate : null,
+      drawnOn: byCheque ? this.drawnOn.trim() : null,
       receivedOn: this.receivedOn || null,
       notes: this.payNote.trim() || null
     }).subscribe({
       next: receipt => {
         this.collecting.set(false);
-        this.show(win, receipt);
+        if (isNativeApp()) {
+          void downloadSizedPdf(feeReceiptHtml(receipt, 'parent'), pdfFileName('FeeReceipt', receipt.receiptCode, receipt.childName),
+            { width: 559, format: 'a5' }).catch(() => undefined);
+        } else {
+          this.show(win, receipt);
+        }
         this.done(`Received ${this.money(receipt.total)} · ${receipt.receiptCode}`);
         this.reference = '';
         this.payNote = '';
+        this.drawnOn = '';
+        this.charges = blankCharges();
         this.load(s.id);
       },
       error: () => { this.collecting.set(false); win?.close(); }
     });
   }
 
+  /** Both copies on one A4 sheet, side by side: the parent's half and the office's half. */
   print(receiptId: number): void {
-    const win = openPendingDocumentWindow(820, 960);
+    if (isNativeApp()) {
+      // No print window in the app: both copies on one landscape A4 page, as a PDF to print from the phone.
+      this.students.receipt(receiptId).subscribe(r =>
+        downloadSizedPdf(feeReceiptHtml(r, 'pair'), pdfFileName('FeeReceipt', r.receiptCode, 'both-copies'),
+          { width: 1123, format: 'a4', landscape: true })
+          .catch(() => this.warn('The PDF could not be made. Please try again.')));
+      return;
+    }
+    const win = openPendingDocumentWindow(1180, 900);
     this.students.receipt(receiptId).subscribe({ next: r => this.show(win, r), error: () => win?.close() });
+  }
+
+  /** The parent copy alone, as a half-A4 (A5) PDF to send or print. */
+  downloadParentCopy(receiptId: number): void {
+    this.downloading.set(receiptId);
+    this.students.receipt(receiptId).subscribe({
+      next: r => {
+        downloadSizedPdf(feeReceiptHtml(r, 'parent'), pdfFileName('FeeReceipt', r.receiptCode, r.childName), { width: 559, format: 'a5' })
+          .catch(() => this.warn('The PDF could not be made. Try again, or use Print and save as PDF.'))
+          .finally(() => this.downloading.set(null));
+      },
+      error: () => this.downloading.set(null)
+    });
   }
 
   cancel(receiptId: number, code: string): void {
@@ -510,7 +602,7 @@ export class PreSchoolStudentComponent implements OnInit {
   }
 
   private show(win: Window | null, receipt: PreSchoolReceipt): void {
-    if (!writeDocumentWindow(win, preSchoolReceiptHtml(receipt))) {
+    if (!writeDocumentWindow(win, feeReceiptHtml(receipt, 'pair'))) {
       this.warn('The receipt window was blocked. Allow pop-ups for this site, then use the print button under Receipts.');
     }
   }

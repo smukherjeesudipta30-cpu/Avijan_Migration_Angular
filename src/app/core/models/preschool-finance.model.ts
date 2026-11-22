@@ -98,6 +98,8 @@ export interface PreSchoolIncomeMonth {
   month: string;
   admissionFees: number;
   monthlyFees: number;
+  /** Registration, annual, kit, food, transport and the receipt's other rows. */
+  otherFees?: number;
   income: number;
   salaries: number;
   expenses: number;
@@ -145,6 +147,7 @@ export interface PreSchoolIncomeReceiptLine {
   mode: string;
   admissionFee: number;
   monthlyFees: number;
+  otherFees?: number;
   total: number;
 }
 
@@ -163,6 +166,7 @@ export interface PreSchoolIncomeRange {
   to: string;
   admissionFees: number;
   monthlyFees: number;
+  otherFees?: number;
   income: number;
   salaries: number;
   expenses: number;

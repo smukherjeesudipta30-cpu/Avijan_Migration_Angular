@@ -139,22 +139,70 @@ export interface PreSchoolPublic {
   holidays: PreSchoolHoliday[];
 }
 
+/**
+ * The school's Enquiry Form. The person to call back is worked out by the API
+ * from mother, father or guardian, whoever gave a name and a number first.
+ */
 export interface PreSchoolEnquirySave {
   childName: string;
   childDateOfBirth: string | null;
-  parentName: string;
-  phone: string;
-  email: string | null;
+  email?: string | null;
   classWanted: string | null;
-  message: string | null;
+  message?: string | null;
+  /** "2026-27". */
+  session: string | null;
+  gender: 'Female' | 'Male' | null;
+  motherName: string | null;
+  motherOccupation: string | null;
+  motherPhone: string | null;
+  motherEmail: string | null;
+  motherAddress: string | null;
+  fatherName: string | null;
+  fatherOccupation: string | null;
+  fatherPhone: string | null;
+  fatherEmail: string | null;
+  fatherAddress: string | null;
+  guardianName: string | null;
+  guardianOccupation: string | null;
+  guardianPhone: string | null;
+  guardianAddress: string | null;
+  /** Advertisement, Friends, Facebook, Leaflet, Hoardings, Others. */
+  heardFrom: string[];
+  /** Website or App, for one sent by a parent. */
+  source?: 'Website' | 'App';
 }
 
-export interface PreSchoolEnquiry extends PreSchoolEnquirySave {
+export interface PreSchoolEnquiryFeedback {
   id: number;
+  feedbackOn: string;
+  note: string;
+  createdBy?: string | null;
+}
+
+/** As the API returns it: empty values are left out, so every optional field may be missing. */
+export interface PreSchoolEnquiry extends Partial<Omit<PreSchoolEnquirySave, 'childName' | 'heardFrom' | 'source'>> {
+  id: number;
+  childName: string;
+  parentName: string;
+  phone: string;
   createdOn: string;
   isHandled: boolean;
   handledBy?: string | null;
   handledOn?: string | null;
+  heardFrom?: string[];
+  source?: 'Website' | 'App' | 'Office';
+  createdBy?: string | null;
+  feedback?: PreSchoolEnquiryFeedback[];
+}
+
+/** A blank Enquiry Form. */
+export function emptyEnquiry(session: string | null = null): PreSchoolEnquirySave {
+  return {
+    childName: '', childDateOfBirth: null, classWanted: null, session, gender: null,
+    motherName: null, motherOccupation: null, motherPhone: null, motherEmail: null, motherAddress: null,
+    fatherName: null, fatherOccupation: null, fatherPhone: null, fatherEmail: null, fatherAddress: null,
+    guardianName: null, guardianOccupation: null, guardianPhone: null, guardianAddress: null, heardFrom: []
+  };
 }
 
 /** A PreSchool closure; dates are "yyyy-MM-dd" and the same for a single day. */

@@ -1,7 +1,27 @@
 /** Avijan PreSchool children, fees and receipts, as PreSchoolStudentsController returns them. Dates are "yyyy-MM-dd". */
 
 export type PreSchoolStatus = 'Active' | 'Completed' | 'Left';
-export type PreSchoolPayMode = 'Cash' | 'UPI' | 'Paytm';
+export type PreSchoolPayMode = 'Cash' | 'UPI' | 'Paytm' | 'Cheque' | 'DD';
+
+/** The Fee Receipt's other rows, in the printed order (Part I: first four; Part II: the rest). */
+export const PRESCHOOL_CHARGE_HEADS = [
+  { head: 'Registration', label: 'Registration Fee', part: 1 },
+  { head: 'Annual', label: 'Annual Charges', part: 1 },
+  { head: 'Activities', label: 'Activities Fee', part: 1 },
+  { head: 'LateFee', label: 'Late Fee/ Others', part: 1 },
+  { head: 'Prospectus', label: 'Prospectus', part: 2 },
+  { head: 'AdmissionKit', label: 'Admission Kit', part: 2 },
+  { head: 'Food', label: 'Food Charges', part: 2 },
+  { head: 'Transport', label: 'Transport Charges', part: 2 },
+  { head: 'Others', label: 'Others', part: 2 }
+] as const;
+export type PreSchoolChargeHead = typeof PRESCHOOL_CHARGE_HEADS[number]['head'];
+
+export interface PreSchoolCharge {
+  head: PreSchoolChargeHead;
+  amount: number;
+  note?: string | null;
+}
 
 export interface PreSchoolStudentListItem {
   id: number;
@@ -61,6 +81,8 @@ export interface PreSchoolStudentSave {
   status: PreSchoolStatus;
   endedOn: string | null;
   notes: string | null;
+  /** "A", "B" … printed on the fee receipt. */
+  section?: string | null;
 }
 
 /** The three ID-card photos, as data URLs. */
@@ -86,14 +108,18 @@ export interface PreSchoolCollect {
   includeAdmission: boolean;
   admissionAmount: number | null;
   months: string[];
+  charges: PreSchoolCharge[];
   mode: PreSchoolPayMode;
   reference: string | null;
+  chequeDate: string | null;
+  drawnOn: string | null;
   receivedOn: string | null;
   notes: string | null;
 }
 
 export interface PreSchoolReceiptLine {
-  kind: 'Admission' | 'Monthly';
+  kind: 'Admission' | 'Monthly' | 'Charge';
+  chargeHead?: PreSchoolChargeHead | null;
   forMonth?: string | null;
   description: string;
   amount: number;
@@ -120,6 +146,12 @@ export interface PreSchoolReceipt {
   schoolAddress?: string | null;
   schoolPhone?: string | null;
   lines: PreSchoolReceiptLine[];
+  section?: string | null;
+  fatherName?: string | null;
+  motherName?: string | null;
+  address?: string | null;
+  chequeDate?: string | null;
+  drawnOn?: string | null;
 }
 
 export interface PreSchoolPendingRow {

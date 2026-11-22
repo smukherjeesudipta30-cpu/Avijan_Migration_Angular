@@ -85,6 +85,28 @@ export class PreSchoolService {
       .pipe(map(r => r.data));
   }
 
+  enquiry(id: number): Observable<PreSchoolEnquiry> {
+    return this.http.get<ApiResponse<PreSchoolEnquiry>>(`${this.base}/enquiries/${id}`).pipe(map(r => r.data));
+  }
+
+  /** A walk-in enquiry typed in by the office (id null), or changes to one. */
+  saveEnquiry(id: number | null, body: PreSchoolEnquirySave): Observable<PreSchoolEnquiry> {
+    const call = id === null
+      ? this.http.post<ApiResponse<PreSchoolEnquiry>>(`${this.base}/enquiries`, body)
+      : this.http.put<ApiResponse<PreSchoolEnquiry>>(`${this.base}/enquiries/${id}`, body);
+    return call.pipe(map(r => r.data));
+  }
+
+  addEnquiryFeedback(id: number, feedbackOn: string | null, note: string): Observable<PreSchoolEnquiry> {
+    return this.http.post<ApiResponse<PreSchoolEnquiry>>(`${this.base}/enquiries/${id}/feedback`, { feedbackOn, note })
+      .pipe(map(r => r.data));
+  }
+
+  deleteEnquiryFeedback(id: number, feedbackId: number): Observable<PreSchoolEnquiry> {
+    return this.http.delete<ApiResponse<PreSchoolEnquiry>>(`${this.base}/enquiries/${id}/feedback/${feedbackId}`)
+      .pipe(map(r => r.data));
+  }
+
   holidays(year: number): Observable<PreSchoolHoliday[]> {
     return this.http.get<ApiResponse<PreSchoolHoliday[]>>(`${this.base}/holidays`, { params: { year } }).pipe(map(r => r.data));
   }

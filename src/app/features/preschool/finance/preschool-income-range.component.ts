@@ -35,7 +35,7 @@ const monthOf = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { mon
       </div>
       @if (data(); as d) {
         <div class="pir__kpis">
-          <div><span>Fees received</span><strong class="pir__green">{{ money(d.income) }}</strong><small>Admission {{ money(d.admissionFees) }} · Monthly {{ money(d.monthlyFees) }}</small></div>
+          <div><span>Fees received</span><strong class="pir__green">{{ money(d.income) }}</strong><small>Admission {{ money(d.admissionFees) }} · Monthly {{ money(d.monthlyFees) }} · Other {{ money(d.otherFees ?? 0) }}</small></div>
           <div><span>Salaries paid</span><strong>{{ money(d.salaries) }}</strong><small>{{ d.salaryPayments.length }} payment(s)</small></div>
           <div><span>Other expenses</span><strong>{{ money(d.expenses) }}</strong><small>{{ d.expenseEntries.length }} entr{{ d.expenseEntries.length === 1 ? 'y' : 'ies' }}</small></div>
           <div><span>Net</span><strong [class.pir__red]="d.net < 0" [class.pir__green]="d.net >= 0">{{ money(d.net) }}</strong>
@@ -89,10 +89,10 @@ export class PreSchoolIncomeRangeComponent {
     if (!d) return;
     downloadCsv(`Avijan-PreSchool-income-${d.from}-to-${d.to}`, [
       { title: `Avijan PreSchool — Income report — ${this.title}`, header: ['', 'Amount'], rows: [
-        ['Admission fees', d.admissionFees], ['Monthly fees', d.monthlyFees], ['Fees received', d.income],
+        ['Admission fees', d.admissionFees], ['Monthly fees', d.monthlyFees], ['Other fees', d.otherFees ?? 0], ['Fees received', d.income],
         ['Salaries paid', d.salaries], ['Other expenses', d.expenses], ['Net', d.net]] },
-      { title: 'Fees received', header: ['Date', 'Receipt', 'Child', 'Class', 'Mode', 'Admission', 'Monthly', 'Total'],
-        rows: d.receipts.map(r => [r.receivedOn, r.receiptCode, r.childName, r.className, r.mode, r.admissionFee, r.monthlyFees, r.total]) },
+      { title: 'Fees received', header: ['Date', 'Receipt', 'Child', 'Class', 'Mode', 'Admission', 'Monthly', 'Other', 'Total'],
+        rows: d.receipts.map(r => [r.receivedOn, r.receiptCode, r.childName, r.className, r.mode, r.admissionFee, r.monthlyFees, r.otherFees ?? 0, r.total]) },
       { title: 'Salaries paid', header: ['Date paid', 'Staff', 'Role', 'For month', 'Mode', 'Amount'],
         rows: d.salaryPayments.map(s => [s.paidOn, s.staffName, s.role, monthOf(s.forMonth), s.mode, s.amount]) },
       { title: 'Other expenses', header: ['Date', 'Head', 'Description', 'Mode', 'Amount'],
@@ -115,7 +115,7 @@ export class PreSchoolIncomeRangeComponent {
       button{margin-top:16px;padding:8px 18px;border:0;border-radius:999px;background:#6d28d9;color:#fff;font-weight:600}@media print{button{display:none}}</style></head>
       <body><h1>Avijan PreSchool — Income report</h1><p>${e(this.title)} · cancelled receipts are left out.</p>
       <table class="sum"><tbody>
-        <tr><td>Fees received (admission ${e(m(d.admissionFees))}, monthly ${e(m(d.monthlyFees))})</td><td class="r">${e(m(d.income))}</td></tr>
+        <tr><td>Fees received (admission ${e(m(d.admissionFees))}, monthly ${e(m(d.monthlyFees))}, other ${e(m(d.otherFees ?? 0))})</td><td class="r">${e(m(d.income))}</td></tr>
         <tr><td>Salaries paid</td><td class="r">${e(m(d.salaries))}</td></tr><tr><td>Other expenses</td><td class="r">${e(m(d.expenses))}</td></tr>
         <tr><td>Net</td><td class="r">${e(m(d.net))}</td></tr></tbody></table>
       <h2>Fees received</h2>${table(['Date', 'Receipt', 'Child', 'Class', 'Mode', 'Amount'],
