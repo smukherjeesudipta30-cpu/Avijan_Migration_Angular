@@ -171,7 +171,10 @@ function receiptCard(r: PreSchoolReceipt, copy: Copy): string {
   const charge = (head: string) => sum(l => l.kind === 'Charge' && l.chargeHead === head);
 
   const months = [...new Set(r.lines.filter(l => l.kind === 'Monthly' && l.forMonth).map(l => l.forMonth!))].sort().map(monthLabel);
-  const othersNote = r.lines.find(l => l.chargeHead === 'Others')?.description.split(' — ')[1];
+  const othersNote = [
+    charge('WinterGarments') ? 'Winter Garments' : '',
+    r.lines.find(l => l.chargeHead === 'Others')?.description.split(' — ')[1] ?? ''
+  ].filter(Boolean).join(', ');
   const lateNote = r.lines.find(l => l.chargeHead === 'LateFee')?.description.split(' — ')[1];
 
   const partOne: [string, string, number][] = [
@@ -187,7 +190,7 @@ function receiptCard(r: PreSchoolReceipt, copy: Copy): string {
     ['h.', 'Admission Kit', charge('AdmissionKit')],
     ['I.', 'Food Charges', charge('Food')],
     ['j.', 'Transport Charges', charge('Transport')],
-    ['k.', `Others (if any)${othersNote ? ` <small>— ${e(othersNote)}</small>` : ''}`, charge('Others')]
+    ['k.', `Others (if any)${othersNote ? ` <small>— ${e(othersNote)}</small>` : ''}`, charge('Others') + charge('WinterGarments')]
   ];
   const totalOne = partOne.reduce((t, [, , a]) => t + a, 0);
 

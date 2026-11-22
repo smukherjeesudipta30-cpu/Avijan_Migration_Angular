@@ -13,6 +13,7 @@ export const PRESCHOOL_CHARGE_HEADS = [
   { head: 'AdmissionKit', label: 'Admission Kit', part: 2 },
   { head: 'Food', label: 'Food Charges', part: 2 },
   { head: 'Transport', label: 'Transport Charges', part: 2 },
+  { head: 'WinterGarments', label: 'Winter Garments', part: 2 },
   { head: 'Others', label: 'Others', part: 2 }
 ] as const;
 export type PreSchoolChargeHead = typeof PRESCHOOL_CHARGE_HEADS[number]['head'];

@@ -18,6 +18,12 @@ export interface PreSchoolStoreItem {
   inStock: number;
   students: number;
   studentsWaiting: number;
+  /** The usual price paid per piece (to My Chhota School). */
+  unitCost?: number | null;
+  /** The Fee Receipt line parents pay this item on. */
+  chargeHead?: string | null;
+  /** Everything spent buying it. */
+  spent?: number;
 }
 
 export interface PreSchoolStoreMovement {
@@ -32,9 +38,39 @@ export interface PreSchoolStoreMovement {
   onDate: string;
   note: string | null;
   createdBy: string | null;
+  unitCost?: number | null;
+  supplier?: string | null;
 }
 
-export interface PreSchoolStore { items: PreSchoolStoreItem[]; recent: PreSchoolStoreMovement[]; }
+export interface PreSchoolSupplierPayment {
+  id: number;
+  supplier: string;
+  paidOn: string;
+  amount: number;
+  mode: 'Cash' | 'Bank' | 'UPI' | 'Cheque';
+  reference?: string | null;
+  note?: string | null;
+  createdBy?: string | null;
+}
+
+/** The account with My Chhota School: stock bought, paid in bulk, and still owed. */
+export interface PreSchoolSupplierAccount {
+  supplier: string;
+  bought: number;
+  paid: number;
+  balance: number;
+  payments: PreSchoolSupplierPayment[];
+}
+
+export interface PreSchoolSupplierPaymentSave {
+  paidOn: string | null;
+  amount: number;
+  mode: PreSchoolSupplierPayment['mode'];
+  reference: string | null;
+  note: string | null;
+}
+
+export interface PreSchoolStore { items: PreSchoolStoreItem[]; recent: PreSchoolStoreMovement[]; account?: PreSchoolSupplierAccount; }
 
 export interface PreSchoolStudentStoreLine {
   itemId: number;
@@ -45,7 +81,10 @@ export interface PreSchoolStudentStoreLine {
   givenBy: string | null;
 }
 
-export interface PreSchoolStoreItemSave { name: string; classId: number | null; sortOrder: number; isActive: boolean; }
+export interface PreSchoolStoreItemSave {
+  name: string; classId: number | null; sortOrder: number; isActive: boolean;
+  unitCost: number | null; chargeHead: string | null;
+}
 
 /** The PreSchool store: tuition books, bags and the like, class by class. */
 @Injectable({ providedIn: 'root' })
@@ -64,9 +103,20 @@ export class PreSchoolStoreService {
     return call.pipe(map(r => r.data));
   }
 
-  stockIn(itemId: number, quantity: number, onDate: string | null, note: string | null): Observable<PreSchoolStoreItem> {
-    return this.http.post<ApiResponse<PreSchoolStoreItem>>(`${this.base}/store/items/${itemId}/stock`, { quantity, onDate, note })
-      .pipe(map(r => r.data));
+  /** Stock bought: how many, the price paid per piece, and from whom (My Chhota School when left out). */
+  stockIn(itemId: number, quantity: number, onDate: string | null, note: string | null,
+          unitCost: number | null = null, supplier: string | null = null): Observable<PreSchoolStoreItem> {
+    return this.http.post<ApiResponse<PreSchoolStoreItem>>(`${this.base}/store/items/${itemId}/stock`,
+      { quantity, onDate, note, unitCost, supplier }).pipe(map(r => r.data));
+  }
+
+  /** A bulk payment to My Chhota School. */
+  addSupplierPayment(body: PreSchoolSupplierPaymentSave): Observable<PreSchoolSupplierAccount> {
+    return this.http.post<ApiResponse<PreSchoolSupplierAccount>>(`${this.base}/store/supplier-payments`, body).pipe(map(r => r.data));
+  }
+
+  removeSupplierPayment(id: number): Observable<PreSchoolSupplierAccount> {
+    return this.http.delete<ApiResponse<PreSchoolSupplierAccount>>(`${this.base}/store/supplier-payments/${id}`).pipe(map(r => r.data));
   }
 
   removeMovement(id: number): Observable<boolean> {

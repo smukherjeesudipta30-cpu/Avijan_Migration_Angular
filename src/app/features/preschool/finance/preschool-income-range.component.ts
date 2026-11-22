@@ -38,9 +38,31 @@ const monthOf = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { mon
           <div><span>Fees received</span><strong class="pir__green">{{ money(d.income) }}</strong><small>Admission {{ money(d.admissionFees) }} · Monthly {{ money(d.monthlyFees) }} · Other {{ money(d.otherFees ?? 0) }}</small></div>
           <div><span>Salaries paid</span><strong>{{ money(d.salaries) }}</strong><small>{{ d.salaryPayments.length }} payment(s)</small></div>
           <div><span>Other expenses</span><strong>{{ money(d.expenses) }}</strong><small>{{ d.expenseEntries.length }} entr{{ d.expenseEntries.length === 1 ? 'y' : 'ies' }}</small></div>
+          <div><span>Paid to My Chhota School</span><strong>{{ money(d.purchases ?? 0) }}</strong>
+            <small>{{ (d.supplierPayments ?? []).length }} payment(s) · still owed {{ money(d.owedToSupplier ?? 0) }}</small></div>
           <div><span>Net</span><strong [class.pir__red]="d.net < 0" [class.pir__green]="d.net >= 0">{{ money(d.net) }}</strong>
             <small>{{ d.from | date: 'd MMM y' }} – {{ d.to | date: 'd MMM y' }}</small></div>
         </div>
+        @if (d.storeMargins?.length) {
+          <div class="pir__store">
+            <h3>Kit, garments and prospectus: parents paid vs cost of stock received</h3>
+            <div class="pir__store-table">
+              <table>
+                <thead><tr><th>Item</th><th class="r">Bought</th><th class="r">Given</th><th class="r">Parents paid</th><th class="r">Cost of stock</th><th class="r">Difference</th></tr></thead>
+                <tbody>
+                  @for (x of d.storeMargins; track x.item) {
+                    <tr><td>{{ x.item }}@if (!x.chargeHead) { <small class="app-muted"> · not on the receipt</small> }</td>
+                      <td class="r">{{ x.bought }}</td><td class="r">{{ x.given }}</td>
+                      <td class="r">{{ money(x.receivedFromParents) }}</td><td class="r">{{ money(x.spent) }}</td>
+                      <td class="r"><strong [class.pir__red]="x.margin < 0" [class.pir__green]="x.margin >= 0">{{ money(x.margin) }}</strong></td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <small class="app-muted">Parents paid: the matching Fee Receipt lines in these dates. Cost of stock: deliveries received in these dates at their price
+              ({{ money(d.stockReceived ?? 0) }} in all), whether or not My Chhota School has been paid yet.</small>
+          </div>
+        }
         <p class="app-muted pir__note">{{ d.receipts.length }} receipt(s) in these dates. Download the PDF or Excel file for every entry.</p>
       }
     </section>
@@ -59,6 +81,13 @@ const monthOf = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { mon
     .pir__green { color: #2b7a2b; }
     .pir__red { color: #b42318; }
     .pir__note { margin: 0.6rem 0 0; font-size: 0.82rem; }
+    .pir__store { margin-top: 0.9rem; }
+    .pir__store h3 { margin: 0 0 0.4rem; font-size: 0.9rem; }
+    .pir__store-table { overflow-x: auto; }
+    .pir__store table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .pir__store th, .pir__store td { padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--app-border); text-align: left; white-space: nowrap; }
+    .pir__store th { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--app-text-muted); }
+    .pir__store .r { text-align: right; }
   `]
 })
 export class PreSchoolIncomeRangeComponent {
@@ -90,13 +119,20 @@ export class PreSchoolIncomeRangeComponent {
     downloadCsv(`Avijan-PreSchool-income-${d.from}-to-${d.to}`, [
       { title: `Avijan PreSchool — Income report — ${this.title}`, header: ['', 'Amount'], rows: [
         ['Admission fees', d.admissionFees], ['Monthly fees', d.monthlyFees], ['Other fees', d.otherFees ?? 0], ['Fees received', d.income],
-        ['Salaries paid', d.salaries], ['Other expenses', d.expenses], ['Net', d.net]] },
+        ['Salaries paid', d.salaries], ['Other expenses', d.expenses], ['Paid to My Chhota School', d.purchases ?? 0], ['Net', d.net],
+        ['Stock received from My Chhota School (at price)', d.stockReceived ?? 0], ['Still owed to My Chhota School on the last day', d.owedToSupplier ?? 0]] },
       { title: 'Fees received', header: ['Date', 'Receipt', 'Child', 'Class', 'Mode', 'Admission', 'Monthly', 'Other', 'Total'],
         rows: d.receipts.map(r => [r.receivedOn, r.receiptCode, r.childName, r.className, r.mode, r.admissionFee, r.monthlyFees, r.otherFees ?? 0, r.total]) },
       { title: 'Salaries paid', header: ['Date paid', 'Staff', 'Role', 'For month', 'Mode', 'Amount'],
         rows: d.salaryPayments.map(s => [s.paidOn, s.staffName, s.role, monthOf(s.forMonth), s.mode, s.amount]) },
       { title: 'Other expenses', header: ['Date', 'Head', 'Description', 'Mode', 'Amount'],
-        rows: d.expenseEntries.map(x => [x.spentOn, x.head, x.description, x.mode, x.amount]) }
+        rows: d.expenseEntries.map(x => [x.spentOn, x.head, x.description, x.mode, x.amount]) },
+      { title: 'Paid to My Chhota School', header: ['Date paid', 'Mode', 'Reference', 'Note', 'Amount'],
+        rows: (d.supplierPayments ?? []).map(p => [p.paidOn, p.mode, p.reference ?? '', p.note ?? '', p.amount]) },
+      { title: 'Stock received from My Chhota School', header: ['Date', 'Item', 'Class', 'Supplier', 'Quantity', 'Price / piece', 'Amount'],
+        rows: (d.purchaseEntries ?? []).map(p => [p.onDate, p.itemName, p.className, p.supplier, p.quantity, p.unitCost, p.amount]) },
+      { title: 'Kit, garments and prospectus: parents paid vs bought', header: ['Item', 'Bought', 'Given', 'Parents paid', 'Cost of stock', 'Difference'],
+        rows: (d.storeMargins ?? []).map(x => [x.item, x.bought, x.given, x.receivedFromParents, x.spent, x.margin]) }
     ]);
   }
 
@@ -117,13 +153,21 @@ export class PreSchoolIncomeRangeComponent {
       <table class="sum"><tbody>
         <tr><td>Fees received (admission ${e(m(d.admissionFees))}, monthly ${e(m(d.monthlyFees))}, other ${e(m(d.otherFees ?? 0))})</td><td class="r">${e(m(d.income))}</td></tr>
         <tr><td>Salaries paid</td><td class="r">${e(m(d.salaries))}</td></tr><tr><td>Other expenses</td><td class="r">${e(m(d.expenses))}</td></tr>
+        <tr><td>Paid to My Chhota School</td><td class="r">${e(m(d.purchases ?? 0))}</td></tr>
         <tr><td>Net</td><td class="r">${e(m(d.net))}</td></tr></tbody></table>
+      <p>Still owed to My Chhota School on ${e(fmt(d.to))}: <strong>${e(m(d.owedToSupplier ?? 0))}</strong>.</p>
       <h2>Fees received</h2>${table(['Date', 'Receipt', 'Child', 'Class', 'Mode', 'Amount'],
         d.receipts.map(r => [e(fmt(r.receivedOn)), e(r.receiptCode), e(r.childName), e(r.className), e(r.mode), e(m(r.total))]), [5])}
       <h2>Salaries paid</h2>${table(['Date', 'Staff', 'For month', 'Mode', 'Amount'],
         d.salaryPayments.map(s => [e(fmt(s.paidOn)), `${e(s.staffName)} <small>(${e(s.role)})</small>`, e(monthOf(s.forMonth)), e(s.mode), e(m(s.amount))]), [4])}
       <h2>Other expenses</h2>${table(['Date', 'Head', 'Mode', 'Amount'],
         d.expenseEntries.map(x => [e(fmt(x.spentOn)), `${e(x.head)}${x.description ? ` <small>— ${e(x.description)}</small>` : ''}`, e(x.mode), e(m(x.amount))]), [3])}
+      <h2>Paid to My Chhota School</h2>${table(['Date paid', 'Mode', 'Reference', 'Note', 'Amount'],
+        (d.supplierPayments ?? []).map(p => [e(fmt(p.paidOn)), e(p.mode), e(p.reference ?? ''), e(p.note ?? ''), e(m(p.amount))]), [4])}
+      <h2>Stock received from My Chhota School</h2>${table(['Date', 'Item', 'Class', 'Qty × price', 'Amount'],
+        (d.purchaseEntries ?? []).map(p => [e(fmt(p.onDate)), e(p.itemName), e(p.className), `${p.quantity} × ${e(m(p.unitCost))}`, e(m(p.amount))]), [4])}
+      <h2>Kit, garments and prospectus: parents paid vs cost of stock</h2>${table(['Item', 'Bought', 'Given', 'Parents paid', 'Cost of stock', 'Difference'],
+        (d.storeMargins ?? []).map(x => [e(x.item), `${x.bought}`, `${x.given}`, e(m(x.receivedFromParents)), e(m(x.spent)), e(m(x.margin))]), [1, 2, 3, 4, 5])}
       <button onclick="window.print()">Print / Save as PDF</button></body></html>`);
   }
 }

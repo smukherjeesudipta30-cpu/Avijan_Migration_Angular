@@ -103,6 +103,8 @@ export interface PreSchoolIncomeMonth {
   income: number;
   salaries: number;
   expenses: number;
+  /** Store stock bought (from My Chhota School), by the day it came in. */
+  purchases?: number;
   net: number;
 }
 
@@ -115,6 +117,7 @@ export interface PreSchoolIncomeReport {
   net: number;
   incomeByMode: Record<string, number>;
   expensesByHead: Record<string, number>;
+  purchases?: number;
 }
 
 /** Suggested expense heads; any other can be typed. Salaries are not here: they come from the salary sheet. */
@@ -170,10 +173,42 @@ export interface PreSchoolIncomeRange {
   income: number;
   salaries: number;
   expenses: number;
+  /** Store stock bought (from My Chhota School), by the day it came in. */
+  purchases?: number;
   net: number;
   incomeByMode: Record<string, number>;
   expensesByHead: Record<string, number>;
   receipts: PreSchoolIncomeReceiptLine[];
+  purchaseEntries?: PreSchoolIncomePurchaseLine[];
+  storeMargins?: PreSchoolStoreMargin[];
+  /** Payments to My Chhota School in these dates (these make up purchases). */
+  supplierPayments?: { id: number; supplier: string; paidOn: string; amount: number; mode: string; reference?: string | null; note?: string | null }[];
+  /** Still owed to My Chhota School on the last day. */
+  owedToSupplier?: number;
+  /** Stock received in these dates at its price. */
+  stockReceived?: number;
   salaryPayments: PreSchoolIncomeSalaryLine[];
   expenseEntries: PreSchoolExpense[];
+}
+
+/** One delivery of store stock and what it cost. */
+export interface PreSchoolIncomePurchaseLine {
+  onDate: string;
+  itemName: string;
+  className: string;
+  supplier: string;
+  quantity: number;
+  unitCost: number;
+  amount: number;
+}
+
+/** One kind of store item: what parents paid for it against what it cost to buy. */
+export interface PreSchoolStoreMargin {
+  item: string;
+  chargeHead?: string | null;
+  receivedFromParents: number;
+  spent: number;
+  margin: number;
+  bought: number;
+  given: number;
 }

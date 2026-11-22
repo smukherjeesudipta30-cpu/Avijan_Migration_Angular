@@ -105,6 +105,27 @@ const CLASS_THEMES = [
 
     <app-smart-class [photoUrl]="smartClassPhoto()" />
 
+    <section class="ph__section" id="franchise">
+      <div class="ph__cert">
+        <div class="ph__cert-text">
+          <span class="ph__cert-tag">Authorised franchise</span>
+          <h2>Avijan PreSchool is an authorised franchise of My Chhota School</h2>
+          <p>Our classes follow My Chhota School's curriculum, methods and learning kits, from Pre-Nursery to UKG.</p>
+          <dl class="ph__cert-facts">
+            <div><dt>Certificate No.</dt><dd>MCS/2026/SCH2026820</dd></div>
+            <div><dt>Classes</dt><dd>Pre-Nursery to UKG</dd></div>
+            <div><dt>Valid till</dt><dd>June 2031</dd></div>
+          </dl>
+          <a class="ph__cert-link" href="images/preschool/franchise-certificate.jpg" target="_blank" rel="noopener">View the certificate in full size</a>
+        </div>
+        <a class="ph__cert-frame" href="images/preschool/franchise-certificate.jpg" target="_blank" rel="noopener"
+          aria-label="Open the My Chhota School franchisee authorization certificate in full size">
+          <img src="images/preschool/franchise-certificate.jpg" width="1600" height="1165" loading="lazy"
+            alt="My Chhota School Pvt. Ltd. franchisee authorization certificate for Avijan PreSchool, Champahati, valid for Pre-nursery to UKG till June 2031" />
+        </a>
+      </div>
+    </section>
+
 
     @if (info()?.uniformShopName; as shop) {
       <section class="ph__section">
@@ -205,6 +226,21 @@ const CLASS_THEMES = [
     @keyframes ph-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
     @media (prefers-reduced-motion: reduce) { .ph__bubble { animation: none; } }
     .ph__section { max-width: 1150px; margin: 0 auto; padding: 2.5rem 1.25rem; }
+    .ph__cert { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: 2rem; align-items: center; padding: 2rem;
+      border-radius: 32px; background: #fff; box-shadow: 0 10px 30px rgba(42, 47, 69, 0.06); }
+    .ph__cert-tag { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 999px; background: #fff1d6; color: #9a5b00;
+      font-weight: 800; font-size: 0.8rem; letter-spacing: 0.04em; text-transform: uppercase; }
+    .ph__cert-text h2 { margin: 0.6rem 0; font-size: 1.7rem; line-height: 1.25; }
+    .ph__cert-text p { margin: 0 0 1rem; color: #5b6178; line-height: 1.6; }
+    .ph__cert-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 0.6rem; margin: 0 0 1rem; }
+    .ph__cert-facts div { padding: 0.6rem 0.75rem; border-radius: 14px; background: #f3f9ff; }
+    .ph__cert-facts dt { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #5b6178; }
+    .ph__cert-facts dd { margin: 0.15rem 0 0; font-weight: 800; font-size: 0.9rem; word-break: break-word; }
+    .ph__cert-link { font-weight: 700; }
+    .ph__cert-frame { display: block; border-radius: 18px; overflow: hidden; box-shadow: 0 12px 34px rgba(42, 47, 69, 0.16); transform: rotate(-1deg);
+      transition: transform 0.2s ease; }
+    .ph__cert-frame:hover, .ph__cert-frame:focus-visible { transform: rotate(0deg) scale(1.01); }
+    .ph__cert-frame img { display: block; width: 100%; height: auto; }
     .ph__section > h2, .ph__why h2 { margin: 0 0 0.4rem; font-size: 2rem; text-align: center; }
     .ph__lead { text-align: center; color: #5b6178; margin: 0 0 1.6rem; }
     .ph__classes { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1.1rem; }
@@ -259,7 +295,10 @@ const CLASS_THEMES = [
     .ph__footer a { text-decoration: none; }
     .ph__foot-links { display: flex; flex-direction: column; gap: 0.4rem; font-weight: 700; }
     @media (max-width: 820px) {
-      .ph__hero, .ph__enquire, .ph__footer { grid-template-columns: 1fr; }
+      .ph__hero, .ph__enquire, .ph__footer, .ph__cert { grid-template-columns: 1fr; }
+      .ph__cert { padding: 1.25rem; }
+      .ph__cert-text h2 { font-size: 1.35rem; }
+      .ph__cert-frame { transform: none; }
       .ph__hero-art { height: 14rem; }
       .ph__bar-links a:not(.ph__login) { display: none; }
       .ph__form { grid-template-columns: 1fr; }

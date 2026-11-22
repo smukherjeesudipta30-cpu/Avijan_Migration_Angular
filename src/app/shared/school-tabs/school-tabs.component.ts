@@ -17,7 +17,7 @@ import { RouterLink } from '@angular/router';
       <a routerLink="/preschool" class="st__tab" [class.st__tab--on]="current() === 'preschool'"
         [attr.aria-current]="current() === 'preschool' ? 'page' : null">
         <span aria-hidden="true">🎈</span> Avijan PreSchool
-        @if (current() !== 'preschool') { <small>New</small> }</a>
+</a>
     </nav>
   `,
   styles: [`
@@ -25,7 +25,6 @@ import { RouterLink } from '@angular/router';
     .st__tab { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 1rem; border-radius: 999px;
       color: #c9cede; font-size: 0.9rem; font-weight: 600; text-decoration: none; }
     .st__tab:hover { color: #fff; }
-    .st__tab small { padding: 0.05rem 0.45rem; border-radius: 999px; background: #ff6b8b; color: #fff; font-size: 0.7rem; }
     .st__tab--on, .st__tab--on:hover { background: #fff; color: #2a2f45; }
     @media (max-width: 480px) { .st__tab { padding: 0.4rem 0.7rem; font-size: 0.8rem; } }
   `]
