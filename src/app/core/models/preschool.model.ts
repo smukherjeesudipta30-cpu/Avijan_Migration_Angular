@@ -30,6 +30,8 @@ export interface PreSchoolClass {
   monthlyTotal: number;
   subjects: PreSchoolSubject[];
   feeHeads: PreSchoolFeeHead[];
+  /** Head → usual amount for the Fee Receipt's other rows (Registration, Annual, AdmissionKit…). */
+  chargeRates?: Record<string, number>;
 }
 
 export interface PreSchoolGradeBand {
@@ -168,8 +170,8 @@ export interface PreSchoolEnquirySave {
   guardianAddress: string | null;
   /** Advertisement, Friends, Facebook, Leaflet, Hoardings, Others. */
   heardFrom: string[];
-  /** Website or App, for one sent by a parent. */
-  source?: 'Website' | 'App';
+  /** Website or App for one sent by a parent; Office for one typed in at the desk. */
+  source?: 'Website' | 'App' | 'Office';
 }
 
 export interface PreSchoolEnquiryFeedback {

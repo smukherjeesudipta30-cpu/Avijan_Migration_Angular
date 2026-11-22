@@ -8,6 +8,7 @@ import { Observable } from 'rxjs';
 
 import { formatMoney } from '../../../core/format/money';
 import { PreSchoolClass } from '../../../core/models/preschool.model';
+import { PRESCHOOL_CHARGE_HEADS } from '../../../core/models/preschool-student.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { PreSchoolService } from '../../../core/services/preschool.service';
 
@@ -120,6 +121,31 @@ const toMonths = (years: number | null | string) =>
             </section>
 
             <section class="app-card">
+              <div class="psc__head">
+                <h2>Fee Receipt charges</h2>
+                <strong>Part I + II: {{ money(ratesTotal()) }}</strong>
+              </div>
+              <p class="app-muted psc__note">The usual amount for each line of the Fee Receipt in this class. They are filled in when fees are
+                collected and can still be changed on any one receipt. Leave 0 for a line that does not apply. Admission fee and the monthly tuition are set above.</p>
+              @for (part of [1, 2]; track part) {
+                <p class="psc__part">Part {{ part === 1 ? 'I' : 'II' }}</p>
+                <div class="psc__rates">
+                  @for (h of chargeHeads; track h.head) {
+                    @if (h.part === part) {
+                      <label>{{ h.label }}
+                        <span class="psc__rupee"><span aria-hidden="true">₹</span>
+                          <input pInputText type="number" min="0" step="1" [(ngModel)]="rates[h.head]" [disabled]="!canEditRates()" /></span>
+                      </label>
+                    }
+                  }
+                </div>
+              }
+              @if (canEditRates()) {
+                <p-button label="Save receipt charges" icon="pi pi-check" size="small" [loading]="savingRates()" (onClick)="saveRates()" />
+              }
+            </section>
+
+            <section class="app-card">
               <h2>Subjects</h2>
               <div class="psc__rows">
                 <div class="psc__row psc__row--head"><span>Subject</span><span>Full marks</span><span>Order</span><span>Active</span><span></span></div>
@@ -158,6 +184,12 @@ const toMonths = (years: number | null | string) =>
     .psc__pick--on { background: #ede9fe; border-color: #c4b5fd; }
     .psc__pick--off span { text-decoration: line-through; opacity: 0.6; }
     .psc__detail { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+    .psc__note { margin: -0.25rem 0 0.5rem; font-size: 0.85rem; }
+    .psc__part { margin: 0.6rem 0 0.35rem; font-weight: 700; font-size: 0.8rem; color: #4c1d95; }
+    .psc__rates { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 0.65rem 0.9rem; margin-bottom: 0.6rem; }
+    .psc__rates label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.82rem; font-weight: 600; }
+    .psc__rupee { display: flex; align-items: center; gap: 0.35rem; }
+    .psc__rupee input { width: 100%; }
     .psc__detail h2 { margin: 0 0 0.75rem; font-size: 1.05rem; }
     .psc__head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
     .psc__form { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 0.8rem; margin-bottom: 0.9rem; }
@@ -187,6 +219,35 @@ export class PreSchoolClassesComponent implements OnInit {
   readonly savingClass = signal(false);
 
   readonly canEdit = computed(() => this.auth.hasAnyRole(['PreSchoolHead']));
+  /** The receipt's usual amounts: the admin and the receptionist both keep them. */
+  readonly canEditRates = computed(() => this.auth.hasAnyRole(['PreSchoolHead', 'PreSchoolFrontDesk']));
+  readonly chargeHeads = PRESCHOOL_CHARGE_HEADS;
+  readonly savingRates = signal(false);
+  rates: Record<string, number | null> = {};
+
+  ratesTotal(): number {
+    return Object.values(this.rates).reduce<number>((t, v) => t + (Number(v) || 0), 0);
+  }
+
+  saveRates(): void {
+    const classId = this.selectedId();
+    if (classId === null) return;
+    const clean: Record<string, number> = {};
+    for (const h of PRESCHOOL_CHARGE_HEADS) {
+      const v = Number(this.rates[h.head] ?? 0);
+      if (!(v >= 0)) { this.warn(`${h.label} cannot be negative.`); return; }
+      if (v > 0) clean[h.head] = v;
+    }
+    this.savingRates.set(true);
+    this.preschool.saveChargeRates(classId, clean).subscribe({
+      next: saved => {
+        this.savingRates.set(false);
+        this.classes.update(list => list.map(c => c.id === saved.id ? { ...c, chargeRates: saved.chargeRates ?? {} } : c));
+        this.done('Receipt charges saved.');
+      },
+      error: () => this.savingRates.set(false)
+    });
+  }
   readonly selected = computed(() => this.classes().find(c => c.id === this.selectedId()) ?? null);
   readonly money = formatMoney;
 
@@ -216,6 +277,7 @@ export class PreSchoolClassesComponent implements OnInit {
     });
     this.fees.set(c.feeHeads.map(f => ({ id: f.id, name: f.name, amount: f.monthlyAmount, sortOrder: f.sortOrder, isActive: f.isActive, saving: false })));
     this.subjects.set(c.subjects.map(s => ({ id: s.id, name: s.name, amount: s.maxMarks, sortOrder: s.sortOrder, isActive: s.isActive, saving: false })));
+    this.rates = Object.fromEntries(PRESCHOOL_CHARGE_HEADS.map(h => [h.head, c.chargeRates?.[h.head] ?? null]));
     void this.router.navigate([], { queryParams: { class: id }, replaceUrl: true });
   }
 

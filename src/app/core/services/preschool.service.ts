@@ -42,6 +42,11 @@ export class PreSchoolService {
     return call.pipe(map(r => r.data));
   }
 
+  /** The class's usual Fee Receipt amounts, head → amount; the admin and the receptionist may set them. */
+  saveChargeRates(classId: number, rates: Record<string, number>): Observable<PreSchoolClass> {
+    return this.http.put<ApiResponse<PreSchoolClass>>(`${this.base}/classes/${classId}/charge-rates`, { rates }).pipe(map(r => r.data));
+  }
+
   saveGradeBands(bands: PreSchoolGradeBandSave[]): Observable<PreSchoolGradeBand[]> {
     return this.http.put<ApiResponse<PreSchoolGradeBand[]>>(`${this.base}/grade-bands`, { bands }).pipe(map(r => r.data));
   }

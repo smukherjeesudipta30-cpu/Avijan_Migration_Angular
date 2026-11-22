@@ -109,7 +109,7 @@ function addMonths(iso: string, n: number): string {
             }
           </div>
 
-          <details class="psd-charges" [open]="chargesTotal() > 0">
+          <details class="psd-charges" [open]="chargesTotal() > 0 || hasRates()">
             <summary>Other charges on the receipt <small class="app-muted">— registration, annual, kit, food, transport…</small>
               @if (chargesTotal() > 0) { <strong>{{ money(chargesTotal()) }}</strong> }</summary>
             @for (part of [1, 2]; track part) {
@@ -117,7 +117,9 @@ function addMonths(iso: string, n: number): string {
               <div class="psd-charge-grid">
                 @for (h of chargeHeads; track h.head) {
                   @if (h.part === part) {
-                    <label>{{ h.label }}
+                    <label class="psd-charge" [class.psd-charge--on]="(charges[h.head].amount ?? 0) > 0">
+                      <span><input type="checkbox" [checked]="(charges[h.head].amount ?? 0) > 0" (change)="toggleCharge(h.head)"
+                        [attr.aria-label]="'Charge ' + h.label" /> {{ h.label }}@if (rateOf(h.head); as rate) { <small>usual {{ money(rate) }}</small> }</span>
                       <input pInputText type="number" min="0" step="1" [(ngModel)]="charges[h.head].amount" placeholder="0" /></label>
                     @if (h.head === 'LateFee' || h.head === 'Others') {
                       <label>{{ h.head === 'LateFee' ? 'Late fee / other' : 'Other' }} — what for
@@ -291,6 +293,9 @@ function addMonths(iso: string, n: number): string {
     .psd-part { margin: 0.7rem 0 0.35rem; font-weight: 700; font-size: 0.8rem; color: #4c1d95; }
     .psd-charge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); gap: 0.6rem; }
     .psd-charge-grid label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8rem; font-weight: 600; }
+    .psd-charge span { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
+    .psd-charge small { font-weight: 500; color: var(--app-text-muted); }
+    .psd-charge--on input[type='number'] { border-color: #6d28d9; }
     .psd-pay label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.82rem; font-weight: 600; }
     .psd-modes { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0.5rem; }
     .psd-modes label { flex-direction: row; align-items: center; gap: 0.35rem; padding: 0.4rem 0.9rem; border: 2px solid #e4e6ef; border-radius: 999px; cursor: pointer; font-size: 0.9rem; }
@@ -360,6 +365,23 @@ export class PreSchoolStudentComponent implements OnInit {
   chequeDate = todayIso();
   drawnOn = '';
   charges = blankCharges();
+
+  /** The child's class's usual amount for a receipt line, from Classes & Fees. */
+  rateOf(head: PreSchoolChargeHead): number {
+    const s = this.student();
+    const cls = s ? this.classes().find(c => c.id === s.classId) : null;
+    return cls?.chargeRates?.[head] ?? 0;
+  }
+
+  hasRates(): boolean {
+    return PRESCHOOL_CHARGE_HEADS.some(h => this.rateOf(h.head) > 0);
+  }
+
+  /** Ticking a line puts in the class's usual amount (if any); unticking clears it. */
+  toggleCharge(head: PreSchoolChargeHead): void {
+    const c = this.charges[head];
+    c.amount = (c.amount ?? 0) > 0 ? null : (this.rateOf(head) || null);
+  }
 
   /** What the receipt's other rows add up to. */
   chargesTotal(): number {

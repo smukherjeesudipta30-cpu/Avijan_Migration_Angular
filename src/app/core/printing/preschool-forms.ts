@@ -240,7 +240,9 @@ function receiptCard(r: PreSchoolReceipt, copy: Copy): string {
           <tr class="sum"><td class="l"></td><td class="t gt">Grand Total</td><td class="rs">${gt}</td><td class="p">${gp}</td></tr>
         </tbody>
       </table>
-      <div class="sign">Authorised Signatory<br>Counsellor</div>
+      ${copy === 'parent'
+        ? '<div class="system">This is a system generated copy. No signature is required.</div>'
+        : '<div class="sign">Authorised Signatory<br>Counsellor</div>'}
       ${r.isCancelled ? '<div class="void">CANCELLED</div>' : ''}
     </div>`;
 }
@@ -270,6 +272,8 @@ const RECEIPT_CSS = `
     display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; box-sizing: border-box; font-size: 15px; }
   .fees td.gt { text-align: right; padding-right: 6px; font-size: 15px; }
   .sign { position: absolute; right: 76px; top: 990px; text-align: right; font-size: 15px; line-height: 1.15; }
+  .system { position: absolute; left: 76px; right: 76px; top: 975px; padding: 8px 10px; border: 1.3px dashed #555; text-align: center;
+    font-size: 14px; font-style: italic; color: #333; }
   .void { position: absolute; left: 50%; top: 52%; transform: translate(-50%, -50%) rotate(-18deg); font: 900 84px Arial, sans-serif;
     color: rgba(180, 35, 24, .2); border: 7px solid rgba(180, 35, 24, .2); padding: 2px 26px; border-radius: 14px; }
 `;
