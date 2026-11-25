@@ -149,9 +149,21 @@ function addMonths(iso: string, n: number): string {
             <label>Note (optional) <input pInputText [(ngModel)]="payNote" maxlength="300" /></label>
           </div>
 
+          <div class="psd-disc">
+            <label>Discount (%) <input pInputText type="number" min="0" max="100" step="0.5" [(ngModel)]="discountPercent" placeholder="0" /></label>
+            <label>Special offer (₹) <input pInputText type="number" min="0" step="1" [(ngModel)]="specialOffer" placeholder="0" /></label>
+            <label class="psd-wide">Offer name (printed on the receipt) <input pInputText [(ngModel)]="offerNote" maxlength="60" placeholder="e.g. Opening offer" /></label>
+          </div>
+
           <div class="psd-total">
-            <span>Total <strong>{{ money(total()) }}</strong></span>
-            <p-button label="Collect and print receipt" icon="pi pi-print" [loading]="collecting()" [disabled]="total() <= 0" (onClick)="collect(s)" />
+            <span class="psd-sum">
+              @if (discountAmount() > 0 || offerAmount() > 0) {
+                <small>Fees {{ money(gross()) }}
+                  @if (discountAmount() > 0) { · less {{ discountPercent }}% {{ money(discountAmount()) }} }
+                  @if (offerAmount() > 0) { · less offer {{ money(offerAmount()) }} }</small>
+              }
+              Total <strong>{{ money(total()) }}</strong></span>
+            <p-button label="Collect and print receipt" icon="pi pi-print" [loading]="collecting()" [disabled]="gross() <= 0" (onClick)="collect(s)" />
           </div>
         </section>
       }
@@ -287,6 +299,9 @@ function addMonths(iso: string, n: number): string {
     .psd-month--paid { background: #e6f8e6; border-color: #bfe6bf; color: #2b7a2b; cursor: default; }
     .psd-pay { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
     .psd-wide { grid-column: 1 / -1; }
+    .psd-disc { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; margin-top: 0.9rem; padding-top: 0.8rem; border-top: 1px dashed var(--app-border); }
+    .psd-disc label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.82rem; font-weight: 600; }
+    .psd-sum small { display: block; font-size: 0.78rem; color: var(--app-text-muted); }
     .psd-charges { margin-bottom: 1rem; padding: 0.6rem 0.75rem; border: 1px solid var(--app-border); border-radius: 10px; }
     .psd-charges summary { cursor: pointer; font-weight: 700; font-size: 0.9rem; }
     .psd-charges summary strong { float: right; }
@@ -401,12 +416,31 @@ export class PreSchoolStudentComponent implements OnInit {
     return months;
   });
 
-  /** A method, not a computed: the admission tick and amount are plain form fields. */
-  total(): number {
+  discountPercent: number | null = null;
+  specialOffer: number | null = null;
+  offerNote = '';
+
+  /** Before any discount. A method, not a computed: the admission tick and amount are plain form fields. */
+  gross(): number {
     const s = this.student();
     if (!s) return 0;
     const admission = this.takeAdmission && !s.admissionPaid ? Number(this.admissionAmount) || 0 : 0;
     return admission + this.picked().size * s.monthlyFee + this.chargesTotal();
+  }
+
+  /** The percentage off the whole receipt, rounded to the paisa as the server does. */
+  discountAmount(): number {
+    const pct = Math.min(100, Math.max(0, Number(this.discountPercent) || 0));
+    return Math.round(this.gross() * pct) / 100;
+  }
+
+  offerAmount(): number {
+    return Math.max(0, Number(this.specialOffer) || 0);
+  }
+
+  /** What is actually collected: fees less the discount, less the special offer. */
+  total(): number {
+    return Math.max(0, this.gross() - this.discountAmount() - this.offerAmount());
   }
 
   ngOnInit(): void {
@@ -543,6 +577,9 @@ export class PreSchoolStudentComponent implements OnInit {
     if (byCheque && !this.chequeDate) return this.warn(`Enter the ${this.payMode} date.`);
     if (byCheque && !this.drawnOn.trim()) return this.warn(`Enter the bank the ${this.payMode} is drawn on.`);
     if (PRESCHOOL_CHARGE_HEADS.some(h => (Number(this.charges[h.head].amount) || 0) < 0)) return this.warn('A charge cannot be negative.');
+    const pct = Number(this.discountPercent) || 0;
+    if (pct < 0 || pct > 100) return this.warn('The discount is a percentage from 0 to 100.');
+    if (this.offerAmount() > this.gross() - this.discountAmount()) return this.warn('The special offer is more than what is left to pay.');
     if (this.takeAdmission && !s.admissionPaid && !(Number(this.admissionAmount) > 0)) return this.warn('Enter the admission amount.');
 
     // Opened now, while the click still counts as the user's, so the pop-up blocker lets it through.
@@ -560,6 +597,9 @@ export class PreSchoolStudentComponent implements OnInit {
       reference: this.payMode === 'Cash' ? null : this.reference.trim(),
       chequeDate: byCheque ? this.chequeDate : null,
       drawnOn: byCheque ? this.drawnOn.trim() : null,
+      discountPercent: pct > 0 ? pct : null,
+      specialOffer: this.offerAmount() > 0 ? this.offerAmount() : null,
+      offerNote: this.offerAmount() > 0 ? this.offerNote.trim() || null : null,
       receivedOn: this.receivedOn || null,
       notes: this.payNote.trim() || null
     }).subscribe({
@@ -575,6 +615,9 @@ export class PreSchoolStudentComponent implements OnInit {
         this.reference = '';
         this.payNote = '';
         this.drawnOn = '';
+        this.discountPercent = null;
+        this.specialOffer = null;
+        this.offerNote = '';
         this.charges = blankCharges();
         this.load(s.id);
       },

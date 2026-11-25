@@ -52,13 +52,14 @@ import { PreSchoolIncomeRangeComponent } from './preschool-income-range.componen
       </div>
 
       <div class="app-card pin-table">
-        <div class="pin-row pin-row--head"><span>Month</span><span class="r">Admission</span><span class="r">Monthly fees</span><span class="r">Other fees</span><span class="r">Income</span><span class="r">Salaries</span><span class="r">Expenses</span><span class="r">Paid to MCS</span><span class="r">Net</span></div>
+        <div class="pin-row pin-row--head"><span>Month</span><span class="r">Admission</span><span class="r">Monthly fees</span><span class="r">Other fees</span><span class="r">Less discounts</span><span class="r">Income</span><span class="r">Salaries</span><span class="r">Expenses</span><span class="r">Paid to MCS</span><span class="r">Net</span></div>
         @for (m of r.months; track m.month) {
           <div class="pin-row" [class.pin-row--empty]="!m.income && !m.salaries && !m.expenses && !m.purchases">
             <span>{{ label(m.month) }}</span>
             <span class="r">{{ show(m.admissionFees) }}</span>
             <span class="r">{{ show(m.monthlyFees) }}</span>
             <span class="r">{{ show(m.otherFees ?? 0) }}</span>
+            <span class="r">{{ m.discounts ? '− ' + money(m.discounts) : '—' }}</span>
             <span class="r"><strong>{{ show(m.income) }}</strong></span>
             <span class="r">{{ show(m.salaries) }}</span>
             <span class="r">{{ show(m.expenses) }}</span>
@@ -68,7 +69,7 @@ import { PreSchoolIncomeRangeComponent } from './preschool-income-range.componen
         }
         <div class="pin-row pin-row--total">
           <span>Total</span><span class="r">{{ money(sum('admissionFees')) }}</span><span class="r">{{ money(sum('monthlyFees')) }}</span>
-          <span class="r">{{ money(sum('otherFees')) }}</span><span class="r">{{ money(r.income) }}</span><span class="r">{{ money(r.salaries) }}</span><span class="r">{{ money(r.expenses) }}</span>
+          <span class="r">{{ money(sum('otherFees')) }}</span><span class="r">− {{ money(sum('discounts')) }}</span><span class="r">{{ money(r.income) }}</span><span class="r">{{ money(r.salaries) }}</span><span class="r">{{ money(r.expenses) }}</span>
           <span class="r">{{ money(r.purchases ?? 0) }}</span><span class="r" [class.pin-red]="r.net < 0">{{ money(r.net) }}</span>
         </div>
       </div>
@@ -99,7 +100,7 @@ import { PreSchoolIncomeRangeComponent } from './preschool-income-range.componen
     .pin-chart { padding: 1rem 1.15rem; margin-bottom: 1rem; }
     .pin-chart h2 { margin: 0 0 0.5rem; font-size: 1rem; }
     .pin-table { padding: 0; overflow-x: auto; margin-bottom: 1rem; }
-    .pin-row { display: grid; grid-template-columns: 1fr repeat(8, minmax(5.5rem, 1fr)); gap: 0.5rem; padding: 0.55rem 1rem;
+    .pin-row { display: grid; grid-template-columns: 1fr repeat(9, minmax(5.5rem, 1fr)); gap: 0.5rem; padding: 0.55rem 1rem;
       border-bottom: 1px solid var(--app-border); min-width: 44rem; }
     .pin-row--head span { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--app-text-muted); }
     .pin-row--empty { color: var(--app-text-muted); }
@@ -162,7 +163,7 @@ export class PreSchoolIncomeComponent implements OnInit {
 
   show(n: number): string { return n ? this.money(n) : '—'; }
 
-  sum(key: 'admissionFees' | 'monthlyFees' | 'otherFees'): number {
+  sum(key: 'admissionFees' | 'monthlyFees' | 'otherFees' | 'discounts'): number {
     return (this.report()?.months ?? []).reduce((n, m) => n + (m[key] ?? 0), 0);
   }
 
@@ -171,7 +172,7 @@ export class PreSchoolIncomeComponent implements OnInit {
     if (!r) return;
     const e = escapeHtml;
     const rows = r.months.map(m => `<tr><td>${e(monthLabel(m.month))}</td><td class="r">${e(this.show(m.admissionFees))}</td>
-      <td class="r">${e(this.show(m.monthlyFees))}</td><td class="r">${e(this.show(m.otherFees ?? 0))}</td><td class="r">${e(this.show(m.income))}</td><td class="r">${e(this.show(m.salaries))}</td>
+      <td class="r">${e(this.show(m.monthlyFees))}</td><td class="r">${e(this.show(m.otherFees ?? 0))}</td><td class="r">${m.discounts ? '− ' + e(this.money(m.discounts)) : '—'}</td><td class="r">${e(this.show(m.income))}</td><td class="r">${e(this.show(m.salaries))}</td>
       <td class="r">${e(this.show(m.expenses))}</td><td class="r">${e(this.show(m.purchases ?? 0))}</td><td class="r">${m.income || m.salaries || m.expenses || m.purchases ? e(this.money(m.net)) : '—'}</td></tr>`).join('');
     openDocumentWindow(`<!doctype html><html><head><meta charset="utf-8"><title>Avijan PreSchool — Income report ${r.year}</title>
       <style>body{font-family:'Segoe UI',Arial,sans-serif;margin:24px;color:#1f2433}h1{margin:0}p{color:#5b6178}
@@ -179,9 +180,9 @@ export class PreSchoolIncomeComponent implements OnInit {
       th{font-size:11px;text-transform:uppercase;color:#6b7088}.r{text-align:right}tfoot td{font-weight:700}
       button{margin-top:16px;padding:8px 18px;border:0;border-radius:999px;background:#6d28d9;color:#fff;font-weight:600}@media print{button{display:none}}</style></head>
       <body><h1>Avijan PreSchool — Income report ${r.year}</h1><p>Fees received, salaries paid, expenses and payments to My Chhota School (MCS), month by month.</p>
-      <table><thead><tr><th>Month</th><th class="r">Admission</th><th class="r">Monthly fees</th><th class="r">Other fees</th><th class="r">Income</th><th class="r">Salaries</th><th class="r">Expenses</th><th class="r">Paid to MCS</th><th class="r">Net</th></tr></thead>
+      <table><thead><tr><th>Month</th><th class="r">Admission</th><th class="r">Monthly fees</th><th class="r">Other fees</th><th class="r">Less discounts</th><th class="r">Income</th><th class="r">Salaries</th><th class="r">Expenses</th><th class="r">Paid to MCS</th><th class="r">Net</th></tr></thead>
       <tbody>${rows}</tbody><tfoot><tr><td>Total</td><td class="r">${e(this.money(this.sum('admissionFees')))}</td><td class="r">${e(this.money(this.sum('monthlyFees')))}</td>
-      <td class="r">${e(this.money(this.sum('otherFees')))}</td><td class="r">${e(this.money(r.income))}</td><td class="r">${e(this.money(r.salaries))}</td><td class="r">${e(this.money(r.expenses))}</td><td class="r">${e(this.money(r.purchases ?? 0))}</td><td class="r">${e(this.money(r.net))}</td></tr></tfoot></table>
+      <td class="r">${e(this.money(this.sum('otherFees')))}</td><td class="r">− ${e(this.money(this.sum('discounts')))}</td><td class="r">${e(this.money(r.income))}</td><td class="r">${e(this.money(r.salaries))}</td><td class="r">${e(this.money(r.expenses))}</td><td class="r">${e(this.money(r.purchases ?? 0))}</td><td class="r">${e(this.money(r.net))}</td></tr></tfoot></table>
       <button onclick="window.print()">Print / Save as PDF</button></body></html>`);
   }
 }

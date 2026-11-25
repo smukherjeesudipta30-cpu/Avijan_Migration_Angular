@@ -114,12 +114,17 @@ export interface PreSchoolCollect {
   reference: string | null;
   chequeDate: string | null;
   drawnOn: string | null;
+  /** A percentage off the receipt's total. */
+  discountPercent?: number | null;
+  /** A fixed amount off, after the percentage. */
+  specialOffer?: number | null;
+  offerNote?: string | null;
   receivedOn: string | null;
   notes: string | null;
 }
 
 export interface PreSchoolReceiptLine {
-  kind: 'Admission' | 'Monthly' | 'Charge';
+  kind: 'Admission' | 'Monthly' | 'Charge' | 'Discount';
   chargeHead?: PreSchoolChargeHead | null;
   forMonth?: string | null;
   description: string;

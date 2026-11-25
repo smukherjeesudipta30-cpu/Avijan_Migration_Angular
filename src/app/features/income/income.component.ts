@@ -21,6 +21,7 @@ import {
 } from '../../core/models/income.model';
 import { formatMoney } from '../../core/format/money';
 import { BranchListItem } from '../../core/models/master.model';
+import { AuthService } from '../../core/services/auth.service';
 import { IncomeService } from '../../core/services/income.service';
 import { ReportService } from '../../core/services/report.service';
 import { MasterService } from '../../core/services/master.service';
@@ -58,6 +59,10 @@ import { openPendingDocumentWindow, writeDocumentWindow } from '../../core/print
 })
 export class IncomeComponent {
   private readonly income = inject(IncomeService);
+  private readonly auth = inject(AuthService);
+
+  /** A Receptionist always gets their own branch's report (the server enforces it); no branch picker for them. */
+  readonly ownBranchOnly = computed(() => this.auth.hasAnyRole(['Receptionist']) && !this.auth.hasAnyRole(['Admin', 'SuperAdmin']));
   private readonly reports = inject(ReportService);
   private readonly masters = inject(MasterService);
   private readonly about = inject(AboutService);

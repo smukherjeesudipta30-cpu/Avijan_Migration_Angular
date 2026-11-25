@@ -105,6 +105,8 @@ export interface PreSchoolIncomeMonth {
   expenses: number;
   /** Store stock bought (from My Chhota School), by the day it came in. */
   purchases?: number;
+  /** Discounts and special offers given on receipts (already taken off income). */
+  discounts?: number;
   net: number;
 }
 
@@ -152,6 +154,7 @@ export interface PreSchoolIncomeReceiptLine {
   monthlyFees: number;
   otherFees?: number;
   total: number;
+  discount?: number;
 }
 
 export interface PreSchoolIncomeSalaryLine {
@@ -175,6 +178,8 @@ export interface PreSchoolIncomeRange {
   expenses: number;
   /** Store stock bought (from My Chhota School), by the day it came in. */
   purchases?: number;
+  /** Discounts and special offers given on receipts (already taken off income). */
+  discounts?: number;
   net: number;
   incomeByMode: Record<string, number>;
   expensesByHead: Record<string, number>;

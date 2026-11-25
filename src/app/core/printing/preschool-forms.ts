@@ -200,6 +200,14 @@ function receiptCard(r: PreSchoolReceipt, copy: Copy): string {
   };
   const [t1, p1] = split(totalOne, true);
   const [gt, gp] = split(r.total, true);
+  // Discount and special offer: their own "Less" lines above the Grand Total.
+  const less = r.lines.filter(l => l.kind === 'Discount');
+  const lessRows = less.map(l => {
+    const [rs, p] = split(-l.amount, true);
+    return `<tr class="less"><td class="l"></td><td class="t">Less: ${e(l.description)}</td><td class="rs">− ${rs}</td><td class="p">${p}</td></tr>`;
+  }).join('');
+  // The 13 printed rows fill 403 units; extra "Less" rows share that height, so the signature never moves.
+  const rowHeight = (403 / (13 + less.length)).toFixed(2);
 
   const cheque = r.mode === 'Cheque' || r.mode === 'DD';
   const payNo = r.mode === 'Cash' ? 'Cash' : cheque ? (r.reference ?? '') : `${r.mode} ${r.reference ?? ''}`;
@@ -233,13 +241,14 @@ function receiptCard(r: PreSchoolReceipt, copy: Copy): string {
       ${field(79, 500, 'Cash/DD/Cheque No. :', 238, 322, payNo.trim())}
       ${field(326, 500, 'Dt:', 350, 452, cheque ? dmy(r.chequeDate) : '')}
       ${field(456, 500, 'Drawn on', 524, 697, cheque ? r.drawnOn ?? '' : '')}
-      <table class="fees">
+      <table class="fees" style="--rh:${rowHeight}px">
         <tbody>
           <tr><td class="part" rowspan="7"><span>Part - I</span></td>${row(partOne[0]).slice(4)}
           ${partOne.slice(1).map(row).join('')}
           <tr class="sum"><td class="l"></td><td class="t"><span class="tot">Total</span></td><td class="rs">${t1}</td><td class="p">${p1}</td></tr>
-          <tr><td class="part" rowspan="6"><span>Part - II</span></td>${row(partTwo[0]).slice(4)}
+          <tr><td class="part" rowspan="${6 + less.length}"><span>Part - II</span></td>${row(partTwo[0]).slice(4)}
           ${partTwo.slice(1).map(row).join('')}
+          ${lessRows}
           <tr class="sum"><td class="l"></td><td class="t gt">Grand Total</td><td class="rs">${gt}</td><td class="p">${gp}</td></tr>
         </tbody>
       </table>
@@ -262,7 +271,7 @@ const RECEIPT_CSS = `
   .fv { position: absolute; transform: translateY(-62%); height: 20px; border-bottom: 1.3px solid #222; box-sizing: border-box;
     padding: 0 4px; font-size: 14px; font-weight: 700; color: #0b2a6b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   table.fees { position: absolute; left: 76px; top: 535px; width: 621px; border-collapse: collapse; table-layout: fixed; font-size: 14px; }
-  .fees td { border: 1.3px solid #222; height: 31px; padding: 0 8px; box-sizing: border-box; white-space: nowrap; overflow: hidden; }
+  .fees td { border: 1.3px solid #222; height: var(--rh, 31px); padding: 0 8px; box-sizing: border-box; white-space: nowrap; overflow: hidden; }
   .fees td.part { width: 20px; padding: 0; position: relative; }
   .fees td.part span { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-90deg);
     font-weight: 700; font-size: 15px; white-space: nowrap; }
@@ -274,6 +283,8 @@ const RECEIPT_CSS = `
   .fees .tot { position: absolute; right: 0; top: -1px; bottom: -1px; width: 53px; border-left: 1.3px solid #222;
     display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; box-sizing: border-box; font-size: 15px; }
   .fees td.gt { text-align: right; padding-right: 6px; font-size: 15px; }
+  .fees tr.less td.t { text-align: right; padding-right: 6px; font-style: italic; }
+  .fees tr.less td.rs, .fees tr.less td.p { color: #b42318; }
   .sign { position: absolute; right: 76px; top: 990px; text-align: right; font-size: 15px; line-height: 1.15; }
   .system { position: absolute; left: 76px; right: 76px; top: 975px; padding: 8px 10px; border: 1.3px dashed #555; text-align: center;
     font-size: 14px; font-style: italic; color: #333; }

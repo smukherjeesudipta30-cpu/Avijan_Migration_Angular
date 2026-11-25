@@ -53,6 +53,12 @@
       styleClass="inc__datepicker" />
   </div>
 
+  @if (ownBranchOnly()) {
+  <div class="inc__field">
+    <span class="inc__label">Branch</span>
+    <strong>{{ report()?.branch || 'Your branch' }}</strong>
+  </div>
+  } @else {
   <div class="inc__field">
     <label for="branch">Branch</label>
     <p-select
@@ -68,6 +74,7 @@
       appendTo="body"
       styleClass="inc__datepicker" />
   </div>
+  }
 
   <p-button label="Run report" icon="pi pi-chart-bar" [loading]="loading()" (onClick)="run()" />
 
