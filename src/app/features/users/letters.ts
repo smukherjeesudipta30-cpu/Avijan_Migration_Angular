@@ -1,4 +1,5 @@
 import { UserListItem } from '../../core/models/user.model';
+import { downloadDocumentPdf, isNativeApp, pdfFileName } from '../../core/printing/pdf-download';
 
 /**
  * Offer and experience (release) letters, ported from `generateOfferLetter` and
@@ -80,30 +81,57 @@ const LETTER_CSS = `
   @media print { .toolbar { display: none; } .sheet { padding: 0; } }
 `;
 
-function openLetter(title: string, bodyHtml: string): boolean {
-  const win = window.open('', '_blank', 'width=860,height=1000');
-  if (!win) return false;
+/** A letter, ready either to print or to save as a PDF. */
+export interface Letter { title: string; fileName: string; body: string; }
 
-  win.document.write(`<!doctype html>
-<html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>${LETTER_CSS}</style></head>
+/** A4 at 96 dpi: the PDF is drawn this wide and fills the page edge to edge. */
+const A4_WIDTH = 794;
+
+/**
+ * Phones (and the app) cannot print from a popup window, so there a letter is
+ * saved as a PDF file; a computer opens the print window as before.
+ */
+export function prefersPdf(): boolean {
+  return isNativeApp() || window.matchMedia?.('(max-width: 820px), (pointer: coarse)').matches === true;
+}
+
+function letterDocument(letter: Letter, forPdf: boolean): string {
+  // In the PDF the sheet carries the page margins itself (about 18 mm).
+  const pdfCss = forPdf ? '.sheet{max-width:none;padding:68px 68px 56px;}' : '';
+  const toolbar = forPdf ? '' : '<div class="toolbar"><button onclick="window.print()">Print / Save as PDF</button></div>';
+  return `<!doctype html>
+<html><head><meta charset="utf-8"><title>${escapeHtml(letter.title)}</title><style>${LETTER_CSS}${pdfCss}</style></head>
 <body>
   <div class="sheet">
-    ${bodyHtml}
-    <div class="toolbar">
-      <button onclick="window.print()">Print / Save as PDF</button>
-    </div>
+    ${letter.body}
+    ${toolbar}
   </div>
-</body></html>`);
+</body></html>`;
+}
 
+/** Opens the print window. False when the browser blocked the popup. */
+export function printLetter(letter: Letter): boolean {
+  const win = window.open('', '_blank', 'width=860,height=1000');
+  if (!win) return false;
+  win.document.write(letterDocument(letter, false));
   win.document.close();
   return true;
+}
+
+/** Saves the letter as an A4 PDF (a download on the website, the share sheet in the app). */
+export function downloadLetterPdf(letter: Letter): Promise<void> {
+  return downloadDocumentPdf(letterDocument(letter, true), letter.fileName, { width: A4_WIDTH });
+}
+
+function letter(title: string, fileName: string, body: string): Letter {
+  return { title, fileName, body };
 }
 
 /**
  * Offer letter with the CTC breakup.
  * @param annualCtc Total annual cost to company, in rupees.
  */
-export function openOfferLetter(user: UserListItem, annualCtc: number): boolean {
+export function offerLetter(user: UserListItem, annualCtc: number): Letter {
   const rows = SALARY_BREAKUP.map(item => {
     const annual = (annualCtc * item.percent) / 100;
 
@@ -120,7 +148,7 @@ export function openOfferLetter(user: UserListItem, annualCtc: number): boolean 
     day: '2-digit', month: 'long', year: 'numeric'
   });
 
-  return openLetter(`Offer letter — ${user.name ?? ''}`, `
+  return letter(`Offer letter — ${user.name ?? ''}`, pdfFileName('Offer_Letter', user.name), `
     <div class="date">${today}</div>
     <h3>OFFER LETTER</h3>
     <p>Dear <strong>${escapeHtml(user.name)}</strong>,</p>
@@ -168,7 +196,7 @@ export function openOfferLetter(user: UserListItem, annualCtc: number): boolean 
  * read "He/She has been released…" with nothing in front. The name is written out
  * properly here.
  */
-export function openExperienceLetter(user: UserListItem): boolean {
+export function experienceLetter(user: UserListItem): Letter {
   const today = new Date().toLocaleDateString('en-IN', {
     day: '2-digit', month: 'long', year: 'numeric'
   });
@@ -176,7 +204,7 @@ export function openExperienceLetter(user: UserListItem): boolean {
   const name = escapeHtml(user.name);
   const leaving = longDate(user.endDate);
 
-  return openLetter(`Experience letter — ${user.name ?? ''}`, `
+  return letter(`Experience letter — ${user.name ?? ''}`, pdfFileName('Experience_Letter', user.name), `
     <div class="date">${today}</div>
     <h3>TO WHOMSOEVER IT MAY CONCERN</h3>
     <p>

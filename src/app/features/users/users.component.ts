@@ -27,10 +27,14 @@ import {
   UserSaveRequest
 } from '../../core/models/user.model';
 import {
+  Letter,
   canIssueReleaseLetter,
+  downloadLetterPdf,
+  experienceLetter,
   isLetterEligible,
-  openExperienceLetter,
-  openOfferLetter
+  offerLetter,
+  prefersPdf,
+  printLetter
 } from './letters';
 import { UserService } from '../../core/services/user.service';
 
@@ -529,7 +533,12 @@ export class UsersComponent {
     this.ctcVisible.set(true);
   }
 
-  confirmOfferLetter(): void {
+  /** True while a letter is being turned into a PDF. */
+  readonly letterBusy = signal(false);
+  /** Phones get the PDF straight away; a computer gets the print window too. */
+  readonly letterAsPdf = prefersPdf();
+
+  confirmOfferLetter(asPdf = this.letterAsPdf): void {
     const user = this.ctcFor();
     const ctc = this.ctcValue();
 
@@ -546,25 +555,25 @@ export class UsersComponent {
     }
 
     this.ctcVisible.set(false);
-
-    if (!openOfferLetter(user, ctc)) {
-      this.warnPopupBlocked();
-    }
+    this.issueLetter(offerLetter(user, ctc), asPdf);
   }
 
   openExperienceLetterFor(user: UserListItem): void {
-    if (!openExperienceLetter(user)) {
-      this.warnPopupBlocked();
-    }
+    this.issueLetter(experienceLetter(user), this.letterAsPdf);
   }
 
-  private warnPopupBlocked(): void {
-    this.messages.add({
-      severity: 'warn',
-      summary: 'Popup blocked',
-      detail: 'Allow popups for this site to open the letter.',
-      life: 6000
-    });
+  /** Prints the letter, or saves it as a PDF; a blocked popup falls back to the PDF. */
+  private issueLetter(letter: Letter, asPdf: boolean): void {
+    if (!asPdf && printLetter(letter)) return;
+
+    this.letterBusy.set(true);
+    this.messages.add({ severity: 'info', summary: 'Preparing PDF', detail: letter.title, life: 2500 });
+    downloadLetterPdf(letter)
+      .then(() => this.messages.add({ severity: 'success', summary: 'PDF saved', detail: letter.fileName, life: 4000 }))
+      .catch(() => this.messages.add({
+        severity: 'error', summary: 'Could not make the PDF', detail: 'Please try again.', life: 6000
+      }))
+      .finally(() => this.letterBusy.set(false));
   }
 
   /** Teacher, Receptionist and Editor get a photo (for their birthday card). */

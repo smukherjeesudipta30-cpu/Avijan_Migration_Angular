@@ -315,6 +315,7 @@
                 severity="secondary"
                 [text]="true"
                 [disabled]="!canIssueExperience(user)"
+                [loading]="letterBusy()"
                 [pTooltip]="canIssueExperience(user) ? 'Experience letter' : 'Set an end date on the account first'"
                 tooltipPosition="top"
                 (onClick)="openExperienceLetterFor(user)" />
@@ -383,7 +384,7 @@
   [visible]="ctcVisible()"
   (visibleChange)="ctcVisible.set($event)"
   [modal]="true"
-  [style]="{ width: '26rem' }"
+  [style]="{ width: '26rem', maxWidth: '94vw' }"
   [draggable]="false">
 
   <p class="app-muted usr__ctc-lead">
@@ -408,7 +409,13 @@
 
   <ng-template pTemplate="footer">
     <p-button label="Cancel" severity="secondary" [text]="true" (onClick)="ctcVisible.set(false)" />
-    <p-button label="Generate letter" icon="pi pi-file-edit" (onClick)="confirmOfferLetter()" />
+    @if (letterAsPdf) {
+      <p-button label="Download PDF" icon="pi pi-file-pdf" [loading]="letterBusy()" (onClick)="confirmOfferLetter(true)" />
+    } @else {
+      <p-button label="Download PDF" icon="pi pi-file-pdf" severity="secondary" [outlined]="true"
+        [loading]="letterBusy()" (onClick)="confirmOfferLetter(true)" />
+      <p-button label="Print letter" icon="pi pi-print" (onClick)="confirmOfferLetter(false)" />
+    }
   </ng-template>
 </p-dialog>
 

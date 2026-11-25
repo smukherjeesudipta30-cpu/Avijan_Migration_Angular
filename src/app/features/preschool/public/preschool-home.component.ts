@@ -3,7 +3,11 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
-import { PRESCHOOL_POWERED_BY, PreSchoolEnquirySave, PreSchoolPublic, ageLabel, emptyEnquiry, isComingSoon } from '../../../core/models/preschool.model';
+import { AVIJAN_FACEBOOK, AVIJAN_INSTAGRAM } from '../../../core/models/career.model';
+import {
+  PRESCHOOL_POWERED_BY, PRESCHOOL_SHARE_FACEBOOK, PRESCHOOL_SHARE_WHATSAPP, PRESCHOOL_URL, preschoolWhatsAppChat
+} from '../../../core/models/preschool.model';
+import { PreSchoolEnquirySave, PreSchoolPublic, ageLabel, emptyEnquiry, isComingSoon } from '../../../core/models/preschool.model';
 import { currentSession } from '../../../core/printing/preschool-forms';
 import { AuthService } from '../../../core/services/auth.service';
 import { PreSchoolService } from '../../../core/services/preschool.service';
@@ -155,11 +159,43 @@ const CLASS_THEMES = [
             <span aria-hidden="true">🎉</span>
             <h3>Thank you!</h3>
             <p>{{ sent() }}</p>
+            <p class="ph__thanks-share">Know another parent looking for a preschool?
+              <a [href]="shareWhatsApp" target="_blank" rel="noopener"><i class="pi pi-whatsapp" aria-hidden="true"></i> Share with them</a></p>
             <button type="button" class="ph__btn" (click)="sent.set(null)">Send another</button>
           </div>
         } @else {
           <app-preschool-enquiry-form [form]="form" [busy]="sending()" (submitted)="send($event)" />
         }
+      </div>
+    </section>
+
+    <section class="ph__section" id="follow" aria-label="Follow and share Avijan PreSchool">
+      <div class="ph__social">
+        <div class="ph__social-col">
+          <span class="ph__social-art" aria-hidden="true">📣</span>
+          <h2>Follow us</h2>
+          <p>Class photos, events, holidays and admission news are posted on our pages first.</p>
+          <div class="ph__social-btns">
+            <a class="ph__soc ph__soc--ig" [href]="instagram" target="_blank" rel="noopener"><i class="pi pi-instagram" aria-hidden="true"></i> Instagram</a>
+            <a class="ph__soc ph__soc--fb" [href]="facebook" target="_blank" rel="noopener"><i class="pi pi-facebook" aria-hidden="true"></i> Facebook</a>
+            @if (chat(); as c) {
+              <a class="ph__soc ph__soc--wa" [href]="c" target="_blank" rel="noopener"><i class="pi pi-whatsapp" aria-hidden="true"></i> Chat with us</a>
+            }
+          </div>
+        </div>
+        <div class="ph__social-col">
+          <span class="ph__social-art" aria-hidden="true">💌</span>
+          <h2>Tell a friend</h2>
+          <p>Know a family with a little one aged 2 to 6? Send them our page.</p>
+          <div class="ph__social-btns">
+            <a class="ph__soc ph__soc--wa" [href]="shareWhatsApp" target="_blank" rel="noopener"><i class="pi pi-whatsapp" aria-hidden="true"></i> WhatsApp</a>
+            <a class="ph__soc ph__soc--fb" [href]="shareFacebook" target="_blank" rel="noopener"><i class="pi pi-facebook" aria-hidden="true"></i> Share</a>
+            <button type="button" class="ph__soc" (click)="copyLink()">
+              <i class="pi" [class.pi-link]="!copied()" [class.pi-check]="copied()" aria-hidden="true"></i>
+              {{ copied() ? 'Copied' : 'Copy link' }}
+            </button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -180,6 +216,11 @@ const CLASS_THEMES = [
         @if (info()?.mapUrl; as m) { <p><i class="pi pi-directions" aria-hidden="true"></i><span><a [href]="m" target="_blank" rel="noopener">Get directions</a></span></p> }
       </div>
       <div class="ph__foot-links">
+        <span class="ph__foot-social">
+          <a [href]="instagram" target="_blank" rel="noopener" aria-label="Avijan on Instagram"><i class="pi pi-instagram"></i></a>
+          <a [href]="facebook" target="_blank" rel="noopener" aria-label="Avijan on Facebook"><i class="pi pi-facebook"></i></a>
+          @if (chat(); as c) { <a [href]="c" target="_blank" rel="noopener" aria-label="Chat with the PreSchool on WhatsApp"><i class="pi pi-whatsapp"></i></a> }
+        </span>
         <a routerLink="/privacy">Privacy</a>
         <a routerLink="/preschool/login">Login</a>
       </div>
@@ -294,8 +335,27 @@ const CLASS_THEMES = [
     .ph__contact a { font-weight: 700; }
     .ph__footer a { text-decoration: none; }
     .ph__foot-links { display: flex; flex-direction: column; gap: 0.4rem; font-weight: 700; }
+    .ph__foot-social { display: flex; gap: 0.5rem; margin-bottom: 0.3rem; }
+    .ph__foot-social a { display: grid; place-items: center; width: 2.1rem; height: 2.1rem; border-radius: 50%; background: #ffe3ec; color: #b3264f; }
+    .ph__social { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+    .ph__social-col { position: relative; padding: 1.6rem; border-radius: 28px; background: #fff; box-shadow: 0 10px 30px rgba(42, 47, 69, 0.06); }
+    .ph__social-col:first-child { background: linear-gradient(135deg, #fff 55%, #ffe3ec); }
+    .ph__social-col:last-child { background: linear-gradient(135deg, #fff 55%, #e3f2ff); }
+    .ph__social-art { position: absolute; top: 1.1rem; right: 1.3rem; font-size: 2.2rem; }
+    .ph__social-col h2 { margin: 0 0 0.35rem; font-size: 1.6rem; }
+    .ph__social-col p { margin: 0 0 1rem; color: #5b6178; line-height: 1.5; max-width: 26rem; }
+    .ph__social-btns { display: flex; gap: 0.55rem; flex-wrap: wrap; }
+    .ph__soc { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.1rem; border-radius: 999px;
+      border: 2px solid #2a2f45; background: #fff; color: #2a2f45; font: inherit; font-weight: 700; font-size: 0.92rem;
+      text-decoration: none; cursor: pointer; transition: transform 0.15s ease; }
+    .ph__soc:hover { transform: translateY(-2px); }
+    .ph__soc--ig { background: linear-gradient(45deg, #f58529, #dd2a7b 50%, #8134af); border-color: transparent; color: #fff; }
+    .ph__soc--fb { background: #1877f2; border-color: #1877f2; color: #fff; }
+    .ph__soc--wa { background: #25d366; border-color: #25d366; color: #fff; }
+    .ph__thanks-share { font-weight: 600; }
+    .ph__thanks-share a { color: #128c4a; white-space: nowrap; }
     @media (max-width: 820px) {
-      .ph__hero, .ph__enquire, .ph__footer, .ph__cert { grid-template-columns: 1fr; }
+      .ph__hero, .ph__enquire, .ph__footer, .ph__cert, .ph__social { grid-template-columns: 1fr; }
       .ph__cert { padding: 1.25rem; }
       .ph__cert-text h2 { font-size: 1.35rem; }
       .ph__cert-frame { transform: none; }
@@ -333,6 +393,23 @@ export class PreSchoolHomeComponent implements OnInit {
   });
 
   readonly poweredBy = PRESCHOOL_POWERED_BY;
+
+  /* ------------------------------------------------------------ social */
+  readonly instagram = AVIJAN_INSTAGRAM;
+  readonly facebook = AVIJAN_FACEBOOK;
+  readonly shareWhatsApp = PRESCHOOL_SHARE_WHATSAPP;
+  readonly shareFacebook = PRESCHOOL_SHARE_FACEBOOK;
+  /** A WhatsApp chat with the PreSchool's own number, once the admin has set one. */
+  readonly chat = computed(() => preschoolWhatsAppChat(this.info()?.phone));
+  readonly copied = signal(false);
+
+  async copyLink(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(PRESCHOOL_URL);
+      this.copied.set(true);
+      setTimeout(() => this.copied.set(false), 2500);
+    } catch { /* clipboard blocked: the WhatsApp and Facebook buttons still share it */ }
+  }
 
   form: PreSchoolEnquirySave = emptyEnquiry(currentSession());
 

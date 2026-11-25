@@ -240,3 +240,29 @@ export function isComingSoon(opensOn: string | null | undefined): boolean {
 /** Avijan PreSchool is run with My Chhota School's curriculum; shown under the name everywhere. */
 export const PRESCHOOL_POWERED_BY = 'powered by My Chhota School';
 
+
+/* ------------------------------------------------------------ social */
+
+/** The PreSchool's public page; the tag lets "Website visitors" count where a visit came from. */
+export const PRESCHOOL_URL = 'https://www.avijan.in/preschool';
+
+/** What a parent sends a friend when they share the PreSchool. */
+export const PRESCHOOL_SHARE_TEXT =
+  'Avijan PreSchool, Champahati (powered by My Chhota School) — Pre-Nursery to UKG. Admissions open:';
+
+export function preschoolShareUrl(source: string): string {
+  return `${PRESCHOOL_URL}?utm_source=${encodeURIComponent(source)}`;
+}
+
+export const PRESCHOOL_SHARE_WHATSAPP =
+  `https://wa.me/?text=${encodeURIComponent(`${PRESCHOOL_SHARE_TEXT} ${preschoolShareUrl('whatsapp')}`)}`;
+export const PRESCHOOL_SHARE_FACEBOOK =
+  `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(preschoolShareUrl('facebook'))}`;
+
+/** A wa.me chat link to the school's phone (Indian numbers get 91 in front); null when there is none. */
+export function preschoolWhatsAppChat(phone?: string | null): string | null {
+  const digits = (phone ?? '').replace(/\D/g, '');
+  if (digits.length < 10) return null;
+  const full = digits.length === 10 ? `91${digits}` : digits.replace(/^0+/, '');
+  return `https://wa.me/${full}?text=${encodeURIComponent('Hello, I would like to know about admission at Avijan PreSchool.')}`;
+}
