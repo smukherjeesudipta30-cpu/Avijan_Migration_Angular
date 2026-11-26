@@ -829,6 +829,7 @@ export class PreSchoolStudentComponent implements OnInit {
     if (pct < 0 || pct > 100) return this.warn('The discount is a percentage from 0 to 100.');
     if (this.offerAmount() > this.gross() - this.discountAmount()) return this.warn('The special offer is more than what is left to pay.');
     if (this.takeAdmission && !s.admissionPaid && !(Number(this.admissionAmount) > 0)) return this.warn('Enter the admission amount.');
+    if (this.picked().size && !s.monthlyFee) return this.warn(`${s.className} has no monthly fee set. Add it in Classes & Fees first.`);
     const tooMuch = this.pickedMonths().find(m => (this.monthAmounts[m] ?? s.monthlyFee) > s.monthlyFee);
     if (tooMuch) return this.warn(`${this.label(tooMuch)}: more than the month's fee of ${this.money(s.monthlyFee)}.`);
     const split = this.byInstalments && this.canSplit();

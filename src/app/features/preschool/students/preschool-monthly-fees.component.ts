@@ -84,7 +84,7 @@ interface Line {
     </div>
 
     <div class="pmf-stats">
-      <span><strong>{{ shown().length }}</strong> children with months due</span>
+      <span><strong>{{ shown().length }}</strong> {{ shown().length === 1 ? 'child' : 'children' }} with months due</span>
       <span>Ticked now: <strong>{{ money(tickedTotal()) }}</strong></span>
       <span>Collected on this page: <strong>{{ money(collected()) }}</strong></span>
     </div>
@@ -114,6 +114,12 @@ interface Line {
                 <p-button icon="pi pi-trash" label="Delete" size="small" [text]="true" severity="danger" [loading]="l.busy"
                   (onClick)="undo(l)" />
               </span>
+            </div>
+          } @else if (!l.row.monthlyFee) {
+            <div class="pmf-nofee">
+              <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+              <span><strong>{{ l.row.className }} has no monthly fee set.</strong> Add its monthly fee (e.g. Tuition) in
+                <a routerLink="/preschool/classes">Classes &amp; Fees</a>, then find this child again.</span>
             </div>
           } @else {
             <div class="pmf-months" role="group" [attr.aria-label]="'Months for ' + l.row.childName">
@@ -179,6 +185,9 @@ interface Line {
     .pmf-done-actions { display: flex; align-items: center; gap: 0.2rem; }
     .pmf-wa { display: inline-flex; gap: 0.3rem; align-items: center; color: #1f9d55; text-decoration: none; font-weight: 700; font-size: 0.85rem; padding: 0 0.5rem; }
     .pmf-empty { padding: 1rem; }
+    .pmf-nofee { grid-column: 2 / -1; display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.6rem 0.8rem; border-radius: 10px;
+      background: #fff1d6; color: #7a4a00; font-size: 0.88rem; }
+    .pmf-nofee a { font-weight: 700; color: inherit; }
     .pmf-reg { display: flex; flex-direction: column; gap: 0.35rem; padding: 0.9rem 1rem; margin: 0.5rem 0 0.6rem; border: 2px solid #ffc2d1; }
     .pmf-reg label { font-weight: 800; }
     .pmf-reg-row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
@@ -343,6 +352,10 @@ export class PreSchoolMonthlyFeesComponent implements OnInit {
 
   collect(l: Line): void {
     if (!l.picked.size) return;
+    if (!l.row.monthlyFee) {
+      this.messages.add({ severity: 'warn', summary: 'No monthly fee set', detail: `${l.row.className} has no monthly fee. Set it in Classes & Fees first.`, life: 6000 });
+      return;
+    }
     const over = [...l.picked].find(m => (l.amounts[m] ?? l.row.monthlyFee) > l.row.monthlyFee);
     if (over) {
       this.messages.add({ severity: 'warn', summary: 'Please check', detail: `${monthLabel(over)}: more than the month's fee of ${this.money(l.row.monthlyFee)}.`, life: 4500 });
