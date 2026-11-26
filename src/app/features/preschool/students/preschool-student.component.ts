@@ -122,6 +122,19 @@ function addMonths(iso: string, n: number): string {
             }
           </div>
 
+          @if (picked().size) {
+            <div class="psd-month-amts">
+              <span class="psd-month-amts-head">Amount for each month <small>— lower it for a concession</small></span>
+              @for (m of pickedMonths(); track m) {
+                <label>{{ label(m) }}
+                  <input pInputText type="number" min="0" [max]="s.monthlyFee" step="1" [ngModel]="monthAmounts[m] ?? s.monthlyFee"
+                    (ngModelChange)="setMonthAmount(m, $event)" />
+                  @if ((monthAmounts[m] ?? s.monthlyFee) < s.monthlyFee) { <small>concession {{ money(s.monthlyFee - (monthAmounts[m] ?? 0)) }}</small> }
+                </label>
+              }
+            </div>
+          }
+
           <details class="psd-charges" [open]="chargesTotal() > 0 || hasRates()">
             <summary>Other charges on the receipt <small class="app-muted">— registration, annual, kit, food, transport…</small>
               @if (chargesTotal() > 0) { <strong>{{ money(chargesTotal()) }}</strong> }</summary>
@@ -309,12 +322,17 @@ function addMonths(iso: string, n: number): string {
                 @if (isHead() && !r.isCancelled) {
                   <p-button icon="pi pi-ban" [text]="true" [rounded]="true" severity="danger" ariaLabel="Cancel receipt" (onClick)="cancel(r.id, r.receiptCode)" />
                 }
+                <p-button icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger" [loading]="deleting() === r.id"
+                  ariaLabel="Delete this receipt (entered by mistake)" (onClick)="deleteReceipt(r.id, r.receiptCode, r.total)" />
               </span>
               @if ((r.payments?.length ?? 0) > 1 || (!r.isCancelled && (r.balance ?? 0) > 0)) {
                 <div class="psd-parts">
                   @for (p of r.payments ?? []; track p.id) {
                     <span>#{{ p.instalmentNo }} · {{ p.paidOn | date: 'd MMM y' }} · {{ money(p.amount) }} · {{ p.mode }}@if (p.reference) { {{ p.reference }} }
-                      <small>by {{ p.collectedBy || '—' }}</small></span>
+                      <small>by {{ p.collectedBy || '—' }}</small>
+                      @if (p.instalmentNo > 1 && p.instalmentNo === r.payments!.length) {
+                        <button type="button" class="psd-del-part" (click)="deleteInstalment(r.id, p.id, p.instalmentNo, p.amount)">Delete</button>
+                      }</span>
                   }
                   @if (!r.isCancelled && (r.balance ?? 0) > 0) {
                     @if (instalmentFor() === r.id) {
@@ -373,6 +391,7 @@ function addMonths(iso: string, n: number): string {
       background: #f8f7fc; font-size: 0.82rem; }
     .psd-parts small { color: var(--app-text-muted); margin-left: 0.3rem; }
     .psd-parts p-button { align-self: flex-start; }
+    .psd-del-part { margin-left: 0.5rem; border: 0; background: none; color: #b42318; font: inherit; font-size: 0.75rem; font-weight: 700; cursor: pointer; text-decoration: underline; }
     .psd-next { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: 0.5rem; align-items: end; }
     .psd-next label { display: flex; flex-direction: column; gap: 0.2rem; font-weight: 600; font-size: 0.78rem; }
     .psd-next select { padding: 0.5rem; border: 1px solid var(--app-border); border-radius: 6px; background: #fff; font: inherit; }
@@ -399,6 +418,13 @@ function addMonths(iso: string, n: number): string {
     .psd-disc { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; margin-top: 0.9rem; padding-top: 0.8rem; border-top: 1px dashed var(--app-border); }
     .psd-disc label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.82rem; font-weight: 600; }
     .psd-sum small { display: block; font-size: 0.78rem; color: var(--app-text-muted); }
+    .psd-month-amts { display: flex; flex-wrap: wrap; gap: 0.5rem 0.9rem; align-items: flex-end; margin: -0.4rem 0 1rem; padding: 0.6rem 0.75rem;
+      border-radius: 10px; background: #fff7fa; border: 1px solid #ffd6e2; }
+    .psd-month-amts-head { width: 100%; font-weight: 700; font-size: 0.85rem; }
+    .psd-month-amts-head small { font-weight: 500; color: var(--app-text-muted); }
+    .psd-month-amts label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.78rem; font-weight: 700; }
+    .psd-month-amts input { width: 6.5rem; }
+    .psd-month-amts small { color: #9a5b00; font-size: 0.7rem; }
     .psd-charges { margin-bottom: 1rem; padding: 0.6rem 0.75rem; border: 1px solid var(--app-border); border-radius: 10px; }
     .psd-charges summary { cursor: pointer; font-weight: 700; font-size: 0.9rem; }
     .psd-charges summary strong { float: right; }
@@ -543,6 +569,24 @@ export class PreSchoolStudentComponent implements OnInit {
   specialOffer: number | null = null;
   offerNote = '';
 
+  /** The amount taken for each ticked month; less than the fee is a concession for this child. */
+  monthAmounts: Record<string, number | null> = {};
+
+  pickedMonths(): string[] {
+    return [...this.picked()].sort();
+  }
+
+  setMonthAmount(month: string, value: number | string | null): void {
+    const n = value === null || value === '' ? null : Math.max(0, Number(value));
+    this.monthAmounts = { ...this.monthAmounts, [month]: n === null || Number.isNaN(n) ? null : n };
+  }
+
+  /** The ticked months: each at its own amount (the fee unless lowered). */
+  monthsTotal(): number {
+    const fee = this.student()?.monthlyFee ?? 0;
+    return this.pickedMonths().reduce((t, m) => t + (this.monthAmounts[m] ?? fee), 0);
+  }
+
   /* ------------------------------------------------------ instalments */
 
   readonly maxInstalments = PRESCHOOL_MAX_INSTALMENTS;
@@ -623,7 +667,7 @@ export class PreSchoolStudentComponent implements OnInit {
     const s = this.student();
     if (!s) return 0;
     const admission = this.takeAdmission && !s.admissionPaid ? Number(this.admissionAmount) || 0 : 0;
-    return admission + this.picked().size * s.monthlyFee + this.chargesTotal();
+    return admission + this.monthsTotal() + this.chargesTotal();
   }
 
   /** The percentage off the whole receipt, rounded to the paisa as the server does. */
@@ -785,6 +829,8 @@ export class PreSchoolStudentComponent implements OnInit {
     if (pct < 0 || pct > 100) return this.warn('The discount is a percentage from 0 to 100.');
     if (this.offerAmount() > this.gross() - this.discountAmount()) return this.warn('The special offer is more than what is left to pay.');
     if (this.takeAdmission && !s.admissionPaid && !(Number(this.admissionAmount) > 0)) return this.warn('Enter the admission amount.');
+    const tooMuch = this.pickedMonths().find(m => (this.monthAmounts[m] ?? s.monthlyFee) > s.monthlyFee);
+    if (tooMuch) return this.warn(`${this.label(tooMuch)}: more than the month's fee of ${this.money(s.monthlyFee)}.`);
     const split = this.byInstalments && this.canSplit();
     const firstPart = Number(this.paidNow) || 0;
     if (split && (firstPart <= 0 || firstPart >= this.total())) {
@@ -799,6 +845,8 @@ export class PreSchoolStudentComponent implements OnInit {
       includeAdmission: this.takeAdmission && !s.admissionPaid,
       admissionAmount: this.takeAdmission ? Number(this.admissionAmount) || null : null,
       months: [...this.picked()].sort(),
+      monthAmounts: this.pickedMonths().filter(m => (this.monthAmounts[m] ?? s.monthlyFee) < s.monthlyFee)
+        .map(m => ({ month: m, amount: this.monthAmounts[m] ?? 0 })),
       mode: this.payMode,
       charges: PRESCHOOL_CHARGE_HEADS
         .filter(h => (Number(this.charges[h.head].amount) || 0) > 0)
@@ -826,6 +874,7 @@ export class PreSchoolStudentComponent implements OnInit {
           : `Received ${this.money(receipt.total)} · ${receipt.receiptCode}`);
         this.byInstalments = false;
         this.paidNow = null;
+        this.monthAmounts = {};
         this.mailToGuardian(receipt);
         this.reference = '';
         this.payNote = '';
@@ -891,6 +940,35 @@ export class PreSchoolStudentComponent implements OnInit {
           : { severity: 'warn', summary: 'Receipt not emailed', detail: r.message, life: 6000 });
       }),
       error: () => this.emailing.set(null)
+    });
+  }
+
+  /* --------------------------------------------------------- deleting */
+
+  readonly deleting = signal<number | null>(null);
+
+  /** A receipt made by mistake is removed; its months are due again and the PreSchool admin is told. */
+  deleteReceipt(receiptId: number, code: string, total: number): void {
+    if (!confirm(`Delete receipt ${code} (${this.money(total)})? Use this only for a receipt entered by mistake. ` +
+      'Its months will be due again, and the PreSchool admin will be told. This cannot be undone.')) return;
+    this.deleting.set(receiptId);
+    this.students.deleteReceipt(receiptId).subscribe({
+      next: () => {
+        this.deleting.set(null);
+        this.done(`${code} deleted`);
+        const s = this.student();
+        if (s) this.load(s.id);
+      },
+      error: () => this.deleting.set(null)
+    });
+  }
+
+  deleteInstalment(receiptId: number, paymentId: number, no: number, amount: number): void {
+    if (!confirm(`Delete instalment ${no} (${this.money(amount)})? Use this only for an instalment entered by mistake. The PreSchool admin will be told.`)) return;
+    this.students.deletePayment(receiptId, paymentId).subscribe(() => {
+      this.done(`Instalment ${no} deleted`);
+      const s = this.student();
+      if (s) this.load(s.id);
     });
   }
 

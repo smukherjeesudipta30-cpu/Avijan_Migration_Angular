@@ -54,12 +54,12 @@ const CARD_INKS = ['#b3264f', '#1d5fa8', '#2b7a2b', '#9a5b00'];
         </div>
         @for (n of a.items.slice(0, 6); track n.id) {
           <div class="psd__alert" [class.psd__alert--new]="!n.isRead">
-            <i class="pi pi-key" aria-hidden="true"></i>
+            <i class="pi" [class.pi-key]="n.type !== 'PreSchoolReceiptDeleted'" [class.pi-trash]="n.type === 'PreSchoolReceiptDeleted'" aria-hidden="true"></i>
             <span><strong>{{ n.title }}</strong><small>{{ n.createdOn | date: 'd MMM y, h:mm a' }}@if (n.loginId) { · {{ n.loginId }} }</small></span>
             @if (!n.isRead) { <button type="button" class="psd__link" (click)="read(n.id)">Mark read</button> }
           </div>
         } @empty {
-          <p class="app-muted psd__none">No alerts. You are told here when a PreSchool staff member changes their password.</p>
+          <p class="app-muted psd__none">No alerts. You are told here when a PreSchool staff member changes their password, or a receipt is deleted.</p>
         }
       </section>
     }

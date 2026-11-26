@@ -94,6 +94,34 @@ export interface PreSchoolReceiptSummary {
   payments?: PreSchoolPayment[] | null;
 }
 
+/** One subject's result in one exam. */
+export interface PreSchoolResultSubject {
+  subject: string;
+  maxMarks: number;
+  marks?: number | null;
+  isAbsent: boolean;
+}
+
+/** A child's result in one exam. */
+export interface PreSchoolResult {
+  examId: number;
+  examName: string;
+  heldOn?: string | null;
+  subjects: PreSchoolResultSubject[];
+  total: number;
+  outOf: number;
+  percent?: number | null;
+  grade?: string | null;
+}
+
+/** One child on the parent's page. */
+export interface PreSchoolParentChild {
+  child: PreSchoolStudentDetail;
+  results: PreSchoolResult[];
+  amountDue: number;
+  instalmentDue: number;
+}
+
 /** Whether a receipt went to the guardian's email, and to which address (or why not). */
 export interface PreSchoolReceiptMailResult {
   sent: boolean;
@@ -191,6 +219,8 @@ export interface PreSchoolCollect {
   notes: string | null;
   /** Paying in instalments: the first instalment received now. Left out when paid in full. */
   paidNow?: number | null;
+  /** Less than the fee taken for a month (a concession); months not listed are charged in full. */
+  monthAmounts?: { month: string; amount: number }[];
 }
 
 export interface PreSchoolReceiptLine {

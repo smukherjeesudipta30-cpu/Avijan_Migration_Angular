@@ -6,7 +6,7 @@ import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
 import {
   PreSchoolAdmissionReport, PreSchoolCollect, PreSchoolPaymentSave, PreSchoolPendingReport, PreSchoolReceipt, PreSchoolStudentDetail,
-  PreSchoolPhotoSlot, PreSchoolStudentListItem, PreSchoolReceiptMailResult, PreSchoolReferrer, PreSchoolStudentPhotos, PreSchoolStudentSave
+  PreSchoolPhotoSlot, PreSchoolStudentListItem, PreSchoolParentChild, PreSchoolReceiptMailResult, PreSchoolReferrer, PreSchoolStudentPhotos, PreSchoolStudentSave
 } from '../models/preschool-student.model';
 import { PreSchoolCollectionReport } from '../models/preschool-finance.model';
 
@@ -61,6 +61,26 @@ export class PreSchoolStudentService {
     const params: Record<string, string> = { minMonths: String(minMonths) };
     if (classId) params['classId'] = String(classId);
     return this.http.get<ApiResponse<PreSchoolPendingReport>>(`${this.base}/reports/pending-fees`, { params }).pipe(map(r => r.data));
+  }
+
+  /** Deletes a receipt entered by mistake (the PreSchool admin is alerted). */
+  deleteReceipt(id: number): Observable<boolean> {
+    return this.http.delete<ApiResponse<boolean>>(`${this.base}/receipts/${id}`).pipe(map(r => r.data));
+  }
+
+  /** Deletes the latest instalment of a receipt, entered by mistake. */
+  deletePayment(receiptId: number, paymentId: number): Observable<PreSchoolReceipt> {
+    return this.http.delete<ApiResponse<PreSchoolReceipt>>(`${this.base}/receipts/${receiptId}/payments/${paymentId}`).pipe(map(r => r.data));
+  }
+
+  /** The signed-in parent's children, with fees, receipts and results. */
+  parentChildren(): Observable<PreSchoolParentChild[]> {
+    return this.http.get<ApiResponse<PreSchoolParentChild[]>>(`${this.base}/parent/children`).pipe(map(r => r.data));
+  }
+
+  /** One of the parent's own receipts, to print or save. */
+  parentReceipt(id: number): Observable<PreSchoolReceipt> {
+    return this.http.get<ApiResponse<PreSchoolReceipt>>(`${this.base}/parent/receipts/${id}`).pipe(map(r => r.data));
   }
 
   /** Emails a receipt to the child's guardian; pdfBase64 is the parent copy to attach. */
