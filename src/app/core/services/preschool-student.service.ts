@@ -6,8 +6,9 @@ import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
 import {
   PreSchoolAdmissionReport, PreSchoolCollect, PreSchoolPaymentSave, PreSchoolPendingReport, PreSchoolReceipt, PreSchoolStudentDetail,
-  PreSchoolPhotoSlot, PreSchoolStudentListItem, PreSchoolStudentPhotos, PreSchoolStudentSave
+  PreSchoolPhotoSlot, PreSchoolStudentListItem, PreSchoolReceiptMailResult, PreSchoolReferrer, PreSchoolStudentPhotos, PreSchoolStudentSave
 } from '../models/preschool-student.model';
+import { PreSchoolCollectionReport } from '../models/preschool-finance.model';
 
 /** Avijan PreSchool admissions, fee collection, receipts and their reports. */
 @Injectable({ providedIn: 'root' })
@@ -60,6 +61,23 @@ export class PreSchoolStudentService {
     const params: Record<string, string> = { minMonths: String(minMonths) };
     if (classId) params['classId'] = String(classId);
     return this.http.get<ApiResponse<PreSchoolPendingReport>>(`${this.base}/reports/pending-fees`, { params }).pipe(map(r => r.data));
+  }
+
+  /** Emails a receipt to the child's guardian; pdfBase64 is the parent copy to attach. */
+  emailReceipt(receiptId: number, pdfBase64: string | null): Observable<PreSchoolReceiptMailResult> {
+    return this.http.post<ApiResponse<PreSchoolReceiptMailResult>>(`${this.base}/receipts/${receiptId}/email`, { pdfBase64 })
+      .pipe(map(r => r.data));
+  }
+
+  /** The teachers and receptionists who can be named as a child's referrer. */
+  referrers(): Observable<PreSchoolReferrer[]> {
+    return this.http.get<ApiResponse<PreSchoolReferrer[]>>(`${this.base}/referrers`).pipe(map(r => r.data));
+  }
+
+  /** Every payment received between two dates ("yyyy-MM-dd"), with who collected it. */
+  collections(from: string, to: string): Observable<PreSchoolCollectionReport> {
+    return this.http.get<ApiResponse<PreSchoolCollectionReport>>(`${this.base}/reports/collections`, { params: { from, to } })
+      .pipe(map(r => r.data));
   }
 
   /** A further instalment against a receipt being paid in parts. */

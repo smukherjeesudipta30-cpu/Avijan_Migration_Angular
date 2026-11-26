@@ -621,11 +621,35 @@ export const routes: Routes = [
       },
       {
         path: 'preschool/reports/admissions',
-        title: 'PreSchool admissions by month · Avijan',
+        title: 'PreSchool admission report · Avijan',
         canActivate: [roleGuard('PreSchoolHead', 'PreSchoolFrontDesk')],
         loadComponent: () =>
           import('./features/preschool/reports/preschool-admissions-report.component')
             .then(m => m.PreSchoolAdmissionsReportComponent)
+      },
+      {
+        path: 'preschool/reports/honorarium',
+        title: 'PreSchool honorarium report · Avijan',
+        canActivate: [roleGuard('PreSchoolHead')],
+        loadComponent: () =>
+          import('./features/preschool/finance/preschool-honorarium-report.component')
+            .then(m => m.PreSchoolHonorariumReportComponent)
+      },
+      {
+        path: 'preschool/reports/collections',
+        title: 'PreSchool fee collection report · Avijan',
+        canActivate: [roleGuard('PreSchoolHead', 'PreSchoolFrontDesk')],
+        loadComponent: () =>
+          import('./features/preschool/reports/preschool-collections-report.component')
+            .then(m => m.PreSchoolCollectionsReportComponent)
+      },
+      {
+        path: 'preschool/fees/monthly',
+        title: 'Collect monthly fees · Avijan PreSchool',
+        canActivate: [roleGuard('PreSchoolHead', 'PreSchoolFrontDesk')],
+        loadComponent: () =>
+          import('./features/preschool/students/preschool-monthly-fees.component')
+            .then(m => m.PreSchoolMonthlyFeesComponent)
       },
       {
         /* PreSchool staff attendance: the Computer Centre's screen, talking to
@@ -663,7 +687,7 @@ export const routes: Routes = [
       },
       {
         path: 'preschool/my-payslips',
-        title: 'My payslips · Avijan PreSchool',
+        title: 'My honorarium · Avijan PreSchool',
         canActivate: [roleGuard('PreSchoolHead', 'PreSchoolFrontDesk', 'PreSchoolTutor')],
         loadComponent: () =>
           import('./features/preschool/finance/preschool-my-payslips.component')

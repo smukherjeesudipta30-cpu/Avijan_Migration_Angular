@@ -6,7 +6,7 @@ import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
 import {
   PreSchoolAlerts, PreSchoolExpense, PreSchoolExpenseSave, PreSchoolIncomeRange, PreSchoolIncomeReport, PreSchoolSalaryPay, PreSchoolSalaryPayment,
-  PreSchoolSalarySheet, PreSchoolStaff, PreSchoolStaffSave
+  PreSchoolSalarySheet, PreSchoolStaff, PreSchoolStaffSave, PreSchoolMyReferrals, PreSchoolHonorariumReport
 } from '../models/preschool-finance.model';
 
 /** Avijan PreSchool staff and salaries, expenses and income report — the PreSchool admin's side. */
@@ -70,11 +70,21 @@ export class PreSchoolFinanceService {
   }
 
   /** The signed-in PreSchool staff member's own salary slips. */
+  /** The signed-in teacher's or receptionist's reference fees, paid and still to come. */
+  myReferrals(): Observable<PreSchoolMyReferrals> {
+    return this.http.get<ApiResponse<PreSchoolMyReferrals>>(`${this.base}/my-referrals`).pipe(map(r => r.data));
+  }
+
   myPayslips(): Observable<PreSchoolSalaryPayment[]> {
     return this.http.get<ApiResponse<PreSchoolSalaryPayment[]>>(`${this.base}/my-payslips`).pipe(map(r => r.data));
   }
 
   /** Income, salaries and expenses between any two dates, with every entry behind them. */
+  /** Honorarium paid: basis "month" for whole months (1st to last day), "paid" for the dates paid. */
+  honorarium(from: string, to: string, basis: 'month' | 'paid'): Observable<PreSchoolHonorariumReport> {
+    return this.http.get<ApiResponse<PreSchoolHonorariumReport>>(`${this.base}/reports/honorarium`, { params: { from, to, basis } }).pipe(map(r => r.data));
+  }
+
   incomeRange(from: string, to: string): Observable<PreSchoolIncomeRange> {
     return this.http.get<ApiResponse<PreSchoolIncomeRange>>(`${this.base}/reports/income-range`, { params: { from, to } }).pipe(map(r => r.data));
   }

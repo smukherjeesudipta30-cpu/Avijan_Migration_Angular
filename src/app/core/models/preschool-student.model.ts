@@ -1,7 +1,20 @@
 /** Avijan PreSchool children, fees and receipts, as PreSchoolStudentsController returns them. Dates are "yyyy-MM-dd". */
 
 export type PreSchoolStatus = 'Active' | 'Completed' | 'Left';
-export type PreSchoolPayMode = 'Cash' | 'UPI' | 'Paytm' | 'Cheque' | 'DD';
+export type PreSchoolPayMode = 'Cash' | 'Bank' | 'UPI' | 'Paytm' | 'Cheque' | 'DD';
+
+/** The ways a parent can pay, in the order offered. Bank: a transfer or deposit into the school's account. */
+export const PRESCHOOL_PAY_MODES: PreSchoolPayMode[] = ['Cash', 'Bank', 'UPI', 'Paytm', 'Cheque', 'DD'];
+
+/** Who referred a child: a PreSchool teacher or receptionist ("Staff"), or no one ("None"). */
+export type PreSchoolReferenceType = 'Staff' | 'None';
+
+/** A PreSchool teacher or receptionist who can be named as a child's referrer. */
+export interface PreSchoolReferrer {
+  id: number;
+  name: string;
+  role: string;
+}
 
 /**
  * The Fee Receipt's other rows, in the printed order (Part I: first four; Part II: the rest).
@@ -81,6 +94,13 @@ export interface PreSchoolReceiptSummary {
   payments?: PreSchoolPayment[] | null;
 }
 
+/** Whether a receipt went to the guardian's email, and to which address (or why not). */
+export interface PreSchoolReceiptMailResult {
+  sent: boolean;
+  message: string;
+  to?: string | null;
+}
+
 /** One payment (instalment) against a receipt, with the login that collected it. */
 export interface PreSchoolPayment {
   id: number;
@@ -128,6 +148,9 @@ export interface PreSchoolStudentSave {
   notes: string | null;
   /** "A", "B" … printed on the fee receipt. */
   section?: string | null;
+  /** Who referred the child; required for a new admission. */
+  referenceType?: PreSchoolReferenceType | null;
+  referredByStaffId?: number | null;
 }
 
 /** The three ID-card photos, as data URLs. */
@@ -147,6 +170,7 @@ export interface PreSchoolStudentDetail extends PreSchoolStudentSave {
   admissionPaid: boolean;
   months: PreSchoolMonth[];
   receipts: PreSchoolReceiptSummary[];
+  referredByName?: string | null;
 }
 
 export interface PreSchoolCollect {

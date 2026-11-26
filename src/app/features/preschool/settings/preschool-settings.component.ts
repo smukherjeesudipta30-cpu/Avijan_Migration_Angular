@@ -51,6 +51,10 @@ interface BandDraft {
             <label>Receipt number prefix
               <input pInputText [(ngModel)]="f.receiptPrefix" maxlength="10" />
               <small class="app-muted">Receipts read {{ (f.receiptPrefix || 'APS').toUpperCase() }}/0001, /0002 …</small></label>
+            <label>Reference fee (%)
+              <input pInputText type="number" min="0" max="50" step="0.5" [(ngModel)]="f.referralPercent" />
+              <small class="app-muted">The share of each admission payment earned by the teacher or receptionist who referred the child,
+                paid with their salary. With no reference it all stays PreSchool income.</small></label>
           </div>
         </section>
 
@@ -178,7 +182,8 @@ export class PreSchoolSettingsComponent implements OnInit {
     const latitude = num(f.latitude), longitude = num(f.longitude);
     if ((latitude === null) !== (longitude === null)) { this.warn('Give both the latitude and the longitude, or neither.'); return; }
     this.preschool.saveSettings({
-      ...f, opensOn: f.opensOn || null, latitude, longitude, geofenceMetres: num(f.geofenceMetres) ?? 100
+      ...f, opensOn: f.opensOn || null, latitude, longitude, geofenceMetres: num(f.geofenceMetres) ?? 100,
+      referralPercent: num(f.referralPercent) ?? 5
     }).subscribe({
       next: s => { this.saving.set(false); this.applySettings(s); this.done('Settings saved.'); },
       error: () => this.saving.set(false)

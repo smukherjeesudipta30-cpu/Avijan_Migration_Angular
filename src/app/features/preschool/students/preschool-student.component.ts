@@ -11,13 +11,15 @@ import { Observable, concatMap, from, last, of } from 'rxjs';
 import { formatMoney } from '../../../core/format/money';
 import { PreSchoolClass, todayIso } from '../../../core/models/preschool.model';
 import {
-  PRESCHOOL_CHARGE_HEADS, PRESCHOOL_MAX_INSTALMENTS, PRESCHOOL_OTHERS_ROW, PreSchoolChargeHead, PreSchoolMonth, PreSchoolPayMode,
+  PRESCHOOL_CHARGE_HEADS, PRESCHOOL_MAX_INSTALMENTS, PRESCHOOL_OTHERS_ROW, PRESCHOOL_PAY_MODES, PreSchoolChargeHead, PreSchoolMonth,
+  PreSchoolPayMode, PreSchoolReferrer,
   PreSchoolPhotoSlot, PreSchoolReceipt, PreSchoolReceiptSummary, PreSchoolStudentDetail, PreSchoolStudentPhotos, PreSchoolStudentSave,
   monthLabel, whatsAppLink
 } from '../../../core/models/preschool-student.model';
 import { openPendingDocumentWindow, writeDocumentWindow } from '../../../core/printing/legacy-documents';
 import { downloadSizedPdf, isNativeApp, pdfFileName } from '../../../core/printing/pdf-download';
 import { feeReceiptHtml } from '../../../core/printing/preschool-forms';
+import { emailReceiptToGuardian } from '../../../core/printing/preschool-receipt-mail';
 import { PhotoCaptureComponent } from '../../../shared/photo-capture/photo-capture.component';
 import { AuthService } from '../../../core/services/auth.service';
 import { PreSchoolService } from '../../../core/services/preschool.service';
@@ -28,7 +30,8 @@ const blankForm = (): PreSchoolStudentSave => ({
   childName: '', dateOfBirth: '', gender: null, bloodGroup: null, fatherName: null, motherName: null,
   parentName: '', phone: '', emergencyPhone: null, email: null, address: null,
   guardianRelation: null, guardian2Name: null, guardian2Relation: null, guardian2Phone: null, heightCm: null, weightKg: null, classId: 0,
-  joinedOn: todayIso(), monthlyDiscount: 0, status: 'Active', endedOn: null, notes: null, section: null
+  joinedOn: todayIso(), monthlyDiscount: 0, status: 'Active', endedOn: null, notes: null, section: null,
+  referenceType: null, referredByStaffId: null
 });
 
 /** The receipt's other rows, blank: an amount (and a note for "Late fee / others" and "Others") per head. */
@@ -151,6 +154,9 @@ function addMonths(iso: string, n: number): string {
             @if (payMode === 'UPI' || payMode === 'Paytm') {
               <label>{{ payMode }} reference <input pInputText [(ngModel)]="reference" maxlength="60" /></label>
             }
+            @if (payMode === 'Bank') {
+              <label>Bank reference / UTR <small class="app-muted">(optional)</small> <input pInputText [(ngModel)]="reference" maxlength="60" /></label>
+            }
             @if (payMode === 'Cheque' || payMode === 'DD') {
               <label>{{ payMode }} No. <input pInputText [(ngModel)]="reference" maxlength="30" /></label>
               <label>{{ payMode }} date <input pInputText type="date" [(ngModel)]="chequeDate" /></label>
@@ -204,6 +210,16 @@ function addMonths(iso: string, n: number): string {
               @for (c of classes(); track c.id) { <option [ngValue]="c.id" [disabled]="!c.isActive">{{ c.name }}</option> }
             </select></label>
           <label>Section <input pInputText [(ngModel)]="form.section" maxlength="10" placeholder="A" /></label>
+          <label class="w2">Referred by {{ isNew() ? '*' : '' }}
+            <select [ngModel]="referenceChoice()" (ngModelChange)="setReference($event)">
+              <option value="" disabled>Choose: a teacher, a receptionist, or no reference</option>
+              <option value="None">No reference (walk-in) — all fees are PreSchool income</option>
+              @for (r of referrers(); track r.id) { <option [value]="'staff:' + r.id">{{ r.name }} · {{ r.role }}</option> }
+              @if (form.referredByStaffId && !hasReferrer(form.referredByStaffId)) {
+                <option [value]="'staff:' + form.referredByStaffId">{{ student()?.referredByName ?? 'Former staff' }}</option>
+              }
+            </select>
+            <small class="app-muted psd-ref-note">The referrer earns {{ referralPercent() }}% of each admission payment, paid with their salary.</small></label>
           <label>Joining date * <input pInputText type="date" [(ngModel)]="form.joinedOn" /></label>
           <label>Height (cm) <input pInputText type="number" min="40" max="200" step="0.5" [(ngModel)]="form.heightCm" placeholder="95" /></label>
           <label>Weight (kg) <input pInputText type="number" min="2" max="80" step="0.1" [(ngModel)]="form.weightKg" placeholder="14.5" /></label>
@@ -285,6 +301,11 @@ function addMonths(iso: string, n: number): string {
                 <p-button icon="pi pi-file-pdf" [text]="true" [rounded]="true" ariaLabel="Download the parent copy as PDF"
                   [loading]="downloading() === r.id" (onClick)="downloadParentCopy(r.id)" />
                 <a [href]="share(s, r.receiptCode, r.total, r.summary)" target="_blank" rel="noopener" class="psd-wa" aria-label="Send to parent on WhatsApp"><i class="pi pi-whatsapp" aria-hidden="true"></i></a>
+                @if (!r.isCancelled) {
+                  <p-button icon="pi pi-envelope" [text]="true" [rounded]="true" [loading]="emailing() === r.id"
+                    [ariaLabel]="s.email ? 'Email the receipt to ' + s.email : 'No guardian email on the record'" [disabled]="!s.email"
+                    (onClick)="emailAgain(r.id)" />
+                }
                 @if (isHead() && !r.isCancelled) {
                   <p-button icon="pi pi-ban" [text]="true" [rounded]="true" severity="danger" ariaLabel="Cancel receipt" (onClick)="cancel(r.id, r.receiptCode)" />
                 }
@@ -302,7 +323,7 @@ function addMonths(iso: string, n: number): string {
                         <label>Date <input pInputText type="date" [(ngModel)]="next.paidOn" [max]="today" /></label>
                         <label>Mode
                           <select [(ngModel)]="next.mode">@for (m of modes; track m) { <option [value]="m">{{ m }}</option> }</select></label>
-                        @if (next.mode !== 'Cash') { <label>Reference / No. <input pInputText [(ngModel)]="next.reference" maxlength="60" /></label> }
+                        @if (next.mode !== 'Cash') { <label>Reference / No.@if (next.mode === 'Bank') { (optional) } <input pInputText [(ngModel)]="next.reference" maxlength="60" /></label> }
                         <span class="psd-next-btns">
                           <p-button label="Save instalment" icon="pi pi-check" size="small" [loading]="savingInstalment()" (onClick)="saveInstalment(r)" />
                           <p-button label="Cancel" size="small" [text]="true" (onClick)="instalmentFor.set(null)" />
@@ -335,6 +356,7 @@ function addMonths(iso: string, n: number): string {
     .psd-package { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;
       padding: 0.6rem 0.75rem; margin-bottom: 0.9rem; border-radius: 10px; background: #fff7e6; border: 1px solid #ffe0a3; }
     .psd-package small { display: block; color: var(--app-text-muted); font-size: 0.78rem; }
+    .psd-ref-note { font-weight: 500; font-size: 0.75rem; }
     .psd-in-others { font-size: 0.7rem; color: var(--app-text-muted); margin-top: -0.2rem; }
     .psd-inst { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem 0.9rem; align-items: end; margin-top: 0.9rem;
       padding: 0.7rem 0.8rem; border-radius: 10px; border: 1px dashed var(--app-border); }
@@ -426,7 +448,7 @@ export class PreSchoolStudentComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
-  readonly modes: PreSchoolPayMode[] = ['Cash', 'UPI', 'Paytm', 'Cheque', 'DD'];
+  readonly modes: PreSchoolPayMode[] = PRESCHOOL_PAY_MODES;
   readonly chargeHeads = PRESCHOOL_CHARGE_HEADS;
   readonly downloading = signal<number | null>(null);
   readonly today = todayIso();
@@ -450,6 +472,28 @@ export class PreSchoolStudentComponent implements OnInit {
   private savedPhotos: PreSchoolStudentPhotos = { child: null, guardian1: null, guardian2: null };
 
   form: PreSchoolStudentSave = blankForm();
+
+  /* -------------------------------------------------------- reference */
+
+  readonly referrers = signal<PreSchoolReferrer[]>([]);
+  readonly referralPercent = signal(5);
+
+  referenceChoice(): string {
+    if (this.form.referenceType === 'None') return 'None';
+    if (this.form.referenceType === 'Staff' && this.form.referredByStaffId) return `staff:${this.form.referredByStaffId}`;
+    return '';
+  }
+
+  setReference(choice: string): void {
+    if (choice === 'None') { this.form.referenceType = 'None'; this.form.referredByStaffId = null; return; }
+    const id = Number(choice.replace('staff:', ''));
+    this.form.referenceType = id ? 'Staff' : null;
+    this.form.referredByStaffId = id || null;
+  }
+
+  hasReferrer(id: number): boolean {
+    return this.referrers().some(r => r.id === id);
+  }
   takeAdmission = false;
   admissionAmount: number | null = null;
   payMode: PreSchoolPayMode = 'Cash';
@@ -555,7 +599,7 @@ export class PreSchoolStudentComponent implements OnInit {
     if (amount > (r.balance ?? 0)) return this.warn(`Only ${this.money(r.balance ?? 0)} is left to pay on ${r.receiptCode}.`);
     const isLast = (r.payments?.length ?? 1) + 1 >= PRESCHOOL_MAX_INSTALMENTS;
     if (isLast && amount < (r.balance ?? 0)) return this.warn(`This is the last instalment allowed: it must clear the ${this.money(r.balance ?? 0)} left.`);
-    if (this.next.mode !== 'Cash' && !this.next.reference.trim()) return this.warn(`Enter the ${this.next.mode} reference / number.`);
+    if (this.next.mode !== 'Cash' && this.next.mode !== 'Bank' && !this.next.reference.trim()) return this.warn(`Enter the ${this.next.mode} reference / number.`);
 
     this.savingInstalment.set(true);
     this.students.addPayment(r.id, {
@@ -566,6 +610,7 @@ export class PreSchoolStudentComponent implements OnInit {
         this.savingInstalment.set(false);
         this.instalmentFor.set(null);
         this.done(`Instalment received · ${this.money(amount)} · balance ${this.money(receipt.balance ?? 0)}`);
+        this.mailToGuardian(receipt);
         const s = this.student();
         if (s) this.load(s.id);
       },
@@ -597,7 +642,11 @@ export class PreSchoolStudentComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.preschool.overview().subscribe(o => this.classes.set(o.classes));
+    this.preschool.overview().subscribe(o => {
+      this.classes.set(o.classes);
+      this.referralPercent.set(o.settings.referralPercent ?? 5);
+    });
+    this.students.referrers().subscribe(r => this.referrers.set(r));
     const id = Number(this.route.snapshot.paramMap.get('id'));
     if (id) {
       this.isNew.set(false);
@@ -648,7 +697,8 @@ export class PreSchoolStudentComponent implements OnInit {
     this.loadStore(id);
     this.students.get(id).subscribe(s => {
       this.student.set(s);
-      const { id: _id, admissionCode: _a, className: _c, monthlyFee: _m, admissionFee: _f, admissionPaid: _p, months: _ms, receipts: _r, ...editable } = s;
+      const { id: _id, admissionCode: _a, className: _c, monthlyFee: _m, admissionFee: _f, admissionPaid: _p, months: _ms, receipts: _r,
+        referredByName: _rn, ...editable } = s;
       this.form = { ...blankForm(), ...editable };
       this.takeAdmission = !s.admissionPaid && s.admissionFee > 0;
       this.admissionAmount = s.admissionFee || null;
@@ -672,6 +722,7 @@ export class PreSchoolStudentComponent implements OnInit {
     if (!/^\+?[0-9 \-]{10,15}$/.test(f.phone.trim())) return this.warn('Enter a 10-digit phone number.');
     if (!f.address?.trim()) return this.warn('Enter the home address.');
     if (f.status !== 'Active' && !f.endedOn) return this.warn('Give the date the child completed the class or left.');
+    if (this.isNew() && !f.referenceType) return this.warn('Choose who referred the child — a teacher, a receptionist, or No reference.');
     if (f.guardian2Phone?.trim() && !/^\+?[0-9 \-]{10,15}$/.test(f.guardian2Phone.trim())) return this.warn('Enter a 10-digit phone for guardian 2.');
     if (f.guardian2Phone?.trim() && !f.guardian2Name?.trim()) return this.warn('Enter guardian 2\'s name with their phone.');
 
@@ -724,7 +775,7 @@ export class PreSchoolStudentComponent implements OnInit {
 
   collect(s: PreSchoolStudentDetail): void {
     const byCheque = this.payMode === 'Cheque' || this.payMode === 'DD';
-    if (this.payMode !== 'Cash' && !this.reference.trim()) {
+    if (this.payMode !== 'Cash' && this.payMode !== 'Bank' && !this.reference.trim()) {
       return this.warn(byCheque ? `Enter the ${this.payMode} number.` : `Enter the ${this.payMode} reference number.`);
     }
     if (byCheque && !this.chequeDate) return this.warn(`Enter the ${this.payMode} date.`);
@@ -775,6 +826,7 @@ export class PreSchoolStudentComponent implements OnInit {
           : `Received ${this.money(receipt.total)} · ${receipt.receiptCode}`);
         this.byInstalments = false;
         this.paidNow = null;
+        this.mailToGuardian(receipt);
         this.reference = '';
         this.payNote = '';
         this.drawnOn = '';
@@ -812,6 +864,33 @@ export class PreSchoolStudentComponent implements OnInit {
           .finally(() => this.downloading.set(null));
       },
       error: () => this.downloading.set(null)
+    });
+  }
+
+  /* ------------------------------------------------------------ email */
+
+  readonly emailing = signal<number | null>(null);
+
+  /** After money is taken: the receipt goes to the guardian's email, if there is one. */
+  private mailToGuardian(receipt: PreSchoolReceipt): void {
+    if (!this.student()?.email && !this.form.email) return;
+    void emailReceiptToGuardian(this.students, receipt).then(r =>
+      this.messages.add(r.sent
+        ? { severity: 'info', summary: 'Receipt emailed', detail: r.message, life: 3500 }
+        : { severity: 'warn', summary: 'Receipt not emailed', detail: r.message, life: 6000 }));
+  }
+
+  /** The email button under Receipts: send (again) to the guardian. */
+  emailAgain(receiptId: number): void {
+    this.emailing.set(receiptId);
+    this.students.receipt(receiptId).subscribe({
+      next: receipt => void emailReceiptToGuardian(this.students, receipt).then(r => {
+        this.emailing.set(null);
+        this.messages.add(r.sent
+          ? { severity: 'success', summary: 'Receipt emailed', detail: r.message, life: 3500 }
+          : { severity: 'warn', summary: 'Receipt not emailed', detail: r.message, life: 6000 });
+      }),
+      error: () => this.emailing.set(null)
     });
   }
 

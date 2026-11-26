@@ -25,7 +25,7 @@ const monthOf = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { mon
   imports: [DatePipe, FormsModule, ButtonModule],
   template: `
     <section class="app-card pir">
-      <h2>Any dates <small class="app-muted">— income, salaries and expenses between two days, to download</small></h2>
+      <h2>Custom income report · Champahati PreSchool <small class="app-muted">— admission and monthly fees, honorarium and every expense between any two days</small></h2>
       <div class="pir__bar">
         <label>From <input type="date" [(ngModel)]="from" [max]="to" /></label>
         <label>To <input type="date" [(ngModel)]="to" [min]="from" /></label>
@@ -36,7 +36,8 @@ const monthOf = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { mon
       @if (data(); as d) {
         <div class="pir__kpis">
           <div><span>Fees received</span><strong class="pir__green">{{ money(d.income) }}</strong><small>Admission {{ money(d.admissionFees) }} · Monthly {{ money(d.monthlyFees) }} · Other {{ money(d.otherFees ?? 0) }}@if (d.discounts) { · less discounts {{ money(d.discounts) }} }</small></div>
-          <div><span>Salaries paid</span><strong>{{ money(d.salaries) }}</strong><small>{{ d.salaryPayments.length }} payment(s)</small></div>
+          <div><span>Honorarium paid</span><strong>{{ money(d.salaries) }}</strong><small>{{ d.salaryPayments.length }} slip(s) · teachers and staff</small></div>
+          <div><span>Reference fees paid</span><strong>{{ money(d.referrals ?? 0) }}</strong><small>to teachers and receptionists, with their salaries</small></div>
           <div><span>Other expenses</span><strong>{{ money(d.expenses) }}</strong><small>{{ d.expenseEntries.length }} entr{{ d.expenseEntries.length === 1 ? 'y' : 'ies' }}</small></div>
           <div><span>Paid to My Chhota School</span><strong>{{ money(d.purchases ?? 0) }}</strong>
             <small>{{ (d.supplierPayments ?? []).length }} payment(s) · still owed {{ money(d.owedToSupplier ?? 0) }}</small></div>
@@ -69,7 +70,64 @@ const monthOf = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { mon
             @for (x of collectors(d); track x.name) { <span><b>{{ x.name }}</b> {{ money(x.amount) }}</span> }
           </div>
         }
-        <p class="app-muted pir__note">{{ d.receipts.length }} payment(s) in these dates (an instalment counts on the day it was paid). Download the PDF or Excel file for every entry.</p>
+        <details class="pir__detail" open>
+          <summary>Fees received <strong>{{ money(d.income) }}</strong> <small>{{ d.receipts.length }} payment(s) · an instalment counts on the day paid</small></summary>
+          <div class="pir__tbl"><table>
+            <thead><tr><th>Date</th><th>Receipt</th><th>Child</th><th>Class</th><th class="r">Admission</th><th class="r">Monthly</th><th class="r">Other</th><th>Mode</th><th>By</th><th class="r">Amount</th></tr></thead>
+            <tbody>
+              @for (x of d.receipts; track $index) {
+                <tr><td class="nw">{{ x.receivedOn | date: 'd MMM' }}</td><td class="nw">{{ x.receiptCode }}@if ((x.instalmentNo ?? 1) > 1) { <small> · inst. {{ x.instalmentNo }}</small> }</td>
+                  <td>{{ x.childName }} <small>{{ x.admissionCode }}</small></td><td>{{ x.className }}</td>
+                  <td class="r">{{ x.admissionFee ? money(x.admissionFee) : '—' }}</td><td class="r">{{ x.monthlyFees ? money(x.monthlyFees) : '—' }}</td>
+                  <td class="r">{{ (x.otherFees ?? 0) - (x.discount ?? 0) ? money((x.otherFees ?? 0) - (x.discount ?? 0)) : '—' }}</td>
+                  <td>{{ x.mode }}</td><td>{{ x.collectedBy || '—' }}</td><td class="r"><strong>{{ money(x.total) }}</strong></td></tr>
+              } @empty { <tr><td colspan="10" class="app-muted">No fees received.</td></tr> }
+            </tbody>
+            @if (d.receipts.length) {
+              <tfoot><tr><td colspan="4">Total</td><td class="r">{{ money(d.admissionFees) }}</td><td class="r">{{ money(d.monthlyFees) }}</td>
+                <td class="r">{{ money((d.otherFees ?? 0) - (d.discounts ?? 0)) }}</td><td colspan="2"></td><td class="r">{{ money(d.income) }}</td></tr></tfoot>
+            }
+          </table></div>
+        </details>
+        <details class="pir__detail">
+          <summary>Honorarium paid <strong>{{ money(d.salaries + (d.referrals ?? 0)) }}</strong> <small>teachers, receptionist and staff, with reference fees</small></summary>
+          <div class="pir__tbl"><table>
+            <thead><tr><th>Paid on</th><th>Name</th><th>Role</th><th>For month</th><th>Mode</th><th class="r">Reference fees</th><th class="r">Paid</th></tr></thead>
+            <tbody>
+              @for (s of d.salaryPayments; track $index) {
+                <tr><td class="nw">{{ s.paidOn | date: 'd MMM' }}</td><td>{{ s.staffName }}</td><td>{{ s.role }}</td><td>{{ s.forMonth | date: 'MMM y' }}</td>
+                  <td>{{ s.mode }}</td><td class="r">{{ s.referralBonus ? money(s.referralBonus) : '—' }}</td><td class="r"><strong>{{ money(s.amount) }}</strong></td></tr>
+              } @empty { <tr><td colspan="7" class="app-muted">No honorarium paid.</td></tr> }
+            </tbody>
+          </table></div>
+        </details>
+        <details class="pir__detail">
+          <summary>Expenses <strong>{{ money(d.expenses) }}</strong> <small>{{ d.expenseEntries.length }} entr{{ d.expenseEntries.length === 1 ? 'y' : 'ies' }}</small></summary>
+          <div class="pir__tbl"><table>
+            <thead><tr><th>Date</th><th>Head</th><th>Details</th><th>Mode</th><th class="r">Amount</th></tr></thead>
+            <tbody>
+              @for (x of d.expenseEntries; track x.id) {
+                <tr><td class="nw">{{ x.spentOn | date: 'd MMM' }}</td><td>{{ x.head }}</td><td>{{ x.description || '—' }}</td><td>{{ x.mode }}</td>
+                  <td class="r"><strong>{{ money(x.amount) }}</strong></td></tr>
+              } @empty { <tr><td colspan="5" class="app-muted">No expenses.</td></tr> }
+            </tbody>
+          </table></div>
+        </details>
+        @if ((d.supplierPayments ?? []).length) {
+          <details class="pir__detail">
+            <summary>Paid to My Chhota School <strong>{{ money(d.purchases ?? 0) }}</strong> <small>kit, garments and prospectus stock</small></summary>
+            <div class="pir__tbl"><table>
+              <thead><tr><th>Date</th><th>Mode</th><th>Reference</th><th>Note</th><th class="r">Amount</th></tr></thead>
+              <tbody>
+                @for (p of d.supplierPayments ?? []; track p.id) {
+                  <tr><td class="nw">{{ p.paidOn | date: 'd MMM' }}</td><td>{{ p.mode }}</td><td>{{ p.reference || '—' }}</td><td>{{ p.note || '—' }}</td>
+                    <td class="r"><strong>{{ money(p.amount) }}</strong></td></tr>
+                }
+              </tbody>
+            </table></div>
+          </details>
+        }
+        <p class="app-muted pir__note">Champahati PreSchool only — the Computer Centre's money is not in this report. Download the PDF or Excel file for every entry.</p>
       }
     </section>
   `,
@@ -87,6 +145,18 @@ const monthOf = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { mon
     .pir__green { color: #2b7a2b; }
     .pir__red { color: #b42318; }
     .pir__note { margin: 0.6rem 0 0; font-size: 0.82rem; }
+    .pir__detail { margin-top: 0.8rem; border: 1px solid var(--app-border); border-radius: 10px; }
+    .pir__detail summary { padding: 0.6rem 0.8rem; cursor: pointer; font-weight: 700; font-size: 0.9rem; }
+    .pir__detail summary strong { margin-left: 0.4rem; color: #1f2430; }
+    .pir__detail summary small { margin-left: 0.4rem; font-weight: 500; color: var(--app-text-muted); }
+    .pir__tbl { overflow-x: auto; }
+    .pir__tbl table { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 0.84rem; }
+    .pir__tbl th, .pir__tbl td { padding: 0.4rem 0.6rem; border-top: 1px solid var(--app-border); text-align: left; }
+    .pir__tbl th { font-size: 0.68rem; text-transform: uppercase; color: var(--app-text-muted); background: #f8f7fc; white-space: nowrap; }
+    .pir__tbl tfoot td { font-weight: 700; background: #faf9fc; }
+    .pir__tbl small { color: var(--app-text-muted); }
+    .pir__tbl .r { text-align: right; white-space: nowrap; }
+    .pir__tbl .nw { white-space: nowrap; }
     .pir__who { margin-top: 0.9rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
     .pir__who h3 { margin: 0 0.4rem 0 0; font-size: 0.9rem; }
     .pir__who span { padding: 0.25rem 0.7rem; border-radius: 999px; background: #f5f3ff; font-size: 0.85rem; }
@@ -132,14 +202,14 @@ export class PreSchoolIncomeRangeComponent {
     downloadCsv(`Avijan-PreSchool-income-${d.from}-to-${d.to}`, [
       { title: `Avijan PreSchool — Income report — ${this.title}`, header: ['', 'Amount'], rows: [
         ['Admission fees', d.admissionFees], ['Monthly fees', d.monthlyFees], ['Other fees', d.otherFees ?? 0], ['Less discounts and offers', -(d.discounts ?? 0)], ['Fees received', d.income],
-        ['Salaries paid', d.salaries], ['Other expenses', d.expenses], ['Paid to My Chhota School', d.purchases ?? 0], ['Net', d.net],
+        ['Honorarium paid', d.salaries], ['Reference fees paid (with honorarium)', d.referrals ?? 0], ['Other expenses', d.expenses], ['Paid to My Chhota School', d.purchases ?? 0], ['Net', d.net],
         ['Stock received from My Chhota School (at price)', d.stockReceived ?? 0], ['Still owed to My Chhota School on the last day', d.owedToSupplier ?? 0]] },
       { title: 'Fees received', header: ['Date', 'Receipt', 'Instalment', 'Child', 'Class', 'Mode', 'Collected by', 'Admission', 'Monthly', 'Other', 'Discount', 'Received', 'Receipt total'],
         rows: d.receipts.map(r => [r.receivedOn, r.receiptCode, r.instalmentNo ?? 1, r.childName, r.className, r.mode, r.collectedBy ?? '',
           r.admissionFee, r.monthlyFees, r.otherFees ?? 0, -(r.discount ?? 0), r.total, r.billTotal ?? r.total]) },
       { title: 'Fees collected by', header: ['Login', 'Amount'],
         rows: this.collectors(d).map(x => [x.name, x.amount]) },
-      { title: 'Salaries paid', header: ['Date paid', 'Staff', 'Role', 'For month', 'Mode', 'Amount'],
+      { title: 'Honorarium paid', header: ['Date paid', 'Staff', 'Role', 'For month', 'Mode', 'Amount'],
         rows: d.salaryPayments.map(s => [s.paidOn, s.staffName, s.role, monthOf(s.forMonth), s.mode, s.amount]) },
       { title: 'Other expenses', header: ['Date', 'Head', 'Description', 'Mode', 'Amount'],
         rows: d.expenseEntries.map(x => [x.spentOn, x.head, x.description, x.mode, x.amount]) },
@@ -165,10 +235,11 @@ export class PreSchoolIncomeRangeComponent {
       table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{border-bottom:1px solid #e4e6ef;padding:6px 5px;text-align:left}
       th{font-size:11px;text-transform:uppercase;color:#6b7088}.r{text-align:right}.sum td{font-weight:700}
       button{margin-top:16px;padding:8px 18px;border:0;border-radius:999px;background:#6d28d9;color:#fff;font-weight:600}@media print{button{display:none}}</style></head>
-      <body><h1>Avijan PreSchool — Income report</h1><p>${e(this.title)} · cancelled receipts are left out.</p>
+      <body><h1>Avijan PreSchool, Champahati — Income report</h1><p>${e(this.title)} · cancelled receipts are left out.</p>
       <table class="sum"><tbody>
         <tr><td>Fees received (admission ${e(m(d.admissionFees))}, monthly ${e(m(d.monthlyFees))}, other ${e(m(d.otherFees ?? 0))}, less discounts ${e(m(d.discounts ?? 0))})</td><td class="r">${e(m(d.income))}</td></tr>
-        <tr><td>Salaries paid</td><td class="r">${e(m(d.salaries))}</td></tr><tr><td>Other expenses</td><td class="r">${e(m(d.expenses))}</td></tr>
+        <tr><td>Honorarium paid</td><td class="r">${e(m(d.salaries))}</td></tr>
+        <tr><td>Reference fees paid (with honorarium)</td><td class="r">${e(m(d.referrals ?? 0))}</td></tr><tr><td>Other expenses</td><td class="r">${e(m(d.expenses))}</td></tr>
         <tr><td>Paid to My Chhota School</td><td class="r">${e(m(d.purchases ?? 0))}</td></tr>
         <tr><td>Net</td><td class="r">${e(m(d.net))}</td></tr></tbody></table>
       <p>Still owed to My Chhota School on ${e(fmt(d.to))}: <strong>${e(m(d.owedToSupplier ?? 0))}</strong>.</p>
@@ -176,7 +247,7 @@ export class PreSchoolIncomeRangeComponent {
         d.receipts.map(r => [e(fmt(r.receivedOn)), `${e(r.receiptCode)}${(r.instalmentNo ?? 1) > 1 || (r.billTotal ?? r.total) !== r.total ? ` <small>(instalment ${r.instalmentNo ?? 1})</small>` : ''}`,
           e(r.childName), e(r.className), e(r.mode), e(r.collectedBy ?? ''), e(m(r.total))]), [6])}
       <h2>Fees collected by</h2>${table(['Login', 'Amount'], this.collectors(d).map(x => [e(x.name), e(m(x.amount))]), [1])}
-      <h2>Salaries paid</h2>${table(['Date', 'Staff', 'For month', 'Mode', 'Amount'],
+      <h2>Honorarium paid</h2>${table(['Date', 'Staff', 'For month', 'Mode', 'Amount'],
         d.salaryPayments.map(s => [e(fmt(s.paidOn)), `${e(s.staffName)} <small>(${e(s.role)})</small>`, e(monthOf(s.forMonth)), e(s.mode), e(m(s.amount))]), [4])}
       <h2>Other expenses</h2>${table(['Date', 'Head', 'Mode', 'Amount'],
         d.expenseEntries.map(x => [e(fmt(x.spentOn)), `${e(x.head)}${x.description ? ` <small>— ${e(x.description)}</small>` : ''}`, e(x.mode), e(m(x.amount))]), [3])}

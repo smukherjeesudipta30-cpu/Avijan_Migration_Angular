@@ -60,6 +60,8 @@ export interface PreSchoolSettings {
   latitude?: number | null;
   longitude?: number | null;
   geofenceMetres?: number;
+  /** The referring teacher's or receptionist's share of each admission payment, in percent. */
+  referralPercent?: number;
   modifiedBy: string | null;
   modifiedOn: string | null;
 }

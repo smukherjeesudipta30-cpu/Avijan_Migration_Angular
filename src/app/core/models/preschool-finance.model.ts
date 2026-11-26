@@ -45,6 +45,47 @@ export interface PreSchoolSalaryPayment {
   paidBy?: string | null;
   schoolName: string;
   schoolAddress?: string | null;
+  /** Reference fees paid with this salary (included in netPaid). */
+  referralBonus?: number;
+}
+
+/** One reference fee: the referrer's share of one payment on a child's admission receipt. */
+export interface PreSchoolReferralCredit {
+  id: number;
+  creditedOn: string;
+  childName: string;
+  admissionCode: string;
+  receiptCode: string;
+  instalmentNo: number;
+  paymentAmount: number;
+  percent: number;
+  amount: number;
+  staffName: string;
+  /** The salary month it was paid with; null while still to be paid. */
+  paidWithSalaryFor?: string | null;
+}
+
+export interface PreSchoolMyReferrals {
+  pending: number;
+  paidOut: number;
+  credits: PreSchoolReferralCredit[];
+}
+
+/** Every payment received between two dates, with the totals by mode, collector, class and day. */
+export interface PreSchoolCollectionReport {
+  from: string;
+  to: string;
+  total: number;
+  payments: number;
+  rows: PreSchoolIncomeReceiptLine[];
+  byMode: Record<string, number>;
+  byCollector: Record<string, number>;
+  byClass: Record<string, number>;
+  byDay: Record<string, number>;
+  admissionFees: number;
+  monthlyFees: number;
+  otherFees: number;
+  discounts: number;
 }
 
 export interface PreSchoolSalaryRow {
@@ -53,6 +94,8 @@ export interface PreSchoolSalaryRow {
   role: PreSchoolStaffRole;
   monthlySalary: number;
   payment?: PreSchoolSalaryPayment | null;
+  /** Reference fees earned and not yet paid: added when this salary is paid. */
+  pendingReferral?: number;
 }
 
 export interface PreSchoolSalarySheet {
@@ -107,6 +150,8 @@ export interface PreSchoolIncomeMonth {
   purchases?: number;
   /** Discounts and special offers given on receipts (already taken off income). */
   discounts?: number;
+  /** Reference fees paid to teachers and receptionists with their salaries (not in salaries). */
+  referrals?: number;
   net: number;
 }
 
@@ -122,6 +167,8 @@ export interface PreSchoolIncomeReport {
   purchases?: number;
   /** Fees received, by the login that collected them. */
   incomeByCollector?: Record<string, number> | null;
+  /** Reference fees paid to teachers and receptionists with their salaries (not in salaries). */
+  referrals?: number;
 }
 
 /** Suggested expense heads; any other can be typed. Salaries are not here: they come from the salary sheet. */
@@ -163,6 +210,14 @@ export interface PreSchoolIncomeReceiptLine {
   instalmentNo?: number;
   /** The whole receipt, of which this payment is a part. */
   billTotal?: number;
+  /** The child's admission details. */
+  admissionCode?: string | null;
+  parentName?: string | null;
+  phone?: string | null;
+  joinedOn?: string | null;
+  section?: string | null;
+  reference?: string | null;
+  studentId?: number;
 }
 
 export interface PreSchoolIncomeSalaryLine {
@@ -172,6 +227,8 @@ export interface PreSchoolIncomeSalaryLine {
   forMonth: string;
   mode: string;
   amount: number;
+  /** Of amount, the reference fees paid with it. */
+  referralBonus?: number;
 }
 
 /** The PreSchool's money between any two dates, with every entry behind it. */
@@ -193,6 +250,8 @@ export interface PreSchoolIncomeRange {
   expensesByHead: Record<string, number>;
   /** Every payment received (a whole receipt or one instalment), with who collected it. */
   receipts: PreSchoolIncomeReceiptLine[];
+  /** Reference fees paid to teachers and receptionists with their salaries (not in salaries). */
+  referrals?: number;
   /** Fees received, by the login that collected them. */
   incomeByCollector?: Record<string, number> | null;
   purchaseEntries?: PreSchoolIncomePurchaseLine[];
@@ -227,4 +286,32 @@ export interface PreSchoolStoreMargin {
   margin: number;
   bought: number;
   given: number;
+}
+
+/** One person's honorarium over the report's dates. */
+export interface PreSchoolHonorariumStaff {
+  staffId: number;
+  name: string;
+  role: string;
+  payments: number;
+  honorarium: number;
+  deduction: number;
+  referenceFees: number;
+  netPaid: number;
+  /** Reference fees earned in the dates, paid or still to come. */
+  referenceEarned: number;
+}
+
+/** Honorarium paid to the PreSchool's staff, by month (1st to last day) or by the date paid. */
+export interface PreSchoolHonorariumReport {
+  from: string;
+  to: string;
+  basis: 'month' | 'paid';
+  honorarium: number;
+  deduction: number;
+  referenceFees: number;
+  netPaid: number;
+  byStaff: PreSchoolHonorariumStaff[];
+  payments: PreSchoolSalaryPayment[];
+  referenceCredits: PreSchoolReferralCredit[];
 }

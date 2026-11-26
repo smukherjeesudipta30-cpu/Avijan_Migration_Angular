@@ -66,7 +66,7 @@ function shiftMonth(iso: string, n: number): string {
               <span>{{ p.daysAbsent }}</span>
               <span>{{ p.deduction ? money(p.deduction) : '—' }}</span>
               <span>{{ p.mode }}</span>
-              <span class="r"><strong>{{ money(p.netPaid) }}</strong><small>paid {{ p.paidOn | date: 'd MMM' }}</small></span>
+              <span class="r"><strong>{{ money(p.netPaid) }}</strong><small>paid {{ p.paidOn | date: 'd MMM' }}@if (p.referralBonus) { · incl. {{ money(p.referralBonus) }} reference }</small></span>
               <span class="pst-actions">
                 <p-button icon="pi pi-print" [text]="true" [rounded]="true" ariaLabel="Print salary slip" (onClick)="slip(p)" />
                 <p-button icon="pi pi-undo" [text]="true" [rounded]="true" severity="danger" ariaLabel="Remove payment" (onClick)="unpay(p)" />
@@ -82,7 +82,8 @@ function shiftMonth(iso: string, n: number): string {
                 <select [(ngModel)]="draft(r).mode" aria-label="Payment mode"><option>Cash</option><option>Bank</option><option>UPI</option></select>
                 @if (draft(r).mode !== 'Cash') { <input pInputText [(ngModel)]="draft(r).reference" placeholder="Ref." maxlength="60" aria-label="Reference" /> }
               </span>
-              <span class="r"><strong>{{ money(r.monthlySalary - (+draft(r).deduction || 0)) }}</strong></span>
+              <span class="r"><strong>{{ money(r.monthlySalary - (+draft(r).deduction || 0) + (r.pendingReferral ?? 0)) }}</strong>
+                @if (r.pendingReferral) { <small class="pst-ref">incl. {{ money(r.pendingReferral) }} reference fees</small> }</span>
               <span class="pst-actions"><p-button label="Pay" size="small" [loading]="paying() === r.staffId" (onClick)="pay(r)" /></span>
             </div>
           }
@@ -135,6 +136,7 @@ function shiftMonth(iso: string, n: number): string {
     .pst-month h2 { margin: 0; }
     .pst-sum { margin-left: auto; font-size: 0.9rem; }
     .pst-red { color: #b42318; }
+    .pst-ref { display: block; color: #2b7a2b; font-size: 0.72rem; }
     .pst-row { display: grid; grid-template-columns: 1.4fr 0.8fr 0.8fr 0.9fr 1.3fr 0.9fr 5rem; gap: 0.5rem; align-items: center;
       padding: 0.55rem 0; border-bottom: 1px solid var(--app-border); }
     .pst-row span { min-width: 0; }

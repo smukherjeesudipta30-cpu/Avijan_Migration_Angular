@@ -338,6 +338,13 @@ const RECEIPT_CSS = `
     font-size: 14px; font-style: italic; color: #333; }
   .void { position: absolute; left: 50%; top: 52%; transform: translate(-50%, -50%) rotate(-18deg); font: 900 84px Arial, sans-serif;
     color: rgba(180, 35, 24, .2); border: 7px solid rgba(180, 35, 24, .2); padding: 2px 26px; border-radius: 14px; }
+  /* Black and white only: the same layout, with no colour anywhere (the parent copy is no longer pink). */
+  .card, .card.parent { background: #fff; color: #000; }
+  .card.parent { outline: 1px solid #333; }
+  .head { filter: grayscale(1) contrast(1.2); }
+  .fv, .fees td.rs, .fees td.p, .fees tr.less td.rs, .fees tr.less td.p, .inst tr.paid td { color: #000; }
+  .fees td.t small { color: #222; }
+  .void { color: rgba(0, 0, 0, .18); border-color: rgba(0, 0, 0, .18); }
 `;
 
 /**

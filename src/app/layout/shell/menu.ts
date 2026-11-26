@@ -118,13 +118,14 @@ export const MENU: MenuSection[] = [
       // The admin puts the code on screen; the receptionist and teachers mark in and out.
       { label: 'Attendance', icon: 'pi pi-qrcode', route: '/preschool/attendance', roles: ['PreSchoolHead', 'PreSchoolFrontDesk', 'PreSchoolTutor'] },
       { label: 'Students & Fees', icon: 'pi pi-users', route: '/preschool/students', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] },
+      { label: 'Monthly Fees', icon: 'pi pi-wallet', route: '/preschool/fees/monthly', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] },
       { label: 'Classes & Fees', icon: 'pi pi-book', route: '/preschool/classes', roles: ['PreSchoolHead', 'PreSchoolFrontDesk', 'PreSchoolTutor'] },
       { label: 'Marks', icon: 'pi pi-check-square', route: '/preschool/marks', roles: ['PreSchoolHead', 'PreSchoolFrontDesk', 'PreSchoolTutor'] },
       { label: 'Admission Enquiries', icon: 'pi pi-comments', route: '/preschool/enquiries', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] },
       { label: 'Store', icon: 'pi pi-box', route: '/preschool/store', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] },
       { label: 'Holiday Notices', icon: 'pi pi-calendar', route: '/preschool/holidays', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] },
       // The receptionist's and teachers' own salary slips (the admin pays them under Accounts).
-      { label: 'My Payslips', icon: 'pi pi-wallet', route: '/preschool/my-payslips', roles: ['PreSchoolFrontDesk', 'PreSchoolTutor'] },
+      { label: 'My Honorarium', icon: 'pi pi-wallet', route: '/preschool/my-payslips', roles: ['PreSchoolFrontDesk', 'PreSchoolTutor'] },
       { label: 'School Settings', icon: 'pi pi-cog', route: '/preschool/settings', roles: ['PreSchoolHead'] }
     ]
   },
@@ -135,6 +136,7 @@ export const MENU: MenuSection[] = [
       { label: 'Staff & Salary', icon: 'pi pi-id-card', route: '/preschool/staff', roles: ['PreSchoolHead'] },
       { label: 'Expenses', icon: 'pi pi-minus-circle', route: '/preschool/expenses', roles: ['PreSchoolHead'] },
       { label: 'Expense Report', icon: 'pi pi-chart-bar', route: '/preschool/reports/expenses', roles: ['PreSchoolHead'] },
+      { label: 'Honorarium Report', icon: 'pi pi-id-card', route: '/preschool/reports/honorarium', roles: ['PreSchoolHead'] },
       { label: 'Income Report', icon: 'pi pi-chart-line', route: '/preschool/reports/income', roles: ['PreSchoolHead'] }
     ]
   },
@@ -143,7 +145,8 @@ export const MENU: MenuSection[] = [
     school: 'preschool',
     items: [
       { label: 'Pending Fees', icon: 'pi pi-exclamation-circle', route: '/preschool/reports/pending-fees', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] },
-      { label: 'Admissions by Month', icon: 'pi pi-user-plus', route: '/preschool/reports/admissions', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] },
+      { label: 'Fee Collection', icon: 'pi pi-money-bill', route: '/preschool/reports/collections', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] },
+      { label: 'Admission Report', icon: 'pi pi-user-plus', route: '/preschool/reports/admissions', roles: ['PreSchoolHead', 'PreSchoolFrontDesk'] },
       { label: 'Staff Attendance', icon: 'pi pi-clock', route: '/preschool/reports/attendance', roles: ['PreSchoolHead'] }
     ]
   },

@@ -40,7 +40,8 @@ import { PreSchoolIncomeRangeComponent } from './preschool-income-range.componen
     @if (report(); as r) {
       <div class="pin-kpis">
         <div><span>Fees received</span><strong class="pin-green">{{ money(r.income) }}</strong></div>
-        <div><span>Salaries paid</span><strong>{{ money(r.salaries) }}</strong></div>
+        <div><span>Honorarium paid</span><strong>{{ money(r.salaries) }}</strong></div>
+        <div><span>Reference fees paid</span><strong>{{ money(r.referrals ?? 0) }}</strong></div>
         <div><span>Other expenses</span><strong>{{ money(r.expenses) }}</strong></div>
         <div><span>Paid to My Chhota School</span><strong>{{ money(r.purchases ?? 0) }}</strong></div>
         <div><span>Net {{ r.net < 0 ? 'loss' : 'profit' }}</span><strong [class.pin-red]="r.net < 0" [class.pin-green]="r.net >= 0">{{ money(r.net) }}</strong></div>
@@ -52,7 +53,7 @@ import { PreSchoolIncomeRangeComponent } from './preschool-income-range.componen
       </div>
 
       <div class="app-card pin-table">
-        <div class="pin-row pin-row--head"><span>Month</span><span class="r">Admission</span><span class="r">Monthly fees</span><span class="r">Other fees</span><span class="r">Less discounts</span><span class="r">Income</span><span class="r">Salaries</span><span class="r">Expenses</span><span class="r">Paid to MCS</span><span class="r">Net</span></div>
+        <div class="pin-row pin-row--head"><span>Month</span><span class="r">Admission</span><span class="r">Monthly fees</span><span class="r">Other fees</span><span class="r">Less discounts</span><span class="r">Income</span><span class="r">Honorarium</span><span class="r">Expenses</span><span class="r">Paid to MCS</span><span class="r">Net</span></div>
         @for (m of r.months; track m.month) {
           <div class="pin-row" [class.pin-row--empty]="!m.income && !m.salaries && !m.expenses && !m.purchases">
             <span>{{ label(m.month) }}</span>
@@ -136,7 +137,7 @@ export class PreSchoolIncomeComponent implements OnInit {
         { type: 'bar', label: 'Admission fees', data: months.map(m => m.admissionFees), backgroundColor: '#7c3aed', stack: 'in', order: 1 },
         { type: 'bar', label: 'Monthly fees', data: months.map(m => m.monthlyFees), backgroundColor: '#2b9a4b', stack: 'in', order: 1 },
         { type: 'bar', label: 'Other fees', data: months.map(m => m.otherFees ?? 0), backgroundColor: '#0ea5e9', stack: 'in', order: 1 },
-        { type: 'bar', label: 'Salaries', data: months.map(m => m.salaries), backgroundColor: '#f59e0b', stack: 'out', order: 1 },
+        { type: 'bar', label: 'Honorarium', data: months.map(m => m.salaries), backgroundColor: '#f59e0b', stack: 'out', order: 1 },
         { type: 'bar', label: 'Other expenses', data: months.map(m => m.expenses), backgroundColor: '#94a3b8', stack: 'out', order: 1 },
         { type: 'bar', label: 'Paid to My Chhota School', data: months.map(m => m.purchases ?? 0), backgroundColor: '#e8590c', stack: 'out', order: 1 }
       ]

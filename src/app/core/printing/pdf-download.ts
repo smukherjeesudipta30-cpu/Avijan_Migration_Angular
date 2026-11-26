@@ -192,3 +192,24 @@ export function saveAdmitCardPdf(card: AdmitCard): Promise<void> {
   return downloadDocumentPdf(
     admitCardHtml(card), pdfFileName('AdmitCard', card.registrationId, card.courseName), { width: 900 });
 }
+
+/**
+ * The same page-sized PDF as downloadSizedPdf, returned as base64 instead of
+ * saved — for emailing a receipt to a parent. Drawn at 2× to keep the file small.
+ */
+export async function sizedPdfBase64(
+  html: string,
+  options: { width: number; format: 'a4' | 'a5'; landscape?: boolean }
+): Promise<string> {
+  const { jsPDF } = await import('jspdf');
+  const orientation = options.landscape ? 'landscape' : 'portrait';
+  const pdf = new jsPDF({ orientation, unit: 'mm', format: options.format });
+  const flat = html.replace('</style>', '.sheet{margin:0!important;box-shadow:none!important}</style>');
+  const canvas = await renderToCanvas(flat, options.width, 2);
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const ratio = Math.min(pageW / canvas.width, pageH / canvas.height);
+  pdf.addImage(canvas.toDataURL('image/jpeg', 0.88), 'JPEG',
+    (pageW - canvas.width * ratio) / 2, (pageH - canvas.height * ratio) / 2, canvas.width * ratio, canvas.height * ratio);
+  return pdf.output('datauristring').split(',')[1];
+}
