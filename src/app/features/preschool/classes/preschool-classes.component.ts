@@ -125,6 +125,10 @@ const toMonths = (years: number | null | string) =>
                 <h2>Fee Receipt charges</h2>
                 <strong>Part I + II: {{ money(ratesTotal()) }}</strong>
               </div>
+              @if (selected(); as c) {
+                <p class="psc__package">Admission package: admission fee {{ money(c.admissionFee) }} + first month's tuition {{ money(monthlyTotal()) }}
+                  + these charges {{ money(ratesTotal()) }} = <strong>{{ money(c.admissionFee + monthlyTotal() + ratesTotal()) }}</strong></p>
+              }
               <p class="app-muted psc__note">The usual amount for each line of the Fee Receipt in this class. They are filled in when fees are
                 collected and can still be changed on any one receipt. Leave 0 for a line that does not apply. Admission fee and the monthly tuition are set above.</p>
               @for (part of [1, 2]; track part) {
@@ -185,6 +189,7 @@ const toMonths = (years: number | null | string) =>
     .psc__pick--off span { text-decoration: line-through; opacity: 0.6; }
     .psc__detail { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
     .psc__note { margin: -0.25rem 0 0.5rem; font-size: 0.85rem; }
+    .psc__package { margin: 0 0 0.6rem; padding: 0.5rem 0.75rem; border-radius: 8px; background: #fff7e6; font-size: 0.85rem; }
     .psc__part { margin: 0.6rem 0 0.35rem; font-weight: 700; font-size: 0.8rem; color: #4c1d95; }
     .psc__rates { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 0.65rem 0.9rem; margin-bottom: 0.6rem; }
     .psc__rates label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.82rem; font-weight: 600; }
@@ -224,6 +229,11 @@ export class PreSchoolClassesComponent implements OnInit {
   readonly chargeHeads = PRESCHOOL_CHARGE_HEADS;
   readonly savingRates = signal(false);
   rates: Record<string, number | null> = {};
+
+  /** The class's monthly tuition: its active fee heads. */
+  monthlyTotal(): number {
+    return (this.selected()?.feeHeads ?? []).filter(f => f.isActive).reduce((t, f) => t + f.monthlyAmount, 0);
+  }
 
   ratesTotal(): number {
     return Object.values(this.rates).reduce<number>((t, v) => t + (Number(v) || 0), 0);

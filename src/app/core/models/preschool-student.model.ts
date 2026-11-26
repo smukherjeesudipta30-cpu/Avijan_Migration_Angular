@@ -3,19 +3,37 @@
 export type PreSchoolStatus = 'Active' | 'Completed' | 'Left';
 export type PreSchoolPayMode = 'Cash' | 'UPI' | 'Paytm' | 'Cheque' | 'DD';
 
-/** The Fee Receipt's other rows, in the printed order (Part I: first four; Part II: the rest). */
+/**
+ * The Fee Receipt's other rows, in the printed order (Part I: first four; Part II: the rest).
+ * Winter Garments, Development, Session and Additional Educational Materials have no row
+ * of their own on the printed receipt: they print in its "Others" row.
+ */
 export const PRESCHOOL_CHARGE_HEADS = [
   { head: 'Registration', label: 'Registration Fee', part: 1 },
   { head: 'Annual', label: 'Annual Charges', part: 1 },
-  { head: 'Activities', label: 'Activities Fee', part: 1 },
+  { head: 'Activities', label: 'Academic & Activity Charges', part: 1 },
   { head: 'LateFee', label: 'Late Fee/ Others', part: 1 },
-  { head: 'Prospectus', label: 'Prospectus', part: 2 },
-  { head: 'AdmissionKit', label: 'Admission Kit', part: 2 },
+  { head: 'Prospectus', label: 'Admission Prospectus', part: 2 },
+  { head: 'AdmissionKit', label: 'School Kit & Uniform (Admission Kit)', part: 2 },
   { head: 'Food', label: 'Food Charges', part: 2 },
   { head: 'Transport', label: 'Transport Charges', part: 2 },
   { head: 'WinterGarments', label: 'Winter Garments', part: 2 },
+  { head: 'Development', label: 'Development Charges', part: 2 },
+  { head: 'Session', label: 'Session Charges', part: 2 },
+  { head: 'Materials', label: 'Additional Educational Materials', part: 2 },
   { head: 'Others', label: 'Others', part: 2 }
 ] as const;
+
+/** Heads printed inside the receipt's "Others (if any)" row, with the words printed there. */
+export const PRESCHOOL_OTHERS_ROW: Partial<Record<string, string>> = {
+  WinterGarments: 'Winter Garments',
+  Development: 'Development',
+  Session: 'Session',
+  Materials: 'Edu. Materials'
+};
+
+/** An admission package may be paid in at most this many instalments. */
+export const PRESCHOOL_MAX_INSTALMENTS = 4;
 export type PreSchoolChargeHead = typeof PRESCHOOL_CHARGE_HEADS[number]['head'];
 
 export interface PreSchoolCharge {
@@ -38,6 +56,9 @@ export interface PreSchoolStudentListItem {
   monthsDue: number;
   admissionDue: number;
   amountDue: number;
+  section?: string | null;
+  /** Still to come on receipts being paid in instalments (included in amountDue). */
+  instalmentDue?: number;
 }
 
 export interface PreSchoolMonth {
@@ -55,6 +76,29 @@ export interface PreSchoolReceiptSummary {
   mode: PreSchoolPayMode;
   isCancelled: boolean;
   summary: string;
+  paid?: number;
+  balance?: number;
+  payments?: PreSchoolPayment[] | null;
+}
+
+/** One payment (instalment) against a receipt, with the login that collected it. */
+export interface PreSchoolPayment {
+  id: number;
+  instalmentNo: number;
+  paidOn: string;
+  amount: number;
+  mode: PreSchoolPayMode;
+  reference?: string | null;
+  notes?: string | null;
+  collectedBy?: string | null;
+}
+
+export interface PreSchoolPaymentSave {
+  amount: number;
+  paidOn: string | null;
+  mode: PreSchoolPayMode;
+  reference: string | null;
+  notes: string | null;
 }
 
 export interface PreSchoolStudentSave {
@@ -121,6 +165,8 @@ export interface PreSchoolCollect {
   offerNote?: string | null;
   receivedOn: string | null;
   notes: string | null;
+  /** Paying in instalments: the first instalment received now. Left out when paid in full. */
+  paidNow?: number | null;
 }
 
 export interface PreSchoolReceiptLine {
@@ -158,6 +204,11 @@ export interface PreSchoolReceipt {
   address?: string | null;
   chequeDate?: string | null;
   drawnOn?: string | null;
+  /** Received so far, still to come, and each instalment. */
+  paid?: number;
+  balance?: number;
+  paidInWords?: string | null;
+  payments?: PreSchoolPayment[] | null;
 }
 
 export interface PreSchoolPendingRow {
@@ -171,6 +222,8 @@ export interface PreSchoolPendingRow {
   monthlyFee: number;
   admissionDue: number;
   amount: number;
+  /** Still to come on receipts being paid in instalments (included in amount). */
+  instalmentDue?: number;
 }
 
 export interface PreSchoolPendingReport {
@@ -190,6 +243,12 @@ export interface PreSchoolAdmissionRow {
   joinedOn: string;
   status: PreSchoolStatus;
   admissionFeeReceived: number;
+  section?: string | null;
+  dateOfBirth?: string | null;
+  /** The admission receipt: billed, received so far, still to come. */
+  billed?: number;
+  paid?: number;
+  balance?: number;
 }
 
 export interface PreSchoolAdmissionMonth {
@@ -205,6 +264,12 @@ export interface PreSchoolAdmissionReport {
   total: number;
   admissionFees: number;
   months: PreSchoolAdmissionMonth[];
+  from?: string | null;
+  to?: string | null;
+  billed?: number;
+  paid?: number;
+  balance?: number;
+  byClass?: Record<string, number> | null;
 }
 
 /** "Nov 2026" from "2026-11-01". */

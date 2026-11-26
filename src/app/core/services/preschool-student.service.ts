@@ -5,7 +5,7 @@ import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
 import {
-  PreSchoolAdmissionReport, PreSchoolCollect, PreSchoolPendingReport, PreSchoolReceipt, PreSchoolStudentDetail,
+  PreSchoolAdmissionReport, PreSchoolCollect, PreSchoolPaymentSave, PreSchoolPendingReport, PreSchoolReceipt, PreSchoolStudentDetail,
   PreSchoolPhotoSlot, PreSchoolStudentListItem, PreSchoolStudentPhotos, PreSchoolStudentSave
 } from '../models/preschool-student.model';
 
@@ -62,8 +62,14 @@ export class PreSchoolStudentService {
     return this.http.get<ApiResponse<PreSchoolPendingReport>>(`${this.base}/reports/pending-fees`, { params }).pipe(map(r => r.data));
   }
 
-  admissions(year: number, classId: number | null): Observable<PreSchoolAdmissionReport> {
-    const params: Record<string, string> = { year: String(year) };
+  /** A further instalment against a receipt being paid in parts. */
+  addPayment(receiptId: number, body: PreSchoolPaymentSave): Observable<PreSchoolReceipt> {
+    return this.http.post<ApiResponse<PreSchoolReceipt>>(`${this.base}/receipts/${receiptId}/payments`, body).pipe(map(r => r.data));
+  }
+
+  /** Admissions between two dates ("yyyy-MM-dd"), by joining date. */
+  admissions(from: string, to: string, classId: number | null): Observable<PreSchoolAdmissionReport> {
+    const params: Record<string, string> = { from, to };
     if (classId) params['classId'] = String(classId);
     return this.http.get<ApiResponse<PreSchoolAdmissionReport>>(`${this.base}/reports/admissions`, { params }).pipe(map(r => r.data));
   }

@@ -1,5 +1,5 @@
 import { PreSchoolEnquiry } from '../models/preschool.model';
-import { PreSchoolReceipt, monthLabel } from '../models/preschool-student.model';
+import { PRESCHOOL_MAX_INSTALMENTS, PRESCHOOL_OTHERS_ROW, PreSchoolReceipt, monthLabel } from '../models/preschool-student.model';
 import { escapeHtml } from './legacy-documents';
 
 /*
@@ -171,10 +171,13 @@ function receiptCard(r: PreSchoolReceipt, copy: Copy): string {
   const charge = (head: string) => sum(l => l.kind === 'Charge' && l.chargeHead === head);
 
   const months = [...new Set(r.lines.filter(l => l.kind === 'Monthly' && l.forMonth).map(l => l.forMonth!))].sort().map(monthLabel);
+  // Winter Garments and the fee chart's Development, Session and Educational Materials print in "Others".
+  const inOthers = Object.keys(PRESCHOOL_OTHERS_ROW);
   const othersNote = [
-    charge('WinterGarments') ? 'Winter Garments' : '',
+    ...inOthers.filter(h => charge(h)).map(h => PRESCHOOL_OTHERS_ROW[h]!),
     r.lines.find(l => l.chargeHead === 'Others')?.description.split(' — ')[1] ?? ''
   ].filter(Boolean).join(', ');
+  const othersAmount = charge('Others') + inOthers.reduce((t, h) => t + charge(h), 0);
   const lateNote = r.lines.find(l => l.chargeHead === 'LateFee')?.description.split(' — ')[1];
 
   const partOne: [string, string, number][] = [
@@ -190,7 +193,7 @@ function receiptCard(r: PreSchoolReceipt, copy: Copy): string {
     ['h.', 'Admission Kit', charge('AdmissionKit')],
     ['I.', 'Food Charges', charge('Food')],
     ['j.', 'Transport Charges', charge('Transport')],
-    ['k.', `Others (if any)${othersNote ? ` <small>— ${e(othersNote)}</small>` : ''}`, charge('Others') + charge('WinterGarments')]
+    ['k.', `Others (if any)${othersNote ? ` <small>— ${e(othersNote)}</small>` : ''}`, othersAmount]
   ];
   const totalOne = partOne.reduce((t, [, , a]) => t + a, 0);
 
@@ -206,8 +209,13 @@ function receiptCard(r: PreSchoolReceipt, copy: Copy): string {
     const [rs, p] = split(-l.amount, true);
     return `<tr class="less"><td class="l"></td><td class="t">Less: ${e(l.description)}</td><td class="rs">− ${rs}</td><td class="p">${p}</td></tr>`;
   }).join('');
-  // The 13 printed rows fill 403 units; extra "Less" rows share that height, so the signature never moves.
-  const rowHeight = (403 / (13 + less.length)).toFixed(2);
+  // Paid in instalments: a box under the table for all four, the ones not yet paid left blank to fill in by hand.
+  const payments = r.payments ?? [];
+  const byInstalments = payments.length > 1 || (r.balance ?? 0) > 0;
+  const boxHeight = byInstalments ? 104 : 0;
+  // The 13 printed rows fill 403 units (less the instalment box); extra "Less" rows share that height, so the signature never moves.
+  const rowHeight = ((403 - boxHeight) / (13 + less.length)).toFixed(2);
+  const instalmentBox = byInstalments ? instalmentTable(r, 535 + 403 - boxHeight + 6) : '';
 
   const cheque = r.mode === 'Cheque' || r.mode === 'DD';
   const payNo = r.mode === 'Cash' ? 'Cash' : cheque ? (r.reference ?? '') : `${r.mode} ${r.reference ?? ''}`;
@@ -237,7 +245,8 @@ function receiptCard(r: PreSchoolReceipt, copy: Copy): string {
       ${field(80, 408, 'Address:', 145, 697, addr1)}
       ${value(78, 439, 209, addr2)}
       ${field(291, 439, 'Contact No. :', 383, 697, r.phone)}
-      ${field(84, 469, 'Amount Received (in words) :', 295, 697, `Rupees ${r.totalInWords} only`)}
+      ${field(84, 469, 'Amount Received (in words) :', 295, 697,
+        `Rupees ${byInstalments ? r.paidInWords ?? r.totalInWords : r.totalInWords} only${byInstalments ? ' (so far)' : ''}`)}
       ${field(79, 500, 'Cash/DD/Cheque No. :', 238, 322, payNo.trim())}
       ${field(326, 500, 'Dt:', 350, 452, cheque ? dmy(r.chequeDate) : '')}
       ${field(456, 500, 'Drawn on', 524, 697, cheque ? r.drawnOn ?? '' : '')}
@@ -252,11 +261,40 @@ function receiptCard(r: PreSchoolReceipt, copy: Copy): string {
           <tr class="sum"><td class="l"></td><td class="t gt">Grand Total</td><td class="rs">${gt}</td><td class="p">${gp}</td></tr>
         </tbody>
       </table>
+      ${instalmentBox}
       ${copy === 'parent'
         ? '<div class="system">This is a system generated copy. No signature is required.</div>'
         : '<div class="sign">Authorised Signatory<br>Counsellor</div>'}
       ${r.isCancelled ? '<div class="void">CANCELLED</div>' : ''}
     </div>`;
+}
+
+/** The instalment box: each payment made, and blank rows (up to four) for the rest. */
+function instalmentTable(r: PreSchoolReceipt, top: number): string {
+  const payments = [...(r.payments ?? [])].sort((a, b) => a.instalmentNo - b.instalmentNo);
+  let left = r.total;
+  const rows = Array.from({ length: PRESCHOOL_MAX_INSTALMENTS }, (_, i) => {
+    const p = payments.find(x => x.instalmentNo === i + 1);
+    if (!p) return `<tr><td>${i + 1}</td><td></td><td></td><td></td><td></td><td></td></tr>`;
+    left -= p.amount;
+    const how = p.mode === 'Cash' ? 'Cash' : `${p.mode} ${p.reference ?? ''}`.trim();
+    return `<tr class="paid"><td>${i + 1}</td><td>${dmy(p.paidOn)}</td><td class="n">${money(p.amount)}</td>
+      <td>${e(how)}</td><td>${e(p.collectedBy ?? '')}</td><td class="n">${money(Math.max(0, left))}</td></tr>`;
+  }).join('');
+  const balance = r.balance ?? Math.max(0, left);
+  return `
+    <div class="inst" style="top:${top}px">
+      <div class="inst-head"><b>Payment by instalments</b>
+        <span>Paid ₹${money(r.paid ?? r.total - balance)} · <b>Balance ₹${money(balance)}</b></span></div>
+      <table>
+        <thead><tr><th>No.</th><th>Date</th><th>Amount (₹)</th><th>Cash / Ref. No.</th><th>Received by</th><th>Balance (₹)</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function money(n: number): string {
+  return new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(n);
 }
 
 const RECEIPT_CSS = `
@@ -285,6 +323,16 @@ const RECEIPT_CSS = `
   .fees td.gt { text-align: right; padding-right: 6px; font-size: 15px; }
   .fees tr.less td.t { text-align: right; padding-right: 6px; font-style: italic; }
   .fees tr.less td.rs, .fees tr.less td.p { color: #b42318; }
+  .inst { position: absolute; left: 76px; width: 621px; font-size: 12px; }
+  .inst-head { display: flex; justify-content: space-between; height: 18px; align-items: center; font-size: 13px; }
+  .inst table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .inst th, .inst td { border: 1.1px solid #222; height: 16px; padding: 0 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+  .inst th { font-size: 11px; background: rgba(0, 0, 0, .04); }
+  .inst th:nth-child(1), .inst td:nth-child(1) { width: 30px; text-align: center; }
+  .inst th:nth-child(2) { width: 80px; } .inst th:nth-child(3), .inst th:nth-child(6) { width: 82px; }
+  .inst th:nth-child(5) { width: 130px; }
+  .inst td.n { text-align: right; }
+  .inst tr.paid td { color: #0b2a6b; font-weight: 700; }
   .sign { position: absolute; right: 76px; top: 990px; text-align: right; font-size: 15px; line-height: 1.15; }
   .system { position: absolute; left: 76px; right: 76px; top: 975px; padding: 8px 10px; border: 1.3px dashed #555; text-align: center;
     font-size: 14px; font-style: italic; color: #333; }

@@ -63,7 +63,13 @@ const monthOf = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { mon
               ({{ money(d.stockReceived ?? 0) }} in all), whether or not My Chhota School has been paid yet.</small>
           </div>
         }
-        <p class="app-muted pir__note">{{ d.receipts.length }} receipt(s) in these dates. Download the PDF or Excel file for every entry.</p>
+        @if (collectors(d).length) {
+          <div class="pir__who">
+            <h3>Fees collected by</h3>
+            @for (x of collectors(d); track x.name) { <span><b>{{ x.name }}</b> {{ money(x.amount) }}</span> }
+          </div>
+        }
+        <p class="app-muted pir__note">{{ d.receipts.length }} payment(s) in these dates (an instalment counts on the day it was paid). Download the PDF or Excel file for every entry.</p>
       }
     </section>
   `,
@@ -81,6 +87,9 @@ const monthOf = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { mon
     .pir__green { color: #2b7a2b; }
     .pir__red { color: #b42318; }
     .pir__note { margin: 0.6rem 0 0; font-size: 0.82rem; }
+    .pir__who { margin-top: 0.9rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+    .pir__who h3 { margin: 0 0.4rem 0 0; font-size: 0.9rem; }
+    .pir__who span { padding: 0.25rem 0.7rem; border-radius: 999px; background: #f5f3ff; font-size: 0.85rem; }
     .pir__store { margin-top: 0.9rem; }
     .pir__store h3 { margin: 0 0 0.4rem; font-size: 0.9rem; }
     .pir__store-table { overflow-x: auto; }
@@ -98,6 +107,10 @@ export class PreSchoolIncomeRangeComponent {
   readonly loading = signal(false);
   from = todayIso().slice(0, 8) + '01';
   to = todayIso();
+
+  collectors(d: PreSchoolIncomeRange): { name: string; amount: number }[] {
+    return Object.entries(d.incomeByCollector ?? {}).map(([name, amount]) => ({ name, amount }));
+  }
 
   load(): void {
     if (!this.from || !this.to || this.to < this.from) return;
@@ -121,8 +134,11 @@ export class PreSchoolIncomeRangeComponent {
         ['Admission fees', d.admissionFees], ['Monthly fees', d.monthlyFees], ['Other fees', d.otherFees ?? 0], ['Less discounts and offers', -(d.discounts ?? 0)], ['Fees received', d.income],
         ['Salaries paid', d.salaries], ['Other expenses', d.expenses], ['Paid to My Chhota School', d.purchases ?? 0], ['Net', d.net],
         ['Stock received from My Chhota School (at price)', d.stockReceived ?? 0], ['Still owed to My Chhota School on the last day', d.owedToSupplier ?? 0]] },
-      { title: 'Fees received', header: ['Date', 'Receipt', 'Child', 'Class', 'Mode', 'Admission', 'Monthly', 'Other', 'Discount', 'Total'],
-        rows: d.receipts.map(r => [r.receivedOn, r.receiptCode, r.childName, r.className, r.mode, r.admissionFee, r.monthlyFees, r.otherFees ?? 0, -(r.discount ?? 0), r.total]) },
+      { title: 'Fees received', header: ['Date', 'Receipt', 'Instalment', 'Child', 'Class', 'Mode', 'Collected by', 'Admission', 'Monthly', 'Other', 'Discount', 'Received', 'Receipt total'],
+        rows: d.receipts.map(r => [r.receivedOn, r.receiptCode, r.instalmentNo ?? 1, r.childName, r.className, r.mode, r.collectedBy ?? '',
+          r.admissionFee, r.monthlyFees, r.otherFees ?? 0, -(r.discount ?? 0), r.total, r.billTotal ?? r.total]) },
+      { title: 'Fees collected by', header: ['Login', 'Amount'],
+        rows: this.collectors(d).map(x => [x.name, x.amount]) },
       { title: 'Salaries paid', header: ['Date paid', 'Staff', 'Role', 'For month', 'Mode', 'Amount'],
         rows: d.salaryPayments.map(s => [s.paidOn, s.staffName, s.role, monthOf(s.forMonth), s.mode, s.amount]) },
       { title: 'Other expenses', header: ['Date', 'Head', 'Description', 'Mode', 'Amount'],
@@ -156,8 +172,10 @@ export class PreSchoolIncomeRangeComponent {
         <tr><td>Paid to My Chhota School</td><td class="r">${e(m(d.purchases ?? 0))}</td></tr>
         <tr><td>Net</td><td class="r">${e(m(d.net))}</td></tr></tbody></table>
       <p>Still owed to My Chhota School on ${e(fmt(d.to))}: <strong>${e(m(d.owedToSupplier ?? 0))}</strong>.</p>
-      <h2>Fees received</h2>${table(['Date', 'Receipt', 'Child', 'Class', 'Mode', 'Amount'],
-        d.receipts.map(r => [e(fmt(r.receivedOn)), e(r.receiptCode), e(r.childName), e(r.className), e(r.mode), e(m(r.total))]), [5])}
+      <h2>Fees received</h2>${table(['Date', 'Receipt', 'Child', 'Class', 'Mode', 'Collected by', 'Amount'],
+        d.receipts.map(r => [e(fmt(r.receivedOn)), `${e(r.receiptCode)}${(r.instalmentNo ?? 1) > 1 || (r.billTotal ?? r.total) !== r.total ? ` <small>(instalment ${r.instalmentNo ?? 1})</small>` : ''}`,
+          e(r.childName), e(r.className), e(r.mode), e(r.collectedBy ?? ''), e(m(r.total))]), [6])}
+      <h2>Fees collected by</h2>${table(['Login', 'Amount'], this.collectors(d).map(x => [e(x.name), e(m(x.amount))]), [1])}
       <h2>Salaries paid</h2>${table(['Date', 'Staff', 'For month', 'Mode', 'Amount'],
         d.salaryPayments.map(s => [e(fmt(s.paidOn)), `${e(s.staffName)} <small>(${e(s.role)})</small>`, e(monthOf(s.forMonth)), e(s.mode), e(m(s.amount))]), [4])}
       <h2>Other expenses</h2>${table(['Date', 'Head', 'Mode', 'Amount'],

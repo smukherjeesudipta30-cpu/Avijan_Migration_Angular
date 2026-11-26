@@ -11,8 +11,9 @@ import { Observable, concatMap, from, last, of } from 'rxjs';
 import { formatMoney } from '../../../core/format/money';
 import { PreSchoolClass, todayIso } from '../../../core/models/preschool.model';
 import {
-  PRESCHOOL_CHARGE_HEADS, PreSchoolChargeHead, PreSchoolMonth, PreSchoolPayMode, PreSchoolPhotoSlot, PreSchoolReceipt,
-  PreSchoolStudentDetail, PreSchoolStudentPhotos, PreSchoolStudentSave, monthLabel, whatsAppLink
+  PRESCHOOL_CHARGE_HEADS, PRESCHOOL_MAX_INSTALMENTS, PRESCHOOL_OTHERS_ROW, PreSchoolChargeHead, PreSchoolMonth, PreSchoolPayMode,
+  PreSchoolPhotoSlot, PreSchoolReceipt, PreSchoolReceiptSummary, PreSchoolStudentDetail, PreSchoolStudentPhotos, PreSchoolStudentSave,
+  monthLabel, whatsAppLink
 } from '../../../core/models/preschool-student.model';
 import { openPendingDocumentWindow, writeDocumentWindow } from '../../../core/printing/legacy-documents';
 import { downloadSizedPdf, isNativeApp, pdfFileName } from '../../../core/printing/pdf-download';
@@ -84,6 +85,15 @@ function addMonths(iso: string, n: number): string {
             <p class="psd-warn">{{ s.className }} has no fees set yet. Set them in Classes &amp; Fees first.</p>
           }
 
+          @if (!s.admissionPaid && hasRates()) {
+            <div class="psd-package">
+              <span><strong>Admission package</strong>
+                <small>Admission fee, first month's tuition and every usual charge for {{ s.className }}
+                  — {{ money(packageTotal(s)) }}</small></span>
+              <p-button label="Fill admission package" icon="pi pi-list-check" size="small" [outlined]="true" (onClick)="fillPackage(s)" />
+            </div>
+          }
+
           @if (s.admissionFee > 0 || !s.admissionPaid) {
             <div class="psd-adm" [class.psd-adm--paid]="s.admissionPaid">
               @if (s.admissionPaid) {
@@ -121,6 +131,7 @@ function addMonths(iso: string, n: number): string {
                       <span><input type="checkbox" [checked]="(charges[h.head].amount ?? 0) > 0" (change)="toggleCharge(h.head)"
                         [attr.aria-label]="'Charge ' + h.label" /> {{ h.label }}@if (rateOf(h.head); as rate) { <small>usual {{ money(rate) }}</small> }</span>
                       <input pInputText type="number" min="0" step="1" [(ngModel)]="charges[h.head].amount" placeholder="0" /></label>
+                    @if (printsInOthers(h.head)) { <small class="psd-in-others">prints in "Others"</small> }
                     @if (h.head === 'LateFee' || h.head === 'Others') {
                       <label>{{ h.head === 'LateFee' ? 'Late fee / other' : 'Other' }} — what for
                         <input pInputText [(ngModel)]="charges[h.head].note" maxlength="60" /></label>
@@ -155,6 +166,16 @@ function addMonths(iso: string, n: number): string {
             <label class="psd-wide">Offer name (printed on the receipt) <input pInputText [(ngModel)]="offerNote" maxlength="60" placeholder="e.g. Opening offer" /></label>
           </div>
 
+          <div class="psd-inst" [class.psd-inst--on]="byInstalments">
+            <label class="psd-inst-toggle"><input type="checkbox" [(ngModel)]="byInstalments" [disabled]="!canSplit()" />
+              Pay in instalments <small>— up to {{ maxInstalments }}; the admission and registration fees only, not monthly fees alone</small></label>
+            @if (byInstalments) {
+              <label>Paid now — 1st instalment (₹) <input pInputText type="number" min="1" step="1" [(ngModel)]="paidNow" /></label>
+              <span class="psd-inst-left">Balance after this: <strong>{{ money(balanceAfter()) }}</strong>
+                <small>The receipt prints with blank rows for the next instalments; enter each one under Receipts when it is paid.</small></span>
+            }
+          </div>
+
           <div class="psd-total">
             <span class="psd-sum">
               @if (discountAmount() > 0 || offerAmount() > 0) {
@@ -162,7 +183,8 @@ function addMonths(iso: string, n: number): string {
                   @if (discountAmount() > 0) { · less {{ discountPercent }}% {{ money(discountAmount()) }} }
                   @if (offerAmount() > 0) { · less offer {{ money(offerAmount()) }} }</small>
               }
-              Total <strong>{{ money(total()) }}</strong></span>
+              Total <strong>{{ money(total()) }}</strong>
+              @if (byInstalments && paidNow) { <small>receiving {{ money(paidNow) }} now</small> }</span>
             <p-button label="Collect and print receipt" icon="pi pi-print" [loading]="collecting()" [disabled]="gross() <= 0" (onClick)="collect(s)" />
           </div>
         </section>
@@ -255,7 +277,9 @@ function addMonths(iso: string, n: number): string {
             <div class="psd-receipt" [class.psd-receipt--void]="r.isCancelled">
               <span><strong>{{ r.receiptCode }}</strong> · {{ r.receivedOn | date: 'd MMM y' }} · {{ r.mode }}@if (r.isCancelled) { · <em>Cancelled</em> }
                 <small>{{ r.summary }}</small></span>
-              <strong>{{ money(r.total) }}</strong>
+              <span class="psd-receipt-amt"><strong>{{ money(r.total) }}</strong>
+                @if (!r.isCancelled && (r.balance ?? 0) > 0) { <small class="psd-bal">Balance {{ money(r.balance ?? 0) }}</small> }
+                @else if ((r.payments?.length ?? 0) > 1) { <small class="psd-paidup">Paid in {{ r.payments?.length }} parts</small> }</span>
               <span class="psd-receipt-actions">
                 <p-button icon="pi pi-print" [text]="true" [rounded]="true" ariaLabel="Print receipt (parent and office copy)" (onClick)="print(r.id)" />
                 <p-button icon="pi pi-file-pdf" [text]="true" [rounded]="true" ariaLabel="Download the parent copy as PDF"
@@ -265,6 +289,32 @@ function addMonths(iso: string, n: number): string {
                   <p-button icon="pi pi-ban" [text]="true" [rounded]="true" severity="danger" ariaLabel="Cancel receipt" (onClick)="cancel(r.id, r.receiptCode)" />
                 }
               </span>
+              @if ((r.payments?.length ?? 0) > 1 || (!r.isCancelled && (r.balance ?? 0) > 0)) {
+                <div class="psd-parts">
+                  @for (p of r.payments ?? []; track p.id) {
+                    <span>#{{ p.instalmentNo }} · {{ p.paidOn | date: 'd MMM y' }} · {{ money(p.amount) }} · {{ p.mode }}@if (p.reference) { {{ p.reference }} }
+                      <small>by {{ p.collectedBy || '—' }}</small></span>
+                  }
+                  @if (!r.isCancelled && (r.balance ?? 0) > 0) {
+                    @if (instalmentFor() === r.id) {
+                      <div class="psd-next">
+                        <label>Amount (₹) <input pInputText type="number" min="1" [max]="r.balance ?? 0" [(ngModel)]="next.amount" /></label>
+                        <label>Date <input pInputText type="date" [(ngModel)]="next.paidOn" [max]="today" /></label>
+                        <label>Mode
+                          <select [(ngModel)]="next.mode">@for (m of modes; track m) { <option [value]="m">{{ m }}</option> }</select></label>
+                        @if (next.mode !== 'Cash') { <label>Reference / No. <input pInputText [(ngModel)]="next.reference" maxlength="60" /></label> }
+                        <span class="psd-next-btns">
+                          <p-button label="Save instalment" icon="pi pi-check" size="small" [loading]="savingInstalment()" (onClick)="saveInstalment(r)" />
+                          <p-button label="Cancel" size="small" [text]="true" (onClick)="instalmentFor.set(null)" />
+                        </span>
+                      </div>
+                    } @else {
+                      <p-button [label]="'Receive instalment ' + ((r.payments?.length ?? 1) + 1)" icon="pi pi-plus" size="small" [outlined]="true"
+                        (onClick)="startInstalment(r)" />
+                    }
+                  }
+                </div>
+              }
             </div>
           } @empty {
             <p class="app-muted">No money received yet.</p>
@@ -279,7 +329,32 @@ function addMonths(iso: string, n: number): string {
     .psd--new { grid-template-columns: minmax(0, 46rem); }
     .psd h2 { margin: 0 0 0.75rem; font-size: 1.05rem; }
     .psd-fees, .psd-form, .psd-receipts { padding: 1rem 1.15rem; }
-    .psd-receipts { grid-column: 1; }
+    /* The details form runs down the right; fees, store and receipts stack on the left, with no gaps. */
+    .psd:not(.psd--new) > .psd-form { grid-column: 2; grid-row: 1 / span 3; }
+    .psd:not(.psd--new) > .psd-fees, .psd:not(.psd--new) > .psd-receipts { grid-column: 1; }
+    .psd-package { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+      padding: 0.6rem 0.75rem; margin-bottom: 0.9rem; border-radius: 10px; background: #fff7e6; border: 1px solid #ffe0a3; }
+    .psd-package small { display: block; color: var(--app-text-muted); font-size: 0.78rem; }
+    .psd-in-others { font-size: 0.7rem; color: var(--app-text-muted); margin-top: -0.2rem; }
+    .psd-inst { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem 0.9rem; align-items: end; margin-top: 0.9rem;
+      padding: 0.7rem 0.8rem; border-radius: 10px; border: 1px dashed var(--app-border); }
+    .psd-inst--on { border-style: solid; border-color: #c4b5fd; background: #faf7ff; }
+    .psd-inst-toggle { grid-column: 1 / -1; display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap; font-weight: 700; font-size: 0.9rem; }
+    .psd-inst-toggle small { font-weight: 500; color: var(--app-text-muted); }
+    .psd-inst label:not(.psd-inst-toggle) { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.82rem; font-weight: 600; }
+    .psd-inst-left small { display: block; font-size: 0.75rem; color: var(--app-text-muted); }
+    .psd-receipt-amt { text-align: right; }
+    .psd-receipt-amt small { display: block; font-size: 0.75rem; font-weight: 700; }
+    .psd-bal { color: #b42318; }
+    .psd-paidup { color: #2b7a2b; }
+    .psd-parts { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 0.3rem; padding: 0.5rem 0.65rem; border-radius: 8px;
+      background: #f8f7fc; font-size: 0.82rem; }
+    .psd-parts small { color: var(--app-text-muted); margin-left: 0.3rem; }
+    .psd-parts p-button { align-self: flex-start; }
+    .psd-next { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: 0.5rem; align-items: end; }
+    .psd-next label { display: flex; flex-direction: column; gap: 0.2rem; font-weight: 600; font-size: 0.78rem; }
+    .psd-next select { padding: 0.5rem; border: 1px solid var(--app-border); border-radius: 6px; background: #fff; font: inherit; }
+    .psd-next-btns { display: flex; gap: 0.3rem; grid-column: 1 / -1; }
     .psd-fee-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
     .psd-fee-head small { color: var(--app-text-muted); margin-left: 0.25rem; }
     .psd-warn { margin: 0 0 0.75rem; padding: 0.5rem 0.75rem; border-radius: 8px; background: #fff1d6; color: #7a4a00; }
@@ -334,7 +409,11 @@ function addMonths(iso: string, n: number): string {
     .psd-receipt--void strong { text-decoration: line-through; }
     .psd-receipt-actions { display: flex; align-items: center; }
     .psd-wa { display: grid; place-items: center; width: 2.1rem; height: 2.1rem; border-radius: 50%; color: #1f9d55; text-decoration: none; }
-    @media (max-width: 1000px) { .psd { grid-template-columns: 1fr; } }
+    @media (max-width: 1000px) {
+      .psd { grid-template-columns: 1fr; }
+      .psd:not(.psd--new) > .psd-form, .psd:not(.psd--new) > .psd-fees, .psd:not(.psd--new) > .psd-receipts { grid-column: 1; grid-row: auto; }
+    }
+    @media (max-width: 560px) { .psd-inst { grid-template-columns: 1fr; } .psd-receipt { grid-template-columns: 1fr auto; } .psd-receipt-actions { grid-column: 1 / -1; } }
     @media (max-width: 560px) { .psd-grid, .psd-pay { grid-template-columns: 1fr; } }
   `]
 })
@@ -419,6 +498,80 @@ export class PreSchoolStudentComponent implements OnInit {
   discountPercent: number | null = null;
   specialOffer: number | null = null;
   offerNote = '';
+
+  /* ------------------------------------------------------ instalments */
+
+  readonly maxInstalments = PRESCHOOL_MAX_INSTALMENTS;
+  byInstalments = false;
+  paidNow: number | null = null;
+
+  /** Only a receipt with the admission fee or other charges on it may be split; monthly fees alone are paid in full. */
+  canSplit(): boolean {
+    const s = this.student();
+    return !!s && ((this.takeAdmission && !s.admissionPaid) || this.chargesTotal() > 0);
+  }
+
+  balanceAfter(): number {
+    return Math.max(0, this.total() - (Number(this.paidNow) || 0));
+  }
+
+  printsInOthers(head: string): boolean {
+    return head in PRESCHOOL_OTHERS_ROW;
+  }
+
+  /** The fee chart's whole package for the child's class: admission, the first month and every usual charge. */
+  packageTotal(s: PreSchoolStudentDetail): number {
+    const firstMonth = this.monthChoices().some(m => !m.isPaid) ? s.monthlyFee : 0;
+    return (s.admissionFee || 0) + firstMonth + PRESCHOOL_CHARGE_HEADS.reduce((t, h) => t + this.rateOf(h.head), 0);
+  }
+
+  /** Ticks the admission fee, the first unpaid month and every charge the class has a usual amount for. */
+  fillPackage(s: PreSchoolStudentDetail): void {
+    if (!s.admissionPaid) {
+      this.takeAdmission = true;
+      this.admissionAmount = s.admissionFee || this.admissionAmount;
+    }
+    const first = this.monthChoices().find(m => !m.isPaid);
+    if (first && s.monthlyFee > 0) this.picked.set(new Set([first.month]));
+    for (const h of PRESCHOOL_CHARGE_HEADS) {
+      const rate = this.rateOf(h.head);
+      if (rate > 0) this.charges[h.head].amount = rate;
+    }
+  }
+
+  /** The receipt whose next instalment is being entered, and that instalment. */
+  readonly instalmentFor = signal<number | null>(null);
+  readonly savingInstalment = signal(false);
+  next = { amount: null as number | null, paidOn: todayIso(), mode: 'Cash' as PreSchoolPayMode, reference: '' };
+
+  startInstalment(r: PreSchoolReceiptSummary): void {
+    this.next = { amount: r.balance ?? null, paidOn: todayIso(), mode: 'Cash', reference: '' };
+    this.instalmentFor.set(r.id);
+  }
+
+  saveInstalment(r: PreSchoolReceiptSummary): void {
+    const amount = Number(this.next.amount) || 0;
+    if (amount <= 0) return this.warn('Enter the amount received.');
+    if (amount > (r.balance ?? 0)) return this.warn(`Only ${this.money(r.balance ?? 0)} is left to pay on ${r.receiptCode}.`);
+    const isLast = (r.payments?.length ?? 1) + 1 >= PRESCHOOL_MAX_INSTALMENTS;
+    if (isLast && amount < (r.balance ?? 0)) return this.warn(`This is the last instalment allowed: it must clear the ${this.money(r.balance ?? 0)} left.`);
+    if (this.next.mode !== 'Cash' && !this.next.reference.trim()) return this.warn(`Enter the ${this.next.mode} reference / number.`);
+
+    this.savingInstalment.set(true);
+    this.students.addPayment(r.id, {
+      amount, paidOn: this.next.paidOn || null, mode: this.next.mode,
+      reference: this.next.mode === 'Cash' ? null : this.next.reference.trim(), notes: null
+    }).subscribe({
+      next: receipt => {
+        this.savingInstalment.set(false);
+        this.instalmentFor.set(null);
+        this.done(`Instalment received · ${this.money(amount)} · balance ${this.money(receipt.balance ?? 0)}`);
+        const s = this.student();
+        if (s) this.load(s.id);
+      },
+      error: () => this.savingInstalment.set(false)
+    });
+  }
 
   /** Before any discount. A method, not a computed: the admission tick and amount are plain form fields. */
   gross(): number {
@@ -581,6 +734,11 @@ export class PreSchoolStudentComponent implements OnInit {
     if (pct < 0 || pct > 100) return this.warn('The discount is a percentage from 0 to 100.');
     if (this.offerAmount() > this.gross() - this.discountAmount()) return this.warn('The special offer is more than what is left to pay.');
     if (this.takeAdmission && !s.admissionPaid && !(Number(this.admissionAmount) > 0)) return this.warn('Enter the admission amount.');
+    const split = this.byInstalments && this.canSplit();
+    const firstPart = Number(this.paidNow) || 0;
+    if (split && (firstPart <= 0 || firstPart >= this.total())) {
+      return this.warn(`Enter the 1st instalment: more than 0 and less than the total ${this.money(this.total())}.`);
+    }
 
     // Opened now, while the click still counts as the user's, so the pop-up blocker lets it through.
     // In the app there is no window: the parent copy is saved as a PDF instead, once collected.
@@ -601,7 +759,8 @@ export class PreSchoolStudentComponent implements OnInit {
       specialOffer: this.offerAmount() > 0 ? this.offerAmount() : null,
       offerNote: this.offerAmount() > 0 ? this.offerNote.trim() || null : null,
       receivedOn: this.receivedOn || null,
-      notes: this.payNote.trim() || null
+      notes: this.payNote.trim() || null,
+      paidNow: split ? firstPart : null
     }).subscribe({
       next: receipt => {
         this.collecting.set(false);
@@ -611,7 +770,11 @@ export class PreSchoolStudentComponent implements OnInit {
         } else {
           this.show(win, receipt);
         }
-        this.done(`Received ${this.money(receipt.total)} · ${receipt.receiptCode}`);
+        this.done((receipt.balance ?? 0) > 0
+          ? `Received ${this.money(receipt.paid ?? 0)} of ${this.money(receipt.total)} · balance ${this.money(receipt.balance ?? 0)} · ${receipt.receiptCode}`
+          : `Received ${this.money(receipt.total)} · ${receipt.receiptCode}`);
+        this.byInstalments = false;
+        this.paidNow = null;
         this.reference = '';
         this.payNote = '';
         this.drawnOn = '';

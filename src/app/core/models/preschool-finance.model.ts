@@ -120,6 +120,8 @@ export interface PreSchoolIncomeReport {
   incomeByMode: Record<string, number>;
   expensesByHead: Record<string, number>;
   purchases?: number;
+  /** Fees received, by the login that collected them. */
+  incomeByCollector?: Record<string, number> | null;
 }
 
 /** Suggested expense heads; any other can be typed. Salaries are not here: they come from the salary sheet. */
@@ -155,6 +157,12 @@ export interface PreSchoolIncomeReceiptLine {
   otherFees?: number;
   total: number;
   discount?: number;
+  /** The login that took this payment. */
+  collectedBy?: string | null;
+  /** 1 for the payment made with the receipt, then 2, 3, 4 for later instalments. */
+  instalmentNo?: number;
+  /** The whole receipt, of which this payment is a part. */
+  billTotal?: number;
 }
 
 export interface PreSchoolIncomeSalaryLine {
@@ -183,7 +191,10 @@ export interface PreSchoolIncomeRange {
   net: number;
   incomeByMode: Record<string, number>;
   expensesByHead: Record<string, number>;
+  /** Every payment received (a whole receipt or one instalment), with who collected it. */
   receipts: PreSchoolIncomeReceiptLine[];
+  /** Fees received, by the login that collected them. */
+  incomeByCollector?: Record<string, number> | null;
   purchaseEntries?: PreSchoolIncomePurchaseLine[];
   storeMargins?: PreSchoolStoreMargin[];
   /** Payments to My Chhota School in these dates (these make up purchases). */

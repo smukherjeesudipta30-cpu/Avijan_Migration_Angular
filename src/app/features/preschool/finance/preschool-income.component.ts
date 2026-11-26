@@ -81,6 +81,11 @@ import { PreSchoolIncomeRangeComponent } from './preschool-income-range.componen
           @empty { <p class="app-muted">No fees received in {{ r.year }}.</p> }
         </section>
         <section class="app-card pin-card">
+          <h2>Fees collected by</h2>
+          @for (x of collectors(); track x.name) { <p><span>{{ x.name }}</span><strong>{{ money(x.amount) }}</strong></p> }
+          @empty { <p class="app-muted">No fees received in {{ r.year }}.</p> }
+        </section>
+        <section class="app-card pin-card">
           <h2>Expenses by head</h2>
           @for (x of heads(); track x.name) { <p><span>{{ x.name }}</span><strong>{{ money(x.amount) }}</strong></p> }
           @empty { <p class="app-muted">No expenses in {{ r.year }}.</p> }
@@ -153,6 +158,8 @@ export class PreSchoolIncomeComponent implements OnInit {
   };
 
   readonly modes = computed(() => Object.entries(this.report()?.incomeByMode ?? {}).map(([name, amount]) => ({ name, amount })));
+  /** Fees received in the year, by the login that took them (instalments counted on the day paid). */
+  readonly collectors = computed(() => Object.entries(this.report()?.incomeByCollector ?? {}).map(([name, amount]) => ({ name, amount })));
   readonly heads = computed(() => Object.entries(this.report()?.expensesByHead ?? {}).map(([name, amount]) => ({ name, amount })));
 
   ngOnInit(): void { this.load(); }

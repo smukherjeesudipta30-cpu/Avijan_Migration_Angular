@@ -24,7 +24,7 @@ import { PreSchoolStudentService } from '../../../core/services/preschool-studen
       <div class="app-page-head">
         <span class="app-eyebrow">Avijan PreSchool · Reports</span>
         <h1>Pending fees</h1>
-        <p class="app-muted">Every month from joining up to this month without a receipt, and admission fees not yet taken.</p>
+        <p class="app-muted">Every month from joining up to this month without a receipt, admission fees not yet taken, and instalments still to come.</p>
       </div>
       <p-button label="Print / PDF" icon="pi pi-print" [outlined]="true" (onClick)="print()" [disabled]="!rows().length" />
     </div>
@@ -57,6 +57,7 @@ import { PreSchoolStudentService } from '../../../core/services/preschool-studen
           <span>
             @if (r.months.length) { <span class="ppf-pill" [class.ppf-pill--late]="r.months.length >= 3">{{ r.months.length }} mth</span> {{ list(r.months) }} }
             @if (r.admissionDue > 0) { <span class="ppf-pill ppf-pill--adm">Admission {{ money(r.admissionDue) }}</span> }
+            @if ((r.instalmentDue ?? 0) > 0) { <span class="ppf-pill ppf-pill--adm">Instalment {{ money(r.instalmentDue ?? 0) }}</span> }
           </span>
           <span><a [href]="'tel:' + r.phone">{{ r.phone }}</a></span>
           <span class="r"><strong>{{ money(r.amount) }}</strong></span>
@@ -137,6 +138,7 @@ export class PreSchoolPendingFeesComponent implements OnInit {
     const parts = [];
     if (r.months.length) parts.push(`fees for ${this.list(r.months)}`);
     if (r.admissionDue > 0) parts.push('the admission fee');
+    if ((r.instalmentDue ?? 0) > 0) parts.push(`the next instalment of the admission fees (${this.money(r.instalmentDue ?? 0)} left)`);
     return whatsAppLink(r.phone,
       `Dear ${r.parentName}, this is a gentle reminder from Avijan PreSchool that ${parts.join(' and ')} for ${r.childName} ` +
       `(${this.money(r.amount)}) is pending. Please pay at the school office or by UPI. Thank you.`);
@@ -145,7 +147,7 @@ export class PreSchoolPendingFeesComponent implements OnInit {
   print(): void {
     const e = escapeHtml;
     const body = this.rows().map(r => `<tr><td>${e(r.childName)}<br><small>${e(r.parentName)}</small></td><td>${e(r.className)}</td>
-      <td>${e(this.list(r.months))}${r.admissionDue > 0 ? `${r.months.length ? '; ' : ''}Admission ${e(this.money(r.admissionDue))}` : ''}</td>
+      <td>${e(this.list(r.months))}${r.admissionDue > 0 ? `${r.months.length ? '; ' : ''}Admission ${e(this.money(r.admissionDue))}` : ''}${(r.instalmentDue ?? 0) > 0 ? `${r.months.length || r.admissionDue > 0 ? '; ' : ''}Instalment ${e(this.money(r.instalmentDue ?? 0))}` : ''}</td>
       <td>${e(r.phone)}</td><td class="r">${e(this.money(r.amount))}</td></tr>`).join('');
     openDocumentWindow(`<!doctype html><html><head><meta charset="utf-8"><title>Avijan PreSchool — Pending fees</title>
       <style>body{font-family:'Segoe UI',Arial,sans-serif;margin:24px;color:#1f2433}h1{margin:0}p{color:#5b6178}
