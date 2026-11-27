@@ -97,7 +97,8 @@ export class TeachersComponent {
   readonly earningsPageTotal = computed(() =>
     this.earnings().reduce((sum, e) => sum + (e.amount ?? 0), 0));
 
-  readonly today = new Date();
+  /** Refreshed whenever an account opens, so a page left open overnight still allows today. */
+  today = new Date();
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(50)]],
@@ -333,6 +334,11 @@ export class TeachersComponent {
   /* ---------------------------------------------------------- earnings */
   openEarnings(teacher: TeacherListItem): void {
     this.earningsFor.set(teacher);
+    // "Paid on" starts at today every time - not the day the page was first opened,
+    // which an app or tab left open past midnight would otherwise record.
+    this.today = new Date();
+    this.payDate.set(new Date());
+    this.payAmount.set(null);
     this.earningsVisible.set(true);
     this.earnings.set([]);
     this.loadEarnings();
