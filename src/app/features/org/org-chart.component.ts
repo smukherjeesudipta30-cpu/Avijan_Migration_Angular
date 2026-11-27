@@ -94,12 +94,18 @@ export class OrgChartComponent implements OnInit, OnDestroy {
 
     const wanted = this.branch() ?? this.chosenBranch();
 
+    // Anyone with staff reporting to them — the owner, the heads under her — runs
+    // the whole centre, not one branch. Their boxes were only ever tagged Rajpur,
+    // so a Champahati chart dropped them and its staff floated with nobody above.
+    const managers = new Set(chart.nodes.flatMap(n => n.parentIds));
+
     const visible = chart.nodes.filter(n => {
       if (!n.isActive) return false;
       // A box with no branch — the owner, a function such as Technical Support —
       // belongs to the whole centre and stays on every branch's chart. Somebody who
       // works at two branches appears on both.
       if (!wanted || n.branches.length === 0) return true;
+      if (managers.has(n.id)) return true;
       return n.branches.includes(wanted);
     });
 
